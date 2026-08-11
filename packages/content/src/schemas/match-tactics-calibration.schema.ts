@@ -68,6 +68,15 @@ const tacticalShapeSchema = v.strictObject({
   ),
 });
 
+const chanceActorSelectionSchema = v.strictObject({
+  shooterPropensityBasisPointsByRole: v.strictObject(
+    Object.fromEntries(CANONICAL_PLAYER_ROLES.map((role) => [role, nonNegativeInteger])) as Record<
+      (typeof CANONICAL_PLAYER_ROLES)[number],
+      typeof nonNegativeInteger
+    >,
+  ),
+});
+
 const tacticalMatchupSchema = v.strictObject({
   chainBottleneckWeightBasisPoints: basisPoints,
   pressingContestWeightBasisPoints: basisPoints,
@@ -101,6 +110,7 @@ const matchTacticsCalibrationSchema = v.strictObject({
   schemaVersion: v.literal(MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION),
   version: nonEmptyString,
   classification: v.literal("explicit_game_design_target"),
+  chanceActorSelection: chanceActorSelectionSchema,
   tacticalShape: tacticalShapeSchema,
   tacticalMatchup: tacticalMatchupSchema,
   tacticalSemantics: tacticalSemanticsSchema,

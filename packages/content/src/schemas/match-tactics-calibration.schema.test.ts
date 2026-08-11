@@ -19,6 +19,17 @@ test("the shipped asset parses and is deeply frozen", () => {
   assert.equal(Object.isFrozen(calibration), true);
   assert.equal(Object.isFrozen(calibration.tacticalShape.taskAllocationBasisPointsByRole), true);
   assert.equal(Object.isFrozen(calibration.tacticalShape.taskAllocationBasisPointsByRole.striker), true);
+  assert.equal(Object.isFrozen(calibration.chanceActorSelection.shooterPropensityBasisPointsByRole), true);
+});
+
+test("a missing shooter role is rejected structurally", () => {
+  const raw = structuredClone(matchTacticsCalibrationJson) as Record<string, unknown>;
+  const actors = raw["chanceActorSelection"] as Record<string, Record<string, number>>;
+  delete actors["shooterPropensityBasisPointsByRole"]?.["striker"];
+
+  assert.throws(() => {
+    parseMatchTacticsCalibrationAsset(raw);
+  }, MatchTacticsCalibrationValidationError);
 });
 
 test("an unknown key is rejected instead of ignored", () => {

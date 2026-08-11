@@ -1,10 +1,17 @@
-import { roleWeightKeyForCanonicalRole } from "./team-strength.ts";
-import type { FixtureId, PlayerId, ShotChanceType } from "@game/domain";
+import {
+  lateralChannelShares,
+  type FixtureId,
+  type MatchTacticsCalibrationConfig,
+  type PlayerId,
+  type TacticalRoute,
+  type TacticalShapeTask,
+} from "@game/domain";
 import { deriveRng } from "@game/shared";
 
 import type { MatchTeamContext } from "./match-context.ts";
 import { incidentProfileFor } from "./match-discipline.ts";
 import type { MatchScore, MatchSide } from "./match-simulation-state.ts";
+import { roleWeightKeyForCanonicalRole } from "./team-strength.ts";
 import type { LineupSlot } from "./team-strength.ts";
 
 /**
@@ -19,42 +26,6 @@ import type { LineupSlot } from "./team-strength.ts";
 
 /** Stable RNG stream name used only for opportunity actor selection. */
 const CHANCE_ACTORS_STREAM = "chance-actors";
-
-/** Role weights used when choosing the chance creator from the attacking lineup. */
-const CREATOR_ROLE_WEIGHTS_BY_CHANCE_TYPE: Readonly<Record<ShotChanceType, ChanceActorRoleWeights>> = {
-  open_play: {
-    attacker: 3,
-    midfielder: 4,
-    defender: 1,
-    gk: 0,
-  },
-  counter: {
-    attacker: 5,
-    midfielder: 2,
-    defender: 1,
-    gk: 0,
-  },
-  cross: {
-    attacker: 3,
-    midfielder: 2,
-    defender: 3,
-    gk: 0,
-  },
-  dead_ball: {
-    attacker: 2,
-    midfielder: 3,
-    defender: 2,
-    gk: 0,
-  },
-};
-
-/** Role weights used when choosing the shooter from the attacking lineup. */
-const SHOOTER_ROLE_WEIGHTS: ChanceActorRoleWeights = {
-  attacker: 5,
-  midfielder: 3,
-  defender: 1,
-  gk: 0,
-};
 
 /** Role weights used when choosing the primary defender from the defending lineup. */
 const PRIMARY_DEFENDER_ROLE_WEIGHTS: ChanceActorRoleWeights = {
@@ -76,6 +47,15 @@ type ChanceActorRoleWeights = Readonly<Record<ChanceActorRoleKey, number>>;
 /** The four role-weight profile keys chance selection distinguishes. */
 type ChanceActorRoleKey = "attacker" | "midfielder" | "defender" | "gk";
 
+/** Existing tactical-shape task that owns creator responsibility for each route. */
+const CREATOR_TASK_BY_ROUTE = {
+  central: "central_progression",
+  left: "lateral_progression",
+  right: "lateral_progression",
+  direct: "build_up",
+  transition: "counter_threat",
+} as const satisfies Readonly<Record<TacticalRoute, TacticalShapeTask>>;
+
 /**
  * Input needed to select actors for one attacking opportunity.
  */
@@ -94,15 +74,10 @@ export interface SelectChanceActorsInput {
   readonly attackingTeam: MatchTeamContext;
   /** Team context for the side defending the opportunity. */
   readonly defendingTeam: MatchTeamContext;
-  /**
-   * Structured source type for the chance, derived from the route it came down.
-   *
-   * The execution type is deliberately absent. It is decided *from* the shooter
-   * this call returns - whether a cross is headed depends on who attacked it -
-   * so keying selection on it would make the actors depend on a fact that does
-   * not exist until they have been chosen.
-   */
-  readonly chanceType: ShotChanceType;
+  /** Route already selected for the opportunity; chance type derives from it. */
+  readonly route: TacticalRoute;
+  /** Exact versioned task allocation already carried by the match context. */
+  readonly matchTacticsCalibration: MatchTacticsCalibrationConfig;
 }
 
 /**
@@ -151,22 +126,20 @@ export interface ChanceActorSelectionWeight {
  *   scoreBeforeChance: { home: 0, away: 0 },
  *   attackingTeam: context.home,
  *   defendingTeam: context.away,
- *   chanceType: "open_play",
+ *   route: "central",
+ *   matchTacticsCalibration,
  * });
  */
 export function selectChanceActors(input: SelectChanceActorsInput): ChanceActors {
-  const creatorWeightForRole = (roleKey: string): number => chanceCreatorWeightForRole(roleKey, input.chanceType);
-  const creatorCandidates = taskWeightedCandidates(
+  const creatorCandidates = qualityWeightedCandidates(
     input.attackingTeam,
-    creatorWeightForRole,
-    (profile) => creatorTaskQuality(profile, input.chanceType),
-    CREATOR_TASK_WEIGHT_POLICY,
+    (slot) => creatorResponsibilityForSlot(slot, input.route, input.matchTacticsCalibration),
+    (profile) => creatorTaskQuality(profile, input.route),
   );
-  const shooterCandidates = taskWeightedCandidates(
+  const shooterCandidates = qualityWeightedCandidates(
     input.attackingTeam,
-    chanceShooterWeightForRole,
-    (profile) => shooterTaskQuality(profile, input.chanceType),
-    SHOOTER_TASK_WEIGHT_POLICY,
+    (slot) => shooterPropensityForSlot(slot, input.matchTacticsCalibration),
+    (profile) => shooterTaskQuality(profile, input.route),
   );
   const defenderCandidates = roleWeightedCandidates(
     input.defendingTeam.lineup,
@@ -190,7 +163,7 @@ export function selectChanceActors(input: SelectChanceActorsInput): ChanceActors
     input.attackingSide,
     input.scoreBeforeChance.home,
     input.scoreBeforeChance.away,
-    input.chanceType,
+    input.route,
   );
   const creatorPlayerId = pickWeightedPlayer(creatorCandidates, rng.nextFloat());
   const shooterPool = shooterCandidates;
@@ -205,34 +178,6 @@ export function selectChanceActors(input: SelectChanceActorsInput): ChanceActors
       weight,
     })),
   };
-}
-
-/**
- * Returns the creator weight for a role key.
- *
- * Creator weights vary by chance type so goal creation does not always flow
- * through the same broad midfield pool. Open play still favors midfielders;
- * counters favor attackers; crosses give defenders and attackers more share;
- * dead balls keep a mixed outfield pool. Goalkeepers are excluded.
- *
- * @example
- * const weight = chanceCreatorWeightForRole("midfielder", "open_play");
- */
-export function chanceCreatorWeightForRole(roleKey: string, chanceType: ShotChanceType = "open_play"): number {
-  return CREATOR_ROLE_WEIGHTS_BY_CHANCE_TYPE[chanceType][roleKey as ChanceActorRoleKey];
-}
-
-/**
- * Returns the shooter weight for a role key.
- *
- * Attackers are favored as shooters, midfielders remain common, defenders are
- * rare, and goalkeepers are excluded from shooting in this early causal model.
- *
- * @example
- * const weight = chanceShooterWeightForRole("attacker");
- */
-export function chanceShooterWeightForRole(roleKey: string): number {
-  return SHOOTER_ROLE_WEIGHTS[roleKey as ChanceActorRoleKey];
 }
 
 /**
@@ -272,35 +217,57 @@ function roleWeightedCandidates(
 }
 
 /**
- * Adds a centred within-pool skill multiplier to the existing role weight.
+ * Builds an actor pool from one role-owned frequency and live task quality.
  *
- * Centring against the role-weighted pool keeps an ordinary player at `1` and
- * prevents raw squad quality from inflating every actor in a strong team. The
- * bounds keep role responsibility meaningful: skill distinguishes two players
- * asked to do the same job, but cannot turn a centre-back into the default
- * finisher merely because his attributes are unusual.
+ * Creator frequency comes from formation-task responsibility; shooter
+ * frequency comes from the externally calibrated role propensity. Multiplying
+ * either by current task quality distributes it among the named players without
+ * a response coefficient. Absolute scale is irrelevant to a weighted draw.
  */
-function taskWeightedCandidates(
+function qualityWeightedCandidates(
   team: MatchTeamContext,
-  weightForRole: (roleKey: string) => number,
+  responsibilityForSlot: (slot: LineupSlot) => number,
   taskQualityFor: (profile: MatchTeamContext["incidentProfiles"][number]) => number,
-  policy: TaskWeightPolicy,
 ): readonly WeightedChanceActorCandidate[] {
-  const roleCandidates = roleWeightedCandidates(team.lineup, weightForRole);
-  const weightedQualityTotal = roleCandidates.reduce((total, candidate) =>
-    total + candidate.weight * taskQualityFor(incidentProfileFor(team, candidate.slot.playerId)), 0);
-  const roleWeightTotal = roleCandidates.reduce((total, candidate) => total + candidate.weight, 0);
-  const poolMean = roleWeightTotal === 0 ? 0 : weightedQualityTotal / roleWeightTotal;
+  const candidates: WeightedChanceActorCandidate[] = [];
 
-  return roleCandidates.map((candidate) => {
-    const quality = taskQualityFor(incidentProfileFor(team, candidate.slot.playerId));
-    const multiplier = clamp(
-      1 + (quality - poolMean) / policy.divisor,
-      policy.minimumMultiplier,
-      policy.maximumMultiplier,
-    );
-    return { slot: candidate.slot, weight: candidate.weight * multiplier };
-  });
+  for (const slot of team.lineup) {
+    const responsibility = responsibilityForSlot(slot);
+    if (responsibility <= 0) continue;
+    const quality = taskQualityFor(incidentProfileFor(team, slot.playerId));
+    candidates.push({ slot, weight: responsibility * quality });
+  }
+
+  return candidates;
+}
+
+/** Reads the assigned role's externally calibrated non-set-piece shot rate. */
+function shooterPropensityForSlot(
+  slot: LineupSlot,
+  calibration: MatchTacticsCalibrationConfig,
+): number {
+  return calibration.chanceActorSelection.shooterPropensityBasisPointsByRole[slot.canonicalRole];
+}
+
+/** Reads one role's existing allocation to the task selected by the route. */
+function roleTaskResponsibility(
+  slot: LineupSlot,
+  task: TacticalShapeTask,
+  calibration: MatchTacticsCalibrationConfig,
+): number {
+  return calibration.tacticalShape.taskAllocationBasisPointsByRole[slot.canonicalRole][task] / 10_000;
+}
+
+/** Applies the existing flank channel policy only to lateral creation work. */
+function creatorResponsibilityForSlot(
+  slot: LineupSlot,
+  route: TacticalRoute,
+  calibration: MatchTacticsCalibrationConfig,
+): number {
+  const responsibility = roleTaskResponsibility(slot, CREATOR_TASK_BY_ROUTE[route], calibration);
+  if (route !== "left" && route !== "right") return responsibility;
+
+  return responsibility * lateralChannelShares(slot.side, calibration.tacticalShape.channelPolicy)[route];
 }
 
 /**
@@ -346,28 +313,25 @@ function pickWeightedPlayer(
 /** Task quality of the player working the chance, on the canonical 0..20 scale. */
 function creatorTaskQuality(
   profile: MatchTeamContext["incidentProfiles"][number],
-  chanceType: ShotChanceType,
+  route: TacticalRoute,
 ): number {
-  switch (chanceType) {
-    case "open_play":
+  switch (route) {
+    case "central":
+    case "direct":
       return weightedMean([
         [profile.passing, 3], [profile.vision, 3], [profile.technique, 2],
         [profile.dribbling, 1], [profile.anticipation, 1],
       ]);
-    case "counter":
+    case "transition":
       return weightedMean([
         [profile.passing, 2], [profile.vision, 2], [profile.technique, 1],
         [profile.pace, 2], [profile.dribbling, 2], [profile.anticipation, 1],
       ]);
-    case "cross":
+    case "left":
+    case "right":
       return weightedMean([
         [profile.crossing, 4], [profile.vision, 2], [profile.technique, 2],
         [profile.passing, 1],
-      ]);
-    case "dead_ball":
-      return weightedMean([
-        [profile.freeKicks, 3], [profile.crossing, 2], [profile.passing, 2],
-        [profile.vision, 2], [profile.technique, 1],
       ]);
   }
 }
@@ -375,28 +339,25 @@ function creatorTaskQuality(
 /** Task quality of the player finishing the chance, on the canonical 0..20 scale. */
 function shooterTaskQuality(
   profile: MatchTeamContext["incidentProfiles"][number],
-  chanceType: ShotChanceType,
+  route: TacticalRoute,
 ): number {
-  switch (chanceType) {
-    case "open_play":
+  switch (route) {
+    case "central":
+    case "direct":
       return weightedMean([
         [profile.finishing, 3], [profile.composure, 2], [profile.technique, 1],
         [profile.anticipation, 1],
       ]);
-    case "counter":
+    case "transition":
       return weightedMean([
         [profile.finishing, 3], [profile.composure, 2], [profile.pace, 2],
         [profile.anticipation, 1], [profile.technique, 1],
       ]);
-    case "cross":
+    case "left":
+    case "right":
       return weightedMean([
         [profile.heading, 3], [profile.finishing, 2], [profile.anticipation, 1],
         [profile.composure, 1], [profile.strength, 1],
-      ]);
-    case "dead_ball":
-      return weightedMean([
-        [profile.freeKicks, 3], [profile.penalties, 2], [profile.technique, 2],
-        [profile.composure, 2], [profile.finishing, 1],
       ]);
   }
 }
@@ -406,27 +367,3 @@ function weightedMean(entries: readonly (readonly [value: number, weight: number
   const totalWeight = entries.reduce((total, [, weight]) => total + weight, 0);
   return entries.reduce((total, [value, weight]) => total + value * weight, 0) / totalWeight;
 }
-
-function clamp(value: number, minimum: number, maximum: number): number {
-  return Math.min(maximum, Math.max(minimum, value));
-}
-
-interface TaskWeightPolicy {
-  readonly divisor: number;
-  readonly minimumMultiplier: number;
-  readonly maximumMultiplier: number;
-}
-
-/** Creators own the chance without a second conversion-quality path. */
-const CREATOR_TASK_WEIGHT_POLICY = {
-  divisor: 10,
-  minimumMultiplier: 0.625,
-  maximumMultiplier: 1.375,
-} as const satisfies TaskWeightPolicy;
-
-/** Shooters already matter again when their named execution edge is resolved. */
-const SHOOTER_TASK_WEIGHT_POLICY = {
-  divisor: 70,
-  minimumMultiplier: 0.95,
-  maximumMultiplier: 1.05,
-} as const satisfies TaskWeightPolicy;

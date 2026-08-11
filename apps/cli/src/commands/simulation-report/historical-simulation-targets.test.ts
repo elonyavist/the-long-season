@@ -4,6 +4,8 @@ import { test } from "vitest";
 import {
   HISTORICAL_DIVISION_TABLE_TARGETS,
   HISTORICAL_FIRST_DIVISION_PLAYER_TARGETS,
+  HISTORICAL_FIRST_DIVISION_UPSET_TARGETS,
+  HISTORICAL_UPSET_RANK_GAP_KEYS,
   INTEGRATED_LEADER_AGE_DRIFT_TARGET,
 } from "./historical-simulation-targets.ts";
 
@@ -11,6 +13,10 @@ test("every frozen historical target is a reachable ordered interval", () => {
   const bands = [
     ...Object.values(HISTORICAL_DIVISION_TABLE_TARGETS).flatMap(Object.values),
     ...Object.values(HISTORICAL_FIRST_DIVISION_PLAYER_TARGETS),
+    ...Object.values(HISTORICAL_FIRST_DIVISION_UPSET_TARGETS.rankGap)
+      .flatMap(({ winShare, nonLossShare }) => [winShare, nonLossShare]),
+    HISTORICAL_FIRST_DIVISION_UPSET_TARGETS.firstVersusLast.winShare,
+    HISTORICAL_FIRST_DIVISION_UPSET_TARGETS.firstVersusLast.nonLossShare,
     INTEGRATED_LEADER_AGE_DRIFT_TARGET,
   ];
 
@@ -18,6 +24,22 @@ test("every frozen historical target is a reachable ordered interval", () => {
   assert.equal(HISTORICAL_DIVISION_TABLE_TARGETS[1].championPoints.min >
     HISTORICAL_DIVISION_TABLE_TARGETS[2].championPoints.min, true);
   assert.notDeepEqual(HISTORICAL_DIVISION_TABLE_TARGETS[2], HISTORICAL_DIVISION_TABLE_TARGETS[3]);
+});
+
+test("the upset register is total and keeps exact first-versus-last powered", () => {
+  assert.deepEqual(
+    Object.keys(HISTORICAL_FIRST_DIVISION_UPSET_TARGETS.rankGap),
+    HISTORICAL_UPSET_RANK_GAP_KEYS,
+  );
+  assert.equal(
+    HISTORICAL_FIRST_DIVISION_UPSET_TARGETS.rankGap["7_to_9"].winShare.min
+      > HISTORICAL_FIRST_DIVISION_UPSET_TARGETS.rankGap["15_plus"].winShare.min,
+    true,
+  );
+  assert.equal(
+    HISTORICAL_FIRST_DIVISION_UPSET_TARGETS.firstVersusLast.minimumObservationCount,
+    50,
+  );
 });
 
 test("the season-ten leader gate is one band with the effective 0.50 threshold", () => {

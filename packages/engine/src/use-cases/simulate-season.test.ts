@@ -174,6 +174,12 @@ test("stable season seed produces a compact golden sentinel", () => {
   // five-goal tie places therefore belong to different players. This is the
   // narrow result change expected when routes are contested before the minute
   // loop instead of control reconstructing a second tactical model.
+  //
+  // Phase 81A Step 06B22B then changes only which fielded player takes a shot.
+  // The empirical role propensity leaves every team and fixture fact below
+  // byte-identical, including total chances and goals, while distributing the
+  // old 10/8/8 top-three scoring concentration to 6/5/5. Re-recording any fact
+  // outside `topScorers` here would be a regression, not part of that change.
   assert.deepEqual(
     {
       rounds: result.rounds.length,
@@ -256,19 +262,19 @@ test("stable season seed produces a compact golden sentinel", () => {
       },
       topScorers: [
         {
-          playerId: playerId("player:test-03-02"),
-          clubId: clubId("club:test-03"),
-          goals: 8,
+          playerId: playerId("player:test-01-02"),
+          clubId: clubId("club:test-01"),
+          goals: 6,
         },
         {
-          playerId: playerId("player:test-02-04"),
+          playerId: playerId("player:test-02-02"),
           clubId: clubId("club:test-02"),
-          goals: 6,
+          goals: 5,
         },
         {
-          playerId: playerId("player:test-18-02"),
-          clubId: clubId("club:test-18"),
-          goals: 6,
+          playerId: playerId("player:test-03-04"),
+          clubId: clubId("club:test-03"),
+          goals: 5,
         },
       ],
     },
@@ -395,6 +401,24 @@ test("season simulation exposes canonical participation from each exact match co
     players: team.players,
     roleWeights: team.roleWeights,
   }));
+
+  for (const round of result.rounds) {
+    const participations = round.fixtureIds.map((fixtureId) =>
+      result.fixtureParticipation.find((row) => row.fixtureId === fixtureId));
+    assert.equal(participations.every((row) => row !== undefined), true);
+    const tableRows = participations.flatMap((row) => row === undefined
+      ? []
+      : [row.preMatchTable.home, row.preMatchTable.away]);
+    assert.deepEqual(
+      tableRows.map(({ position }) => position).sort((first, second) => first - second),
+      Array.from({ length: 18 }, (_unused, index) => index + 1),
+    );
+    assert.equal(
+      tableRows.every(({ played }) => played === round.roundNumber - 1),
+      true,
+    );
+  }
+  assert.equal(result.table.every(({ played }) => played === 34), true);
 });
 
 test("empty setup overrides preserve default output", () => {

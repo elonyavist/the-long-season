@@ -26,14 +26,28 @@ import {
 import {
   HISTORICAL_DIVISION_TABLE_TARGETS,
   HISTORICAL_FIRST_DIVISION_PLAYER_TARGETS,
+  HISTORICAL_FIRST_DIVISION_UPSET_TARGETS,
+  HISTORICAL_UPSET_RANK_GAP_KEYS,
+  type HistoricalTargetBand,
+  type HistoricalUpsetRankGapKey,
 } from "./historical-simulation-targets.ts";
 
 export const FIRST_DIVISION_COMPETITION_ID = "competition:ita-1";
 type PlayerRole = NonNullable<CliPlayer["primaryRole"]>;
 const PLAYER_ROLES: readonly PlayerRole[] = [...new Set(GENERATED_SQUAD_IDENTITY_KEYS.flatMap((key) =>
   GENERATED_SQUAD_IDENTITIES[key].positions.map(primaryRoleForPosition)))].sort();
-const GAP_BUCKETS = ["under_0_25", "0_25_to_0_5", "0_5_to_1", "1_plus"] as const;
+const GAP_BUCKETS = [
+  "under_0_25",
+  "0_25_to_0_5",
+  "0_5_to_1",
+  "1_to_1_5",
+  "1_5_to_2",
+  "2_to_3",
+  "3_plus",
+] as const;
 type StrengthGapBucket = typeof GAP_BUCKETS[number];
+const LARGE_STRENGTH_GAP_BUCKETS = ["1_to_1_5", "1_5_to_2", "2_to_3", "3_plus"] as const satisfies
+  readonly StrengthGapBucket[];
 
 export type TableHierarchyOwner =
   | "population_strength"
@@ -80,6 +94,21 @@ export interface OwnerAttributionGapBucketFact {
   readonly draws: number;
 }
 
+/** Exact underdog outcomes for one pre-round rank-distance partition. */
+export interface OwnerAttributionRankGapBucketFact {
+  readonly bucket: HistoricalUpsetRankGapKey;
+  readonly fixtureCount: number;
+  readonly underdogWins: number;
+  readonly draws: number;
+}
+
+/** Sparse exact slice where the pre-round leader faced the last-placed club. */
+export interface OwnerAttributionFirstVersusLastFact {
+  readonly fixtureCount: number;
+  readonly underdogWins: number;
+  readonly draws: number;
+}
+
 export interface OwnerAttributionTableSeasonFact {
   readonly competitionId: string;
   readonly seasonNumber: number;
@@ -101,6 +130,8 @@ export interface OwnerAttributionTableSeasonFact {
   readonly strengthPointsRankCorrelation: number | "not_observed";
   readonly tiedStrengthFixtureCount: number;
   readonly gapBuckets: readonly OwnerAttributionGapBucketFact[];
+  readonly rankGapBuckets: readonly OwnerAttributionRankGapBucketFact[];
+  readonly firstVersusLast: OwnerAttributionFirstVersusLastFact;
 }
 
 export interface OwnerAttributionPlayerSeasonFact {
@@ -180,6 +211,48 @@ export interface OwnerAttributionWorldFacts {
   readonly clubIdentitySeasons: readonly OwnerAttributionClubIdentitySeasonFact[];
   readonly annualRolePlanReconciliationFailureCount: number;
   readonly annualRolePlanPositiveRoleCounts: readonly number[];
+  readonly reconciliationFailureCount: number;
+}
+
+/** One historically calibrated rank-distance lane in the L6.2 checkpoint. */
+export interface HistoricalUpsetRankGapEvaluation {
+  readonly bucket: HistoricalUpsetRankGapKey;
+  readonly observedSeasonCount: number;
+  readonly fixtureCount: number;
+  readonly underdogWinShareMean: number | "not_observed";
+  readonly underdogNonLossShareMean: number | "not_observed";
+  readonly pooledUnderdogWinShare: number | "not_observed";
+  readonly pooledUnderdogNonLossShare: number | "not_observed";
+  readonly winTarget: HistoricalTargetBand;
+  readonly nonLossTarget: HistoricalTargetBand;
+  readonly held: boolean;
+}
+
+/** Fine game-strength lane retained as diagnostic, without historical claims. */
+export interface StrengthGapOutcomeEvaluation {
+  readonly bucket: StrengthGapBucket;
+  readonly fixtureCount: number;
+  readonly favoriteWinShare: number | "not_observed";
+  readonly drawShare: number | "not_observed";
+  readonly underdogWinShare: number | "not_observed";
+}
+
+/** Complete historical-upset decision composed beside the hardened register. */
+export interface HistoricalUpsetCheckpointDecision {
+  readonly decision: "GO" | "REFINE";
+  readonly failedGateKeys: readonly string[];
+  readonly firstDivisionSeasonCount: number;
+  readonly rankGaps: readonly HistoricalUpsetRankGapEvaluation[];
+  readonly firstVersusLast: {
+    readonly fixtureCount: number;
+    readonly underdogWinShare: number | "not_observed";
+    readonly underdogNonLossShare: number | "not_observed";
+    readonly minimumObservationCount: number;
+    readonly winTarget: HistoricalTargetBand;
+    readonly nonLossTarget: HistoricalTargetBand;
+    readonly held: boolean;
+  };
+  readonly strengthGaps: readonly StrengthGapOutcomeEvaluation[];
   readonly reconciliationFailureCount: number;
 }
 
@@ -445,8 +518,9 @@ export function evaluateOwnerAttributionCheckpoint(input: {
 }): OwnerAttributionDecision {
   const firstDivisionTables = input.worlds.flatMap(({ tableSeasons }) => tableSeasons)
     .filter(({ competitionId }) => competitionId === FIRST_DIVISION_COMPETITION_ID);
-  const firstDivisionPlayers = input.worlds.flatMap(({ playerSeasons }) => playerSeasons)
-    .filter(({ competitionId }) => competitionId === FIRST_DIVISION_COMPETITION_ID);
+  const firstDivisionPlayersByWorld = input.worlds.map(({ playerSeasons }) =>
+    playerSeasons.filter(({ competitionId }) => competitionId === FIRST_DIVISION_COMPETITION_ID));
+  const firstDivisionPlayers = firstDivisionPlayersByWorld.flat();
   const firstDivisionSelectionLoad = input.worlds.flatMap(({ selectionLoadSeasons }) => selectionLoadSeasons)
     .filter(({ competitionId }) => competitionId === FIRST_DIVISION_COMPETITION_ID);
   const firstDivisionPlayerUseByWorld = input.worlds.map(({ playerUseSeasons }) =>
@@ -459,7 +533,7 @@ export function evaluateOwnerAttributionCheckpoint(input: {
   );
   const firstDivisionIdentity = input.worlds.flatMap(({ clubIdentitySeasons }) => clubIdentitySeasons)
     .filter(({ competitionId }) => competitionId === FIRST_DIVISION_COMPETITION_ID);
-  const largestGap = sumGapBuckets(firstDivisionTables, "1_plus");
+  const largestGap = sumGapBuckets(firstDivisionTables, LARGE_STRENGTH_GAP_BUCKETS);
   const controlPointsSpreadMean = observedMean(firstDivisionTables.map(({ pointsSpread }) => pointsSpread));
   const controlPpgStandardDeviationMean = observedMean(
     firstDivisionTables.map(({ ppgStandardDeviation }) => ppgStandardDeviation),
@@ -522,7 +596,7 @@ export function evaluateOwnerAttributionCheckpoint(input: {
     ),
     shooterAbilityNominationCorrelation: withinRoleAbilityCorrelation(firstDivisionPlayers, "shots"),
     creatorAbilityNominationCorrelation: withinRoleAbilityCorrelation(firstDivisionPlayers, "creatorNominations"),
-    ...leaderProductionFacts(firstDivisionPlayers),
+    ...leaderProductionFacts(firstDivisionPlayersByWorld),
     ...generation,
     appearanceShare: playerUseEvaluated
       ? appearanceShare(firstDivisionPlayerUse)
@@ -579,6 +653,107 @@ export function evaluateOwnerAttributionCheckpoint(input: {
     renewal: generationalRenewal,
     reconciliationFailureCount,
     worlds: input.worlds,
+  };
+}
+
+/**
+ * Evaluates real-football upset rates from canonical pre-round table facts.
+ *
+ * Rank bands are historical gates. Strength bands are deliberately diagnostic:
+ * their unit is the game's internal 0-20 scale and has no historical analogue.
+ */
+export function evaluateHistoricalUpsetCheckpoint(
+  worlds: readonly OwnerAttributionWorldFacts[],
+): HistoricalUpsetCheckpointDecision {
+  const tables = worlds.flatMap(({ tableSeasons }) => tableSeasons)
+    .filter(({ competitionId }) => competitionId === FIRST_DIVISION_COMPETITION_ID);
+  const rankGaps = HISTORICAL_UPSET_RANK_GAP_KEYS.map((bucket): HistoricalUpsetRankGapEvaluation => {
+    const rows = tables.map((table) => requiredRankGapBucket(table, bucket));
+    const observed = rows.filter(({ fixtureCount }) => fixtureCount > 0);
+    const winShares = observed.map(({ underdogWins, fixtureCount }) => underdogWins / fixtureCount);
+    const nonLossShares = observed.map(({ underdogWins, draws, fixtureCount }) =>
+      (underdogWins + draws) / fixtureCount);
+    const fixtureCount = rows.reduce((sum, row) => sum + row.fixtureCount, 0);
+    const underdogWins = rows.reduce((sum, row) => sum + row.underdogWins, 0);
+    const draws = rows.reduce((sum, row) => sum + row.draws, 0);
+    const targets = HISTORICAL_FIRST_DIVISION_UPSET_TARGETS.rankGap[bucket];
+    const underdogWinShareMean = observedMean(winShares);
+    const underdogNonLossShareMean = observedMean(nonLossShares);
+    return {
+      bucket,
+      observedSeasonCount: observed.length,
+      fixtureCount,
+      underdogWinShareMean,
+      underdogNonLossShareMean,
+      pooledUnderdogWinShare: ratio(underdogWins, fixtureCount),
+      pooledUnderdogNonLossShare: ratio(underdogWins + draws, fixtureCount),
+      winTarget: targets.winShare,
+      nonLossTarget: targets.nonLossShare,
+      held: observed.length === tables.length
+        && insideHistoricalBand(underdogWinShareMean, targets.winShare)
+        && insideHistoricalBand(underdogNonLossShareMean, targets.nonLossShare),
+    };
+  });
+  const firstVersusLastCount = tables.reduce(
+    (sum, { firstVersusLast }) => sum + firstVersusLast.fixtureCount,
+    0,
+  );
+  const firstVersusLastWins = tables.reduce(
+    (sum, { firstVersusLast }) => sum + firstVersusLast.underdogWins,
+    0,
+  );
+  const firstVersusLastDraws = tables.reduce(
+    (sum, { firstVersusLast }) => sum + firstVersusLast.draws,
+    0,
+  );
+  const exactTargets = HISTORICAL_FIRST_DIVISION_UPSET_TARGETS.firstVersusLast;
+  const exactWinShare = ratio(firstVersusLastWins, firstVersusLastCount);
+  const exactNonLossShare = ratio(
+    firstVersusLastWins + firstVersusLastDraws,
+    firstVersusLastCount,
+  );
+  const firstVersusLast = {
+    fixtureCount: firstVersusLastCount,
+    underdogWinShare: exactWinShare,
+    underdogNonLossShare: exactNonLossShare,
+    minimumObservationCount: exactTargets.minimumObservationCount,
+    winTarget: exactTargets.winShare,
+    nonLossTarget: exactTargets.nonLossShare,
+    held: firstVersusLastCount >= exactTargets.minimumObservationCount
+      && insideHistoricalBand(exactWinShare, exactTargets.winShare)
+      && insideHistoricalBand(exactNonLossShare, exactTargets.nonLossShare),
+  } as const;
+  const strengthGaps = GAP_BUCKETS.map((bucket): StrengthGapOutcomeEvaluation => {
+    const aggregate = sumGapBuckets(tables, [bucket]);
+    return {
+      bucket,
+      fixtureCount: aggregate.fixtureCount,
+      favoriteWinShare: ratio(aggregate.favoriteWins, aggregate.fixtureCount),
+      drawShare: ratio(aggregate.draws, aggregate.fixtureCount),
+      underdogWinShare: ratio(
+        aggregate.fixtureCount - aggregate.favoriteWins - aggregate.draws,
+        aggregate.fixtureCount,
+      ),
+    };
+  });
+  const reconciliationFailureCount = worlds.reduce(
+    (sum, world) => sum + world.reconciliationFailureCount,
+    0,
+  );
+  const failedGateKeys = [
+    ...rankGaps.filter(({ held }) => !held).map(({ bucket }) => `rank_gap:${bucket}`),
+    ...(!firstVersusLast.held ? ["first_versus_last"] : []),
+    ...(tables.length === 0 ? ["first_division_population"] : []),
+    ...(reconciliationFailureCount > 0 ? ["reconciliation"] : []),
+  ];
+  return {
+    decision: failedGateKeys.length === 0 ? "GO" : "REFINE",
+    failedGateKeys,
+    firstDivisionSeasonCount: tables.length,
+    rankGaps,
+    firstVersusLast,
+    strengthGaps,
+    reconciliationFailureCount,
   };
 }
 
@@ -719,6 +894,16 @@ function tableSeasonFact(input: {
   const buckets = new Map<StrengthGapBucket, { fixtureCount: number; favoriteWins: number; favoritePoints: number; draws: number }>(
     GAP_BUCKETS.map((bucket) => [bucket, { fixtureCount: 0, favoriteWins: 0, favoritePoints: 0, draws: 0 }]),
   );
+  const rankBuckets = new Map<HistoricalUpsetRankGapKey, {
+    fixtureCount: number;
+    underdogWins: number;
+    draws: number;
+  }>(HISTORICAL_UPSET_RANK_GAP_KEYS.map((bucket) => [bucket, {
+    fixtureCount: 0,
+    underdogWins: 0,
+    draws: 0,
+  }]));
+  const firstVersusLast = { fixtureCount: 0, underdogWins: 0, draws: 0 };
   let tiedStrengthFixtureCount = 0;
   for (const participation of input.result.fixtureParticipation) {
     const fixture = fixtures.get(participation.fixtureId);
@@ -731,6 +916,25 @@ function tableSeasonFact(input: {
     }
     pushMap(strengthByClub, String(fixture.homeClubId), homeStrength);
     pushMap(strengthByClub, String(fixture.awayClubId), awayStrength);
+    const preMatch = participation.preMatchTable;
+    if (preMatch.home.played >= 5 && preMatch.away.played >= 5
+      && preMatch.home.position !== preMatch.away.position) {
+      const underdogHome = preMatch.home.position > preMatch.away.position;
+      const underdogGoals = underdogHome ? result.homeGoals : result.awayGoals;
+      const higherRankedGoals = underdogHome ? result.awayGoals : result.homeGoals;
+      const rankDistance = Math.abs(preMatch.home.position - preMatch.away.position);
+      const rankBucket = rankBuckets.get(rankGapBucket(rankDistance));
+      if (rankBucket === undefined) throw new Error(`L6.2 rank bucket is missing: ${rankDistance}`);
+      rankBucket.fixtureCount += 1;
+      rankBucket.underdogWins += underdogGoals > higherRankedGoals ? 1 : 0;
+      rankBucket.draws += underdogGoals === higherRankedGoals ? 1 : 0;
+      if (Math.min(preMatch.home.position, preMatch.away.position) === 1
+        && Math.max(preMatch.home.position, preMatch.away.position) === input.result.table.length) {
+        firstVersusLast.fixtureCount += 1;
+        firstVersusLast.underdogWins += underdogGoals > higherRankedGoals ? 1 : 0;
+        firstVersusLast.draws += underdogGoals === higherRankedGoals ? 1 : 0;
+      }
+    }
     const gap = Math.abs(homeStrength - awayStrength);
     if (gap === 0) {
       tiedStrengthFixtureCount += 1;
@@ -771,6 +975,11 @@ function tableSeasonFact(input: {
     strengthPointsRankCorrelation: spearman(clubStrengths, points),
     tiedStrengthFixtureCount,
     gapBuckets: GAP_BUCKETS.map((bucket) => ({ bucket, ...buckets.get(bucket)! })),
+    rankGapBuckets: HISTORICAL_UPSET_RANK_GAP_KEYS.map((bucket) => ({
+      bucket,
+      ...rankBuckets.get(bucket)!,
+    })),
+    firstVersusLast,
   };
 }
 
@@ -1313,7 +1522,7 @@ export function topTenPlayerSeasonFacts(
       .slice(0, 10));
 }
 
-function leaderProductionFacts(rows: readonly OwnerAttributionPlayerSeasonFact[]): {
+function leaderProductionFacts(worlds: readonly (readonly OwnerAttributionPlayerSeasonFact[])[]): {
   readonly topScorerMean: number | "not_observed";
   readonly topAssistMean: number | "not_observed";
   readonly topTenScorerMean: number | "not_observed";
@@ -1324,28 +1533,30 @@ function leaderProductionFacts(rows: readonly OwnerAttributionPlayerSeasonFact[]
   readonly age33PlusAssistShare: number | "not_observed";
   readonly exceptional33PlusLeaderObservationCount: number;
 } {
-  const scorerGroups = groupBy(
-    topTenPlayerSeasonFacts(rows, "goals"),
-    (row) => `${row.competitionId}|${row.seasonNumber}`,
-  );
-  const assistGroups = groupBy(
-    topTenPlayerSeasonFacts(rows, "assists"),
-    (row) => `${row.competitionId}|${row.seasonNumber}`,
-  );
   const scorerTop: number[] = [];
   const assistTop: number[] = [];
   const scorerTen: number[] = [];
   const assistTen: number[] = [];
   const scorerAges: number[] = [];
   const assistAges: number[] = [];
-  for (const [groupKey, scorers] of scorerGroups.entries()) {
-    const assists = assistGroups.get(groupKey) ?? [];
-    if (scorers[0] !== undefined) scorerTop.push(scorers[0].goals);
-    if (assists[0] !== undefined) assistTop.push(assists[0].assists);
-    scorerTen.push(mean(scorers.map(({ goals }) => goals)));
-    assistTen.push(mean(assists.map(({ assists: value }) => value)));
-    scorerAges.push(...scorers.map(({ age }) => age));
-    assistAges.push(...assists.map(({ age }) => age));
+  for (const rows of worlds) {
+    const scorerGroups = groupBy(
+      topTenPlayerSeasonFacts(rows, "goals"),
+      (row) => `${row.competitionId}|${row.seasonNumber}`,
+    );
+    const assistGroups = groupBy(
+      topTenPlayerSeasonFacts(rows, "assists"),
+      (row) => `${row.competitionId}|${row.seasonNumber}`,
+    );
+    for (const [groupKey, scorers] of scorerGroups.entries()) {
+      const assists = assistGroups.get(groupKey) ?? [];
+      if (scorers[0] !== undefined) scorerTop.push(scorers[0].goals);
+      if (assists[0] !== undefined) assistTop.push(assists[0].assists);
+      scorerTen.push(mean(scorers.map(({ goals }) => goals)));
+      assistTen.push(mean(assists.map(({ assists: value }) => value)));
+      scorerAges.push(...scorers.map(({ age }) => age));
+      assistAges.push(...assists.map(({ age }) => age));
+    }
   }
   return {
     topScorerMean: observedMean(scorerTop),
@@ -1395,16 +1606,34 @@ function withinRoleAbilityCorrelation(
 
 function sumGapBuckets(
   rows: readonly OwnerAttributionTableSeasonFact[],
-  bucket: StrengthGapBucket,
-): OwnerAttributionGapBucketFact {
-  const matches = rows.flatMap(({ gapBuckets }) => gapBuckets).filter((row) => row.bucket === bucket);
+  buckets: readonly StrengthGapBucket[],
+): Omit<OwnerAttributionGapBucketFact, "bucket"> {
+  const selected = new Set<StrengthGapBucket>(buckets);
+  const matches = rows.flatMap(({ gapBuckets }) => gapBuckets).filter((row) => selected.has(row.bucket));
   return {
-    bucket,
     fixtureCount: matches.reduce((sum, row) => sum + row.fixtureCount, 0),
     favoriteWins: matches.reduce((sum, row) => sum + row.favoriteWins, 0),
     favoritePoints: matches.reduce((sum, row) => sum + row.favoritePoints, 0),
     draws: matches.reduce((sum, row) => sum + row.draws, 0),
   };
+}
+
+function requiredRankGapBucket(
+  table: OwnerAttributionTableSeasonFact,
+  bucket: HistoricalUpsetRankGapKey,
+): OwnerAttributionRankGapBucketFact {
+  const row = table.rankGapBuckets.find((candidate) => candidate.bucket === bucket);
+  if (row === undefined) {
+    throw new Error(`L6.2 table fact omitted rank bucket: ${bucket}`);
+  }
+  return row;
+}
+
+function insideHistoricalBand(
+  value: number | "not_observed",
+  band: HistoricalTargetBand,
+): boolean {
+  return value !== "not_observed" && value >= band.min && value <= band.max;
 }
 
 function roleVector(roles: readonly (PlayerRole | undefined)[]): Readonly<Record<PlayerRole, number>> {
@@ -1439,7 +1668,18 @@ function gapBucket(gap: number): StrengthGapBucket {
   if (gap < 0.25) return "under_0_25";
   if (gap < 0.5) return "0_25_to_0_5";
   if (gap < 1) return "0_5_to_1";
-  return "1_plus";
+  if (gap < 1.5) return "1_to_1_5";
+  if (gap < 2) return "1_5_to_2";
+  if (gap < 3) return "2_to_3";
+  return "3_plus";
+}
+
+function rankGapBucket(gap: number): HistoricalUpsetRankGapKey {
+  if (gap <= 3) return "1_to_3";
+  if (gap <= 6) return "4_to_6";
+  if (gap <= 9) return "7_to_9";
+  if (gap <= 14) return "10_to_14";
+  return "15_plus";
 }
 
 function standardDeviation(values: readonly number[]): number {

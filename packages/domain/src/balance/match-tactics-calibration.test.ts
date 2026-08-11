@@ -23,6 +23,7 @@ import {
   TACTIC_KNOBS,
   tacticalRoleAllocationTotal,
   validateMatchTacticsCalibration,
+  type ChanceActorSelectionCalibrationConfig,
   type MatchTacticsCalibrationConfig,
   type MatchTacticsCalibrationErrorCode,
   type TacticalMatchupCalibrationConfig,
@@ -229,6 +230,47 @@ test("the asset version and classification are part of the contract", () => {
   assertRejects({ ...validCalibration(), schemaVersion: 99 }, "invalid_schema_version");
 });
 
+test("shooter propensity is total, integral, and keeps every outfield role reachable", () => {
+  const missing = { ...shooterPropensities() } as Partial<Record<CanonicalPlayerRole, number>>;
+  delete missing.striker;
+  assertRejects(
+    withActorSelection({
+      shooterPropensityBasisPointsByRole: missing as Readonly<Record<CanonicalPlayerRole, number>>,
+    }),
+    "incomplete_shooter_propensity",
+  );
+  assertRejects(
+    withActorSelection({
+      shooterPropensityBasisPointsByRole: { ...shooterPropensities(), striker: 1.5 },
+    }),
+    "invalid_shooter_propensity",
+  );
+  assertRejects(
+    withActorSelection({
+      shooterPropensityBasisPointsByRole: { ...shooterPropensities(), striker: Number.MAX_SAFE_INTEGER + 1 },
+    }),
+    "invalid_shooter_propensity",
+  );
+  assertRejects(
+    withActorSelection({
+      shooterPropensityBasisPointsByRole: { ...shooterPropensities(), striker: -1 },
+    }),
+    "invalid_shooter_propensity",
+  );
+  assertRejects(
+    withActorSelection({
+      shooterPropensityBasisPointsByRole: { ...shooterPropensities(), goalkeeper: 1 },
+    }),
+    "goalkeeper_shooter_propensity",
+  );
+  assertRejects(
+    withActorSelection({
+      shooterPropensityBasisPointsByRole: { ...shooterPropensities(), center_back: 0 },
+    }),
+    "unreachable_outfield_shooter",
+  );
+});
+
 test("every capacity has a mirror, and mirroring twice is the identity", () => {
   for (const capacity of TACTICAL_SHAPE_CAPACITIES) {
     const mirrored = TACTICAL_SHAPE_CAPACITY_MIRROR[capacity];
@@ -364,15 +406,34 @@ function withShape(overrides: Partial<TacticalShapeCalibrationConfig>): MatchTac
   return { ...validCalibration(), tacticalShape: { ...validShape(), ...overrides } };
 }
 
+function withActorSelection(
+  overrides: Partial<ChanceActorSelectionCalibrationConfig>,
+): MatchTacticsCalibrationConfig {
+  const base = validCalibration();
+  return {
+    ...base,
+    chanceActorSelection: { ...base.chanceActorSelection, ...overrides },
+  };
+}
+
 function validCalibration(): MatchTacticsCalibrationConfig {
   return {
     schemaVersion: MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION,
     version: "match-tactics-test",
     classification: "explicit_game_design_target",
+    chanceActorSelection: {
+      shooterPropensityBasisPointsByRole: shooterPropensities(),
+    },
     tacticalShape: validShape(),
     tacticalMatchup: { chainBottleneckWeightBasisPoints: 6_500, pressingContestWeightBasisPoints: 5_000 },
     tacticalSemantics: validSemantics(),
   };
+}
+
+function shooterPropensities(): Readonly<Record<CanonicalPlayerRole, number>> {
+  return Object.fromEntries(
+    CANONICAL_PLAYER_ROLES.map((role) => [role, role === "goalkeeper" ? 0 : 10_000]),
+  ) as Readonly<Record<CanonicalPlayerRole, number>>;
 }
 
 function withSemantics(

@@ -62,6 +62,7 @@ import {
 } from "./generational-succession.ts";
 import {
   OwnerAttributionObserver,
+  evaluateHistoricalUpsetCheckpoint,
   evaluateSquadUseAttribution,
   evaluateOwnerAttributionCheckpoint,
   evaluatePlayerRenewalLeadersCheckpoint,
@@ -115,6 +116,7 @@ export type CareerCheckpointKind =
   | "annual_role_continuity_l4_5"
   | "integrated_player_world_l5"
   | "integrated_player_world_l5_4"
+  | "integrated_player_world_l6_2"
   | "owner_attribution_l5_1"
   | "standings_hierarchy_l5_2"
   | "player_renewal_leaders_l5_3"
@@ -146,6 +148,7 @@ const CHECKPOINT_OBSERVES_GENERATIONAL_SUCCESSION = {
   annual_role_continuity_l4_5: true,
   integrated_player_world_l5: true,
   integrated_player_world_l5_4: true,
+  integrated_player_world_l6_2: true,
   owner_attribution_l5_1: true,
   standings_hierarchy_l5_2: false,
   player_renewal_leaders_l5_3: true,
@@ -1088,6 +1091,7 @@ export async function createCareerSectionsFacts(input: {
             || input.leagueDiversityProfile?.checkpointKind === "player_renewal_leaders_l5_3"
             || input.leagueDiversityProfile?.checkpointKind === "renewal_architecture_l5_3c"
             || input.leagueDiversityProfile?.checkpointKind === "integrated_player_world_l5_4"
+            || input.leagueDiversityProfile?.checkpointKind === "integrated_player_world_l6_2"
             || input.leagueDiversityProfile?.checkpointKind === "renewal_ablation_l6_1"
             || input.leagueDiversityProfile?.checkpointKind === "renewal_refinement_l6_1a"
             || input.leagueDiversityProfile?.checkpointKind === "independent_owners_l6_1b"
@@ -1095,15 +1099,18 @@ export async function createCareerSectionsFacts(input: {
           renewalArchitecture:
             input.leagueDiversityProfile?.checkpointKind === "renewal_architecture_l5_3c"
             || input.leagueDiversityProfile?.checkpointKind === "integrated_player_world_l5_4"
+            || input.leagueDiversityProfile?.checkpointKind === "integrated_player_world_l6_2"
             || input.leagueDiversityProfile?.checkpointKind === "renewal_ablation_l6_1"
             || input.leagueDiversityProfile?.checkpointKind === "renewal_refinement_l6_1a",
           standingsHierarchy:
             input.leagueDiversityProfile?.checkpointKind === "standings_hierarchy_l5_2"
             || input.leagueDiversityProfile?.checkpointKind === "integrated_player_world_l5_4"
+            || input.leagueDiversityProfile?.checkpointKind === "integrated_player_world_l6_2"
             || input.leagueDiversityProfile?.checkpointKind === "renewal_ablation_l6_1"
             || input.leagueDiversityProfile?.checkpointKind === "renewal_refinement_l6_1a",
           marketTargeting:
             input.leagueDiversityProfile?.checkpointKind === "integrated_player_world_l5_4"
+            || input.leagueDiversityProfile?.checkpointKind === "integrated_player_world_l6_2"
             || input.leagueDiversityProfile?.checkpointKind === "renewal_ablation_l6_1"
             || input.leagueDiversityProfile?.checkpointKind === "renewal_refinement_l6_1a",
           ...(input.leagueDiversityProfile?.checkpointKind === "owner_attribution_l5_1"
@@ -1111,6 +1118,7 @@ export async function createCareerSectionsFacts(input: {
             || input.leagueDiversityProfile?.checkpointKind === "renewal_architecture_l5_3c"
             || input.leagueDiversityProfile?.checkpointKind === "renewal_refinement_l6_1a"
             || input.leagueDiversityProfile?.checkpointKind === "independent_owners_l6_1b"
+            || input.leagueDiversityProfile?.checkpointKind === "integrated_player_world_l6_2"
               ? { analysisStrengthGapScale: 1.5 }
               : input.leagueDiversityProfile?.checkpointKind === "strength_contest_l6_1d"
                 ? { analysisStrengthGapScale: LEGACY_STRENGTH_GAP_MULTIPLIER }
@@ -1250,6 +1258,8 @@ export async function createCareerSectionsFacts(input: {
           worlds.map(requiredAvailabilityAgingFacts),
           input.seasonCount,
         )
+    : input.leagueDiversityProfile.checkpointKind === "integrated_player_world_l6_2"
+      ? evaluateIntegratedPlayerWorldL6_2Checkpoint(worlds, input.seasonCount)
     : input.leagueDiversityProfile.checkpointKind === "integrated_player_world_l5_4"
       ? evaluateIntegratedPlayerWorldL5_4Checkpoint(worlds, input.seasonCount)
     : input.leagueDiversityProfile.checkpointKind === "integrated_player_world_l5"
@@ -2673,6 +2683,26 @@ function evaluateIntegratedPlayerWorldL5_4Checkpoint(
     renewalArchitecture,
     standingsHierarchy,
     marketTargeting,
+  };
+}
+
+/** Composes the unchanged hardened register with the frozen historical upset lanes. */
+function evaluateIntegratedPlayerWorldL6_2Checkpoint(
+  worlds: readonly CareerWorldProjection[],
+  seasonCount: number,
+) {
+  const inherited = evaluateIntegratedPlayerWorldL5_4Checkpoint(worlds, seasonCount);
+  const upset = evaluateHistoricalUpsetCheckpoint(worlds.map(requiredOwnerAttributionFacts));
+  const failedGateKeys = [
+    ...inherited.failedGateKeys,
+    ...upset.failedGateKeys.map((key) => `upsets:${key}`),
+  ];
+  return {
+    decision: failedGateKeys.length === 0 ? "GO" as const : "REFINE" as const,
+    failedGateKeys,
+    supersededGateKeys: inherited.supersededGateKeys,
+    inherited,
+    upset,
   };
 }
 

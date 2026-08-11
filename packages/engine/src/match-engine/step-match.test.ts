@@ -366,13 +366,14 @@ test("save step events fail clearly when the defending team has no goalkeeper", 
   );
 });
 
-test("goal step events carry deterministic assist attribution", () => {
+test("goal step events carry deterministic creator selection and coherent optional attribution", () => {
   // Which team-mate is credited belongs to `chance-actors`, and moves whenever
   // chance type does - it is now a fact about the route the goal came down.
   // What the minute loop owns is the wiring: every goal reaches the event with
-  // exactly one credited team-mate, never the scorer, and identically for one
-  // seed. Pinning the names here would re-test actor selection through an RNG
-  // chain and would break on every route change that is working as intended.
+  // its selected creator; a distinct creator gets exactly one assist-or-chance
+  // credit, while a self-created chance gets neither. Pinning the names here
+  // would re-test actor selection through an RNG chain and would break on every
+  // route change that is working as intended.
   const context = {
     ...validContext({
       fixtureValue: "fixture:assist-step-000001",
@@ -398,8 +399,12 @@ test("goal step events carry deterministic assist attribution", () => {
     const credited = [goal.assistPlayerId, goal.creatorPlayerId].filter((id) => id !== undefined);
 
     assert.equal(typeof goal.selectedCreatorPlayerId, "string");
-    assert.equal(credited.length, 1, `${goal.side} goal credited ${credited.length} team-mates`);
-    assert.equal(credited[0] === goal.scorerPlayerId, false, "a goal may never be assisted by its own scorer");
+    const isSelfCreated = goal.selectedCreatorPlayerId === goal.scorerPlayerId;
+    assert.equal(credited.length, isSelfCreated ? 0 : 1, `${goal.side} goal credited ${credited.length} team-mates`);
+    if (credited[0] !== undefined) {
+      assert.equal(credited[0], goal.selectedCreatorPlayerId);
+      assert.notEqual(credited[0], goal.scorerPlayerId, "a goal may never be assisted by its own scorer");
+    }
   }
 });
 

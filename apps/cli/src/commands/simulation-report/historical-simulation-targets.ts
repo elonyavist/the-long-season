@@ -14,6 +14,22 @@ export interface HistoricalDivisionTableTargets {
   readonly drawShare: HistoricalTargetBand;
 }
 
+/** Rank-distance partitions used by the historical and simulated upset reader. */
+export const HISTORICAL_UPSET_RANK_GAP_KEYS = [
+  "1_to_3",
+  "4_to_6",
+  "7_to_9",
+  "10_to_14",
+  "15_plus",
+] as const;
+export type HistoricalUpsetRankGapKey = typeof HISTORICAL_UPSET_RANK_GAP_KEYS[number];
+
+/** Historical underdog outcome bands for one rank-distance partition. */
+export interface HistoricalUpsetOutcomeTargets {
+  readonly winShare: HistoricalTargetBand;
+  readonly nonLossShare: HistoricalTargetBand;
+}
+
 /**
  * Frozen external targets consumed by simulation-report gates.
  *
@@ -51,6 +67,49 @@ export const HISTORICAL_DIVISION_TABLE_TARGETS = {
     drawShare: { min: 0.2391, max: 0.2868 },
   },
 } as const satisfies Readonly<Record<1 | 2 | 3, HistoricalDivisionTableTargets>>;
+
+/**
+ * Frozen Big Five upset gradient for the First Division.
+ *
+ * The five rank bands use the p10..p90 distribution of league-season shares
+ * across 100 Big Five seasons. Exact first-versus-last is sparse, so its rates
+ * use pooled Wilson 95% intervals and require the separately frozen observation
+ * floor before they may be evaluated.
+ */
+export const HISTORICAL_FIRST_DIVISION_UPSET_TARGETS = {
+  rankGap: {
+    "1_to_3": {
+      winShare: { min: 0.262816, max: 0.37794 },
+      nonLossShare: { min: 0.544878, max: 0.669958 },
+    },
+    "4_to_6": {
+      winShare: { min: 0.215495, max: 0.352678 },
+      nonLossShare: { min: 0.474414, max: 0.630905 },
+    },
+    "7_to_9": {
+      winShare: { min: 0.173763, max: 0.333333 },
+      nonLossShare: { min: 0.40953, max: 0.590523 },
+    },
+    "10_to_14": {
+      winShare: { min: 0.132353, max: 0.274934 },
+      nonLossShare: { min: 0.348419, max: 0.529048 },
+    },
+    "15_plus": {
+      winShare: { min: 0.038187, max: 0.242241 },
+      nonLossShare: { min: 0.158286, max: 0.454545 },
+    },
+  },
+  firstVersusLast: {
+    minimumObservationCount: 50,
+    winShare: { min: 0.054674, max: 0.151355 },
+    nonLossShare: { min: 0.153299, max: 0.287469 },
+  },
+} as const satisfies {
+  readonly rankGap: Readonly<Record<HistoricalUpsetRankGapKey, HistoricalUpsetOutcomeTargets>>;
+  readonly firstVersusLast: HistoricalUpsetOutcomeTargets & {
+    readonly minimumObservationCount: number;
+  };
+};
 
 /**
  * Frozen Big Five player-use, renewal and leader targets for level one only.

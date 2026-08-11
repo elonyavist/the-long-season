@@ -346,6 +346,20 @@ export interface SimulateSeasonFixtureParticipation {
   readonly fieldedTeams: SimulateSeasonFixtureFieldedTeams;
   /** Non-derivable automatic progression facts from the same session. */
   readonly progression: SimulateSeasonFixtureProgression;
+  /** Table positions frozen before any fixture in this round was applied. */
+  readonly preMatchTable: SimulateSeasonFixturePreMatchTable;
+}
+
+/** One side's minimal non-derivable league-table state at kickoff. */
+export interface SimulateSeasonFixtureTablePosition {
+  readonly position: number;
+  readonly played: number;
+}
+
+/** Both sides' table state from the canonical snapshot preceding their round. */
+export interface SimulateSeasonFixturePreMatchTable {
+  readonly home: SimulateSeasonFixtureTablePosition;
+  readonly away: SimulateSeasonFixtureTablePosition;
 }
 
 /** Compact exact facts required to reconcile automatic match control. */
@@ -512,6 +526,8 @@ export function simulateSeason(input: SimulateSeasonInput): SimulateSeasonResult
   validateAnalysisStrengthGapScale(input.analysisStrengthGapScale);
   const fixtureParticipation: SimulateSeasonFixtureParticipation[] = [];
   const opportunityStats = new Map<PlayerId, MutableSeasonPlayerOpportunityStatRow>();
+  let preRoundTable: readonly LeagueTableRow[] = [];
+  let preRoundNumber = 0;
 
   for (const fixtureId of calendar.fixtureIds) {
     const fixture = state.fixtures[fixtureId];
@@ -519,6 +535,17 @@ export function simulateSeason(input: SimulateSeasonInput): SimulateSeasonResult
     if (fixture === undefined) {
       throw new SimulateSeasonError("missing_fixture", `Missing generated fixture: ${fixtureId}`);
     }
+
+    if (fixture.roundNumber !== preRoundNumber) {
+      preRoundNumber = fixture.roundNumber;
+      preRoundTable = computeLeagueTable({
+        clubIds: input.clubIds,
+        fixtures: state.fixtures,
+        fixtureIds: state.fixtureIds,
+        rules: input.tableRules,
+      });
+    }
+    const preMatchTable = fixturePreMatchTable(fixture, preRoundTable);
 
     fitnessRuntime = recoverFitnessBeforeFixture(input, fixture, fitnessRuntime);
 
@@ -573,6 +600,7 @@ export function simulateSeason(input: SimulateSeasonInput): SimulateSeasonResult
       },
       progression: completed.progression,
       contributions,
+      preMatchTable,
     });
     state = applyMatchReportToFixture({ state, fixtureId, report });
     if (analysisState !== undefined && input.analysisStrengthGapScale !== undefined) {
@@ -647,6 +675,27 @@ export function simulateSeason(input: SimulateSeasonInput): SimulateSeasonResult
             }),
           },
         }),
+  };
+}
+
+/**
+ * Reads only the two non-derivable rows needed after the round has completed.
+ *
+ * The table is snapshotted once per round by `simulateSeason`; looking it up
+ * here prevents sequential fixtures on the same date from seeing each other.
+ */
+function fixturePreMatchTable(
+  fixture: Fixture,
+  table: readonly LeagueTableRow[],
+): SimulateSeasonFixturePreMatchTable {
+  const home = table.find(({ clubId }) => clubId === fixture.homeClubId);
+  const away = table.find(({ clubId }) => clubId === fixture.awayClubId);
+  if (home === undefined || away === undefined) {
+    throw new SimulateSeasonError("missing_fixture", `Pre-match table row is missing: ${fixture.id}`);
+  }
+  return {
+    home: { position: home.position, played: home.played },
+    away: { position: away.position, played: away.played },
   };
 }
 

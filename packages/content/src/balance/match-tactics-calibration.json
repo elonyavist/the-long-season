@@ -1,7 +1,23 @@
 {
-  "schemaVersion": 2,
-  "version": "match-tactics-calibration-v3",
+  "schemaVersion": 3,
+  "version": "match-tactics-calibration-v4",
   "classification": "explicit_game_design_target",
+  "chanceActorSelection": {
+    "shooterPropensityBasisPointsByRole": {
+      "goalkeeper": 0,
+      "right_full_back": 4372,
+      "center_back": 4011,
+      "left_full_back": 4417,
+      "defensive_midfielder": 7704,
+      "central_midfielder": 12079,
+      "right_midfielder": 13335,
+      "left_midfielder": 13990,
+      "attacking_midfielder": 18573,
+      "right_winger": 18366,
+      "left_winger": 20442,
+      "striker": 24234
+    }
+  },
   "tacticalShape": {
     "outfieldRoleBudgetBasisPoints": 42000,
     "taskAllocationBasisPointsByRole": {

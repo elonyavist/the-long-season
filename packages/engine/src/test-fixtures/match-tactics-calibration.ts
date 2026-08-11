@@ -33,6 +33,9 @@ export function matchTacticsCalibrationFixture(): MatchTacticsCalibrationConfig 
     schemaVersion: MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION,
     version: "match-tactics-fixture",
     classification: "explicit_game_design_target",
+    chanceActorSelection: {
+      shooterPropensityBasisPointsByRole: uniformShooterPropensities(),
+    },
     tacticalShape: {
       outfieldRoleBudgetBasisPoints: FIXTURE_OUTFIELD_ROLE_BUDGET,
       taskAllocationBasisPointsByRole: {
@@ -241,6 +244,9 @@ export function flatMatchTacticsCalibrationFixture(input: {
     schemaVersion: MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION,
     version: input.version ?? "match-tactics-flat-fixture",
     classification: "explicit_game_design_target",
+    chanceActorSelection: {
+      shooterPropensityBasisPointsByRole: uniformShooterPropensities(),
+    },
     tacticalShape: {
       outfieldRoleBudgetBasisPoints: 50_000,
       taskAllocationBasisPointsByRole: Object.fromEntries(
@@ -266,4 +272,11 @@ function uniformTaskWeights(value: number): Readonly<Record<TacticalShapeTask, n
   return Object.fromEntries(
     TACTICAL_SHAPE_TASKS.map((task) => [task, value]),
   ) as Readonly<Record<TacticalShapeTask, number>>;
+}
+
+/** Keeps fixture actor propensity neutral unless one test overrides it. */
+function uniformShooterPropensities(): Readonly<Record<CanonicalPlayerRole, number>> {
+  return Object.fromEntries(
+    CANONICAL_PLAYER_ROLES.map((role) => [role, role === "goalkeeper" ? 0 : 10_000]),
+  ) as Readonly<Record<CanonicalPlayerRole, number>>;
 }

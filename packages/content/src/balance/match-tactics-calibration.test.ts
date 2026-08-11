@@ -13,16 +13,33 @@ import {
 import { matchTacticsCalibration } from "./match-tactics-calibration.ts";
 
 /**
- * These tests assert the football *shape* of the shipped tuning, not its exact
- * numbers. Step 06 owns tuning against the frozen outcome bands, so pinning a
- * coefficient here would only make retuning look like a regression.
+ * These tests assert the football *shape* of shipped tuning rather than its
+ * coefficients. The one exception is external shooter propensity: those values
+ * reproduce an immutable empirical audit and may not drift like game tuning.
  */
 
 test("the shipped calibration exposes one stable version and schema", () => {
   assert.equal(matchTacticsCalibration.schemaVersion, MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION);
-  assert.equal(matchTacticsCalibration.version, "match-tactics-calibration-v3");
+  assert.equal(matchTacticsCalibration.version, "match-tactics-calibration-v4");
   assert.equal(matchTacticsCalibration.classification, "explicit_game_design_target");
   assert.equal(matchTacticsCalibration.version.length > 0, true);
+});
+
+test("shooter propensity reproduces the frozen external baseline exactly", () => {
+  assert.deepEqual(matchTacticsCalibration.chanceActorSelection.shooterPropensityBasisPointsByRole, {
+    goalkeeper: 0,
+    right_full_back: 4_372,
+    center_back: 4_011,
+    left_full_back: 4_417,
+    defensive_midfielder: 7_704,
+    central_midfielder: 12_079,
+    right_midfielder: 13_335,
+    left_midfielder: 13_990,
+    attacking_midfielder: 18_573,
+    right_winger: 18_366,
+    left_winger: 20_442,
+    striker: 24_234,
+  });
 });
 
 test("mirrored roles are given identical weights", () => {

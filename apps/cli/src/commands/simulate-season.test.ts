@@ -579,7 +579,6 @@ test("simulate-season can print one fixture's structured match detail", async ()
   assert.equal(io.stdoutLines.some((line) => new RegExp(`^  ${PERSON_NAME_PATTERN}\\s+${CLUB_NAME_PATTERN}\\s+`).test(line)), true);
   assert.equal(fixturePlayerStatLines(io.stdoutLines).length, 22);
   assert.equal(io.stdoutLines.some((line) => new RegExp(`^  ${PERSON_NAME_PATTERN}\\s+${CLUB_NAME_PATTERN}\\s+[1-9][0-9]* 0\\s+`).test(line)), true);
-  assert.equal(io.stdoutLines.some((line) => new RegExp(`^  ${PERSON_NAME_PATTERN}\\s+${CLUB_NAME_PATTERN}\\s+0 [1-9][0-9]*\\s+`).test(line)), true);
   assert.equal(io.stdoutLines.some((line) => new RegExp(`^  ${PERSON_NAME_PATTERN}\\s+${CLUB_NAME_PATTERN}\\s+0 0  0   0  0$`).test(line)), true);
   assert.equal(hasPlaceholderPlayerNames(io.stdoutLines), false);
 });

@@ -154,6 +154,66 @@ describe("simulation-report planner", () => {
     })).toThrow(/refuses measurement overrides/);
   });
 
+  it("freezes integrated L6.2 to seven fresh ten-season worlds and the complete register", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-integrated-l6-2-7x10",
+      workerCount: 7,
+    });
+
+    expect(plan.measurementRequest).toMatchObject({
+      profileId: "phase81a-integrated-l6-2-7x10",
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-integrated-l6-2-v1",
+    });
+    expect(plan.measurementRequest.includedSectionIds).toEqual(CAREER_SECTION_IDS);
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-integrated-l6-2-7x10",
+      worldCount: 8,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
+  it("freezes integrated L6.3 to seven fresh ten-season worlds and the complete reader", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-integrated-l6-3-7x10",
+      workerCount: 7,
+    });
+
+    expect(plan.measurementRequest).toMatchObject({
+      profileId: "phase81a-integrated-l6-3-7x10",
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-integrated-l6-3-v1",
+    });
+    expect(plan.measurementRequest.includedSectionIds).toEqual(CAREER_SECTION_IDS);
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-integrated-l6-3-7x10",
+      seasonCount: 9,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
+  it("freezes integrated L6.3B to seven new ten-season worlds and the same complete reader", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-integrated-l6-3b-7x10",
+      workerCount: 7,
+    });
+
+    expect(plan.measurementRequest).toMatchObject({
+      profileId: "phase81a-integrated-l6-3b-7x10",
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-integrated-l6-3b-v1",
+    });
+    expect(plan.measurementRequest.includedSectionIds).toEqual(CAREER_SECTION_IDS);
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-integrated-l6-3b-7x10",
+      worldCount: 8,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
   it("freezes the independent L6.1B canary and powered current-world cohort", () => {
     const canary = createSimulationReportPlan({
       profileId: "phase81a-independent-owners-l6-1b-canary-7x1",

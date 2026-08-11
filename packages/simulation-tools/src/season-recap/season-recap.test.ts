@@ -94,6 +94,10 @@ function baseInput(overrides: Partial<BuildSeasonRecapInput> = {}): BuildSeasonR
               },
             },
           },
+          preMatchTable: {
+            home: { position: 1, played: 0 },
+            away: { position: 2, played: 0 },
+          },
           contributions: [
             {
               fixtureId: "fixture:001" as never,

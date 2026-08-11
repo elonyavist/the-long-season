@@ -16,6 +16,32 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_L6_3B_EMPIRICAL_SHOOTER_AND_READER.md` - **SHOOTER GO /
+  overall REFINE.** A world-isolation bug in the leader reader is corrected;
+  empirical shooter propensity puts top-ten scoring at `18.45`. Cached
+  pre-06B22B facts already have top-ten assists at `7.1914 < 8`, so the creator
+  failure is pre-existing and receives separate attribution.
+
+- `PHASE_81A_STATSBOMB_SHOOTER_PROPENSITY_BASELINE.md` - **`GO`.** Frozen
+  StatsBomb Open Data baseline over `1,517` complete domestic-league matches:
+  deterministic non-set-piece shots per 90 for all `11/11` supported outfield
+  canonical roles, with two byte-identical seven-worker extractions.
+
+- `PHASE_81A_CHECKPOINT_L6_3_PLAYER_USE_AGE_AND_CONCENTRATION.md` - **`REFINE`.**
+  Fresh post-06B22 `7 x 10`: shooter correlation reaches `0.2065`, but top-ten
+  scoring reaches `37.38`; tactical capacity is not individual shot propensity,
+  so 06B22 reopens. Creator concentration stays green.
+
+- `PHASE_81A_CHECKPOINT_L6_2_HARDENED_FULL_REGISTER.md` - **`REFINE`, with
+  upset lane `GO`.** A fresh `7 x 10` keeps all five Big Five rank-gap bands
+  and exact first-versus-last rarity in range with zero reconciliation. The
+  remaining failures are player renewal, veteran load, squad use, identity and
+  local replacement capacity; 06B22 owns only structural actor allocation.
+
+- `PHASE_81A_BIG_FIVE_UPSET_BASELINE.md` - frozen pre-L6.2 historical baseline:
+  Big Five 2005/06-2024/25, pre-date standings, five rank-gap lanes and pooled
+  exact first-versus-last Wilson intervals.
+
 - `PHASE_81A_CHECKPOINT_L6_1D2_STRENGTH_CONTEST_RETRY.md` - **`GO`.** On fresh
   `28 x 10` seeds the `1.25` product records champion points `75.2143`, health
   `25/28`, direction `28/28`, all `17` table guardrails and zero reconciliation.

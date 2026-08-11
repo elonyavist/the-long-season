@@ -5,8 +5,6 @@ import { test } from "vitest";
 import { clubId, fixtureId, playerId } from "@game/domain";
 
 import {
-  chanceCreatorWeightForRole,
-  chanceShooterWeightForRole,
   primaryDefenderWeightForRole,
   selectChanceActors,
 } from "./chance-actors.ts";
@@ -109,20 +107,63 @@ test("self-created and two-player chances are both reachable", () => {
   assert.ok(twoPlayerCount > 0);
 });
 
-test("role weights favor expected outfield responsibilities and exclude goalkeepers", () => {
-  assert.ok(chanceCreatorWeightForRole("midfielder") > chanceCreatorWeightForRole("attacker"));
-  assert.ok(chanceShooterWeightForRole("attacker") > chanceShooterWeightForRole("midfielder"));
+test("defender role weights favor expected outfield responsibilities and exclude goalkeepers", () => {
   assert.ok(primaryDefenderWeightForRole("defender") > primaryDefenderWeightForRole("midfielder"));
-  assert.equal(chanceCreatorWeightForRole("gk"), 0);
-  assert.equal(chanceShooterWeightForRole("gk"), 0);
   assert.equal(primaryDefenderWeightForRole("gk"), 0);
 });
 
-test("creator weights vary by chance type to avoid one fixed creator pool", () => {
-  assert.ok(chanceCreatorWeightForRole("attacker", "counter") > chanceCreatorWeightForRole("midfielder", "counter"));
-  assert.ok(chanceCreatorWeightForRole("defender", "cross") > chanceCreatorWeightForRole("midfielder", "cross"));
-  assert.ok(chanceCreatorWeightForRole("midfielder", "open_play") > chanceCreatorWeightForRole("defender", "open_play"));
-  assert.equal(chanceCreatorWeightForRole("gk", "dead_ball"), 0);
+test("central and direct routes allocate creation through their declared tactical tasks", () => {
+  const central = creatorCountsByRole("central");
+  const direct = creatorCountsByRole("direct");
+  const transition = creatorCountsByRole("transition");
+
+  assert.ok(central.central_midfielder > central.center_back, JSON.stringify(central));
+  assert.ok(direct.center_back > direct.central_midfielder, JSON.stringify(direct));
+  assert.ok(transition.striker > transition.center_back, JSON.stringify(transition));
+});
+
+test("equal-quality shooter weights use the one empirical role propensity on every route", () => {
+  const base = matchTacticsCalibrationFixture();
+  const calibration = {
+    ...base,
+    chanceActorSelection: {
+      shooterPropensityBasisPointsByRole: {
+        ...base.chanceActorSelection.shooterPropensityBasisPointsByRole,
+        center_back: 4_000,
+        central_midfielder: 12_000,
+        striker: 24_000,
+      },
+    },
+  };
+  let firstWeights: readonly number[] | undefined;
+
+  for (const route of ["central", "left", "right", "direct", "transition"] as const) {
+    const pool = selectChanceActors(chanceInput({ route, matchTacticsCalibration: calibration }))
+      .shooterSelectionPool;
+    const weights = [
+      playerId("player:home-def"),
+      playerId("player:home-mid"),
+      playerId("player:home-att"),
+    ].map((id) => {
+      const row = pool.find((candidate) => candidate.playerId === id);
+      if (row === undefined) throw new Error(`Missing shooter candidate ${id}`);
+      return row.weight;
+    });
+
+    assert.equal(weights[1]! / weights[0]!, 3, route);
+    assert.equal(weights[2]! / weights[0]!, 6, route);
+    if (firstWeights === undefined) firstWeights = weights;
+    else assert.deepEqual(weights, firstWeights, route);
+  }
+});
+
+test("flank creators follow the existing left-right channel policy", () => {
+  const team = mirroredFlankTeam();
+  const left = creatorCountsForPlayers(team, "left");
+  const right = creatorCountsForPlayers(team, "right");
+
+  assert.ok(left.left > left.right, JSON.stringify(left));
+  assert.ok(right.right > right.left, JSON.stringify(right));
 });
 
 test("task quality separates two shooters with the same role without deleting either", () => {
@@ -172,9 +213,43 @@ function chanceInput(
     },
     attackingTeam: homeTeamFixture(),
     defendingTeam: awayTeamFixture(),
-    chanceType: "open_play",
+    route: "central",
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
     ...overrides,
   };
+}
+
+/** Counts central-midfield and centre-back creators on one canonical route. */
+function creatorCountsByRole(route: Parameters<typeof selectChanceActors>[0]["route"]): {
+  readonly central_midfielder: number;
+  readonly center_back: number;
+  readonly striker: number;
+} {
+  let centralMidfielder = 0;
+  let centerBack = 0;
+  let striker = 0;
+  for (let minute = 1; minute <= 8_000; minute += 1) {
+    const selected = selectChanceActors(chanceInput({ route, minute }));
+    if (selected.creatorPlayerId === playerId("player:home-mid")) centralMidfielder += 1;
+    if (selected.creatorPlayerId === playerId("player:home-def")) centerBack += 1;
+    if (selected.creatorPlayerId === playerId("player:home-att")) striker += 1;
+  }
+  return { central_midfielder: centralMidfielder, center_back: centerBack, striker };
+}
+
+/** Counts the two symmetric wide players selected as creators. */
+function creatorCountsForPlayers(
+  team: MatchTeamContext,
+  route: "left" | "right",
+): { readonly left: number; readonly right: number } {
+  let left = 0;
+  let right = 0;
+  for (let minute = 1; minute <= 4_000; minute += 1) {
+    const selected = selectChanceActors(chanceInput({ attackingTeam: team, route, minute }));
+    if (selected.creatorPlayerId === playerId("player:home-left")) left += 1;
+    if (selected.creatorPlayerId === playerId("player:home-right")) right += 1;
+  }
+  return { left, right };
 }
 
 /**
@@ -211,6 +286,25 @@ function awayTeamFixture(): MatchTeamContext {
     shape: tacticalShapeProfileFixture(),
     tacticalDistribution: tacticalDistributionFixture(),
   });
+}
+
+/** Builds two quality-identical wide players whose only difference is channel. */
+function mirroredFlankTeam(): MatchTeamContext {
+  const base = homeTeamFixture();
+  const lineup = [
+    base.lineup[0]!,
+    createLineupSlot({
+      slotId: "slot:home-left",
+      playerId: playerId("player:home-left"),
+      canonicalRole: "left_midfielder",
+    }),
+    createLineupSlot({
+      slotId: "slot:home-right",
+      playerId: playerId("player:home-right"),
+      canonicalRole: "right_midfielder",
+    }),
+  ];
+  return { ...base, lineup, incidentProfiles: neutralIncidentProfilesFor(lineup) };
 }
 
 /** Builds two same-role candidates whose only difference is task ability. */

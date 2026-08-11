@@ -580,6 +580,16 @@ export interface TacticalShapeCalibrationConfig {
 }
 
 /**
+ * Versioned empirical frequencies used only to choose the named shot taker.
+ *
+ * Values are integer ten-thousandths of non-set-piece shots per 90, not shares:
+ * they may exceed `10000`. Their common scale cancels in the weighted draw.
+ */
+export interface ChanceActorSelectionCalibrationConfig {
+  readonly shooterPropensityBasisPointsByRole: Readonly<Record<CanonicalPlayerRole, number>>;
+}
+
+/**
  * Versioned calibration for everything the match engine derives from tactics.
  *
  * Phase 81 fills this asset one section at a time: intrinsic shape here,
@@ -591,6 +601,7 @@ export interface MatchTacticsCalibrationConfig {
   readonly schemaVersion: number;
   readonly version: string;
   readonly classification: "explicit_game_design_target";
+  readonly chanceActorSelection: ChanceActorSelectionCalibrationConfig;
   readonly tacticalShape: TacticalShapeCalibrationConfig;
   readonly tacticalMatchup: TacticalMatchupCalibrationConfig;
   readonly tacticalSemantics: TacticalSemanticsCalibrationConfig;
@@ -601,6 +612,10 @@ export type MatchTacticsCalibrationErrorCode =
   | "invalid_schema_version"
   | "invalid_version"
   | "invalid_classification"
+  | "incomplete_shooter_propensity"
+  | "invalid_shooter_propensity"
+  | "goalkeeper_shooter_propensity"
+  | "unreachable_outfield_shooter"
   | "incomplete_contribution_weights"
   | "negative_contribution_weight"
   | "invalid_outfield_role_budget"
@@ -684,8 +699,42 @@ export function validateMatchTacticsCalibration(config: MatchTacticsCalibrationC
   }
 
   validateTacticalShapeCalibration(config.tacticalShape);
+  validateChanceActorSelectionCalibration(config.chanceActorSelection);
   validateTacticalMatchupCalibration(config.tacticalMatchup);
   validateTacticalSemanticsCalibration(config.tacticalSemantics);
+}
+
+/** Validates the total empirical shooter-propensity mapping. */
+export function validateChanceActorSelectionCalibration(
+  config: ChanceActorSelectionCalibrationConfig,
+): void {
+  for (const role of CANONICAL_PLAYER_ROLES) {
+    const propensity = config.shooterPropensityBasisPointsByRole[role];
+    if (propensity === undefined) {
+      throw new MatchTacticsCalibrationError(
+        "incomplete_shooter_propensity",
+        `Match-tactics calibration has no shooter propensity for ${role}`,
+      );
+    }
+    if (!Number.isSafeInteger(propensity) || propensity < 0) {
+      throw new MatchTacticsCalibrationError(
+        "invalid_shooter_propensity",
+        `Shooter propensity must be a non-negative safe integer for ${role}: ${propensity}`,
+      );
+    }
+    if (role === "goalkeeper" && propensity !== 0) {
+      throw new MatchTacticsCalibrationError(
+        "goalkeeper_shooter_propensity",
+        `Goalkeeper shooter propensity must be exactly 0: ${propensity}`,
+      );
+    }
+    if (role !== "goalkeeper" && propensity === 0) {
+      throw new MatchTacticsCalibrationError(
+        "unreachable_outfield_shooter",
+        `Every outfield role must remain reachable as a shooter: ${role}`,
+      );
+    }
+  }
 }
 
 /**
@@ -917,7 +966,7 @@ export function lateralChannelShares(
 }
 
 /** Schema version of the match-tactics calibration asset. */
-export const MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION = 2;
+export const MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION = 3;
 
 /**
  * Derives the exact budget allocated by one role row.

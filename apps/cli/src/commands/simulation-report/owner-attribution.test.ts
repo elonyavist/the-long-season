@@ -3,6 +3,7 @@ import { test } from "vitest";
 
 import {
   OwnerAttributionObserver,
+  evaluateHistoricalUpsetCheckpoint,
   evaluateOwnerAttributionCheckpoint,
   evaluatePlayerRenewalLeadersCheckpoint,
   evaluateSquadUseAttribution,
@@ -14,6 +15,7 @@ import {
   topTenPlayerSeasonFacts,
   type OwnerAttributionDecision,
   type OwnerAttributionPlayerSeasonFact,
+  type OwnerAttributionTableSeasonFact,
   type OwnerAttributionWorldFacts,
 } from "./owner-attribution.ts";
 import type { GenerationalSuccessionWorldFacts } from "./generational-succession.ts";
@@ -154,6 +156,25 @@ test("paired table attribution applies the frozen bands and fails ambiguous resp
   })), "not_attributed");
 });
 
+test("L6.2 upset gates accept a complete historical gradient and fail one collapsed lane", () => {
+  const passingWorlds = Array.from({ length: 7 }, (_, worldIndex) =>
+    upsetWorld(worldIndex, false));
+  const passing = evaluateHistoricalUpsetCheckpoint(passingWorlds);
+
+  assert.equal(passing.decision, "GO");
+  assert.deepEqual(passing.failedGateKeys, []);
+  assert.equal(passing.firstDivisionSeasonCount, 70);
+  assert.equal(passing.firstVersusLast.fixtureCount, 70);
+  assert.equal(passing.firstVersusLast.held, true);
+  assert.equal(passing.strengthGaps.reduce((sum, row) => sum + row.fixtureCount, 0), 21_420);
+
+  const collapsed = evaluateHistoricalUpsetCheckpoint(
+    Array.from({ length: 7 }, (_, worldIndex) => upsetWorld(worldIndex, true)),
+  );
+  assert.equal(collapsed.decision, "REFINE");
+  assert.equal(collapsed.failedGateKeys.includes("rank_gap:15_plus"), true);
+});
+
 test("fixture-dated younger alternatives decide veteran-load ownership with a dead band", () => {
   assert.equal(playerLoadAttributionOwner(playerFacts({
     fresherQualityMatchedYoungerAlternativeShare: 0.2,
@@ -246,6 +267,34 @@ test("the shared top-ten derivation is deterministic and isolated per competitio
     topTenPlayerSeasonFacts(rows, "assists").map(({ playerId }) => playerId),
     ["b", "c", "a", "d"],
   );
+});
+
+test("leader production chooses ten players inside each world before pooling", () => {
+  const world = (worldSeed: string, top: number): OwnerAttributionWorldFacts => ({
+    ...emptyOwnerWorld(),
+    worldSeed,
+    playerSeasons: Array.from({ length: 10 }, (_, index) =>
+      playerSeason(`${worldSeed}:${index}`, top - index, top - index)),
+  });
+  const worlds = [world("world:a", 20), world("world:b", 10)];
+  const generationalWorlds = worlds.map(({ worldSeed }) => ({
+    ...emptyGenerationalWorld(),
+    worldSeed,
+  }));
+  const evaluate = (orderedWorlds: readonly OwnerAttributionWorldFacts[]) =>
+    evaluateOwnerAttributionCheckpoint({
+      worlds: orderedWorlds,
+      generationalWorlds,
+      replicatedFormationRetentionShare: 1,
+      tableAttribution: "not_requested",
+    }).players;
+
+  const players = evaluate(worlds);
+  assert.equal(players.topScorerMean, 15);
+  assert.equal(players.topAssistMean, 15);
+  assert.equal(players.topTenScorerMean, 10.5);
+  assert.equal(players.topTenAssistMean, 10.5);
+  assert.deepEqual(evaluate([...worlds].reverse()), players);
 });
 
 function playerSeason(
@@ -341,6 +390,69 @@ function emptyOwnerWorld(): OwnerAttributionWorldFacts {
     annualRolePlanReconciliationFailureCount: 0,
     annualRolePlanPositiveRoleCounts: [],
     reconciliationFailureCount: 0,
+  };
+}
+
+function upsetWorld(worldIndex: number, collapseLargestRankGap: boolean): OwnerAttributionWorldFacts {
+  return {
+    ...emptyOwnerWorld(),
+    worldSeed: `upset-world:${worldIndex + 1}`,
+    tableSeasons: Array.from({ length: 10 }, (_, seasonIndex) =>
+      upsetTableSeason(worldIndex * 10 + seasonIndex, collapseLargestRankGap)),
+  };
+}
+
+function upsetTableSeason(
+  absoluteSeasonIndex: number,
+  collapseLargestRankGap: boolean,
+): OwnerAttributionTableSeasonFact {
+  const rankGapBuckets = [
+    { bucket: "1_to_3" as const, fixtureCount: 100, underdogWins: 32, draws: 28 },
+    { bucket: "4_to_6" as const, fixtureCount: 100, underdogWins: 28, draws: 27 },
+    { bucket: "7_to_9" as const, fixtureCount: 100, underdogWins: 25, draws: 24 },
+    { bucket: "10_to_14" as const, fixtureCount: 100, underdogWins: 20, draws: 24 },
+    {
+      bucket: "15_plus" as const,
+      fixtureCount: 100,
+      underdogWins: collapseLargestRankGap ? 0 : 13,
+      draws: 18,
+    },
+  ];
+  return {
+    competitionId: "competition:ita-1",
+    seasonNumber: absoluteSeasonIndex + 1,
+    fixtureCount: 306,
+    championPoints: 75,
+    lastPoints: 23,
+    pointsSpread: 52,
+    goalsPerMatch: 2.8,
+    drawShare: 0.26,
+    ppgStandardDeviation: 0.4,
+    pairedChampionPoints: 75,
+    pairedLastPoints: 23,
+    pairedPointsSpread: 52,
+    pairedGoalsPerMatch: 2.8,
+    pairedDrawShare: 0.26,
+    pairedPpgStandardDeviation: 0.4,
+    kickoffStrengthMean: 13,
+    kickoffStrengthSpread: 4,
+    strengthPointsRankCorrelation: 0.5,
+    tiedStrengthFixtureCount: 0,
+    gapBuckets: [
+      { bucket: "under_0_25", fixtureCount: 50, favoriteWins: 20, favoritePoints: 75, draws: 15 },
+      { bucket: "0_25_to_0_5", fixtureCount: 50, favoriteWins: 22, favoritePoints: 80, draws: 14 },
+      { bucket: "0_5_to_1", fixtureCount: 50, favoriteWins: 24, favoritePoints: 84, draws: 12 },
+      { bucket: "1_to_1_5", fixtureCount: 50, favoriteWins: 26, favoritePoints: 88, draws: 10 },
+      { bucket: "1_5_to_2", fixtureCount: 40, favoriteWins: 24, favoritePoints: 80, draws: 8 },
+      { bucket: "2_to_3", fixtureCount: 36, favoriteWins: 24, favoritePoints: 76, draws: 4 },
+      { bucket: "3_plus", fixtureCount: 30, favoriteWins: 22, favoritePoints: 68, draws: 2 },
+    ],
+    rankGapBuckets,
+    firstVersusLast: {
+      fixtureCount: 1,
+      underdogWins: absoluteSeasonIndex < 7 ? 1 : 0,
+      draws: absoluteSeasonIndex >= 7 && absoluteSeasonIndex < 14 ? 1 : 0,
+    },
   };
 }
 

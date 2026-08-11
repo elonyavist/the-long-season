@@ -55,7 +55,17 @@ all `17` guardrails; its distance-only coherence reader reached `17/28` against
 `20/28` because nine legacy worlds already inside the band could not improve
 distance. Step 06B20C1 is Done with `GO`: fresh seeds record health `25/28`,
 direction `28/28`, all `17` guardrails and zero reconciliation, accepting
-`1.25`. An integrated L6.2 must be documented before any further run.
+`1.25`. Step 06B21 now owns the documented integrated L6.2: a fresh `7 x 10`
+over the complete register plus finer kickoff-strength and canonical pre-round
+rank-gap upset diagnostics. It changed no gameplay and is Done with overall
+`REFINE`, while its upset lane is `GO`. Step 06B22 is Done: actor selection now
+uses the formation's versioned tactical-task allocations and the player's live
+task quality; the output-derived `10` / `70` divisors and duplicate coarse role
+tables are gone. L6.3 rejected its shooter semantics; 06B22A has now frozen a
+reproducible `1,517`-match StatsBomb role-propensity baseline. 06B22B and L6.3B
+now record **SHOOTER GO** at `18.45`; the corrected reader finds assists red in
+both current (`7.1614`) and cached pre-06B22B (`7.1914`) facts, so the creator
+question predates the shooter change.
 
 This phase is governed by
 [`PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md`](../../audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md).
@@ -233,6 +243,14 @@ contexts; it never owns the analytic diversity gate.
 | 06B19C | [Checkpoint L6.1C: common-support renewal attribution](06b19c-checkpoint-l6-1c-common-support-renewal-attribution.md) | no | Done: `STOP / RETHINK: antagonistic`; no renewal owner |
 | 06B20C | [population-strength contest translation](06b20c-population-strength-contest-translation.md) | yes | Implemented; L6.1D `REFINE`, candidate unaccepted |
 | 06B20C1 | [Checkpoint L6.1D2 strength-contest retry](06b20c1-checkpoint-l6-1d2-strength-contest-retry.md) | no | Done: `GO`; `1.25` accepted |
+| 06B21 | [Checkpoint L6.2 hardened full register](06b21-checkpoint-l6-2-hardened-full-register.md) | no | Done: overall `REFINE`; upset `GO` |
+| 06B22 | [structural player-task actor allocation](06b22-structural-player-task-actor-allocation.md) | yes | Done; L6.3 open |
+| 06B23 | [Checkpoint L6.3 player use, age and concentration](06b23-checkpoint-l6-3-player-use-age-and-concentration-7x10.md) | no | Done: `REFINE`; 06B22 reopened |
+| 06B22A | [empirical shooter-propensity baseline](06b22a-empirical-shooter-propensity-baseline.md) | no | Done: `GO`; 06B22B open |
+| 06B22B | [empirical shooter-propensity allocation](06b22b-empirical-shooter-propensity-allocation.md) | yes | Done: `GO`; L6.3B open |
+| 06B23A | [Checkpoint L6.3B empirical shooter retry](06b23a-checkpoint-l6-3b-empirical-shooter-retry-7x10.md) | no | **SHOOTER `GO`; overall `REFINE`** |
+| 06B23A1 | [world-isolated leader reader](06b23a1-world-isolated-leader-reader.md) | no | Done: `GO` |
+| 06B23B | [corrected creator-lane attribution](06b23b-corrected-creator-lane-attribution.md) | no | Done: `pre_existing` |
 | 06C | [Checkpoint B2 conditioned tactical ceiling](06c-checkpoint-b2-conditioned-tactical-ceiling.md) | no | GO authorizes 07 |
 | 07 | [player task execution](07-player-task-execution.md) | yes | Step 08 |
 | 08 | [squad identity and lateral execution](08-squad-identity-and-lateral-execution.md) | yes | Step 09 |

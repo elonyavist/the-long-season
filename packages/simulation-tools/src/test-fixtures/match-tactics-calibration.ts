@@ -38,6 +38,11 @@ export function matchTacticsCalibrationFixture(): MatchTacticsCalibrationConfig 
     schemaVersion: MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION,
     version: "match-tactics-simulation-tools-fixture",
     classification: "explicit_game_design_target",
+    chanceActorSelection: {
+      shooterPropensityBasisPointsByRole: Object.fromEntries(
+        CANONICAL_PLAYER_ROLES.map((role) => [role, role === "goalkeeper" ? 0 : 10_000]),
+      ) as Readonly<Record<CanonicalPlayerRole, number>>,
+    },
     tacticalShape: {
       outfieldRoleBudgetBasisPoints: FIXTURE_OUTFIELD_ROLE_BUDGET,
       taskAllocationBasisPointsByRole: Object.fromEntries(

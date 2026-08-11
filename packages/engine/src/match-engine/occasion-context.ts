@@ -3,7 +3,6 @@ import { deriveRng } from "@game/shared";
 
 import {
   type ChanceActorSelectionWeight,
-  chanceShooterWeightForRole,
   primaryDefenderWeightForRole,
   selectChanceActors,
 } from "./chance-actors.ts";
@@ -121,7 +120,8 @@ export function buildOccasionContext(input: BuildOccasionContextInput): Occasion
     scoreBeforeChance: input.scoreBeforeOccasion,
     attackingTeam,
     defendingTeam,
-    chanceType,
+    route: input.route,
+    matchTacticsCalibration: input.simulation.context.matchTacticsCalibration,
   });
 
   const shooter = incidentProfileFor(attackingTeam, actors.shooterPlayerId);

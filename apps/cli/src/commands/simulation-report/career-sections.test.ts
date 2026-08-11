@@ -7,6 +7,7 @@ import { test } from "vitest";
 import { GENERATED_SQUAD_IDENTITY_KEYS } from "@game/content";
 
 import {
+  CAREER_SECTION_IDS,
   createCareerSectionsFacts,
   createRecoveryMatrixFacts,
   coherentMaterialImprovementCount,
@@ -230,6 +231,8 @@ function strengthContestTableRow(
     strengthPointsRankCorrelation: "not_observed",
     tiedStrengthFixtureCount: 0,
     gapBuckets: [],
+    rankGapBuckets: [],
+    firstVersusLast: { fixtureCount: 0, underdogWins: 0, draws: 0 },
   };
 }
 
@@ -376,6 +379,36 @@ test("a read-only hardening replay refuses a missing cached world instead of sim
     await rm(checkpointDirectoryPath, { recursive: true, force: true });
   }
 });
+
+test("a real one-season L6.2 world reaches the exact-upset observation-floor failure", async () => {
+  const checkpointDirectoryPath = await mkdtemp(join(tmpdir(), "phase81a-l6-2-reachability-"));
+  try {
+    const facts = await createCareerSectionsFacts({
+      worldSeeds: ["phase81a-l6-2-reachability-world-00001"],
+      seasonCount: 1,
+      workerCount: 1,
+      detail: "standard",
+      sectionIds: CAREER_SECTION_IDS,
+      leagueDiversityProfile: {
+        profileId: "phase81a-l6-2-reachability",
+        checkpointDirectoryPath,
+        checkpointKind: "integrated_player_world_l6_2",
+      },
+    });
+    const checkpoint = record(record(facts.sections.development).checkpoint);
+    const upset = record(checkpoint.upset);
+    const firstVersusLast = record(upset.firstVersusLast);
+    const rankGaps = array(upset.rankGaps).map(record);
+
+    assert.equal(upset.decision, "REFINE");
+    assert.equal(array(upset.failedGateKeys).includes("first_versus_last"), true);
+    assert.equal(Number(firstVersusLast.fixtureCount) < 50, true);
+    assert.equal(rankGaps.length, 5);
+    assert.equal(rankGaps.every(({ fixtureCount }) => Number(fixtureCount) > 0), true);
+  } finally {
+    await rm(checkpointDirectoryPath, { recursive: true, force: true });
+  }
+}, 120_000);
 
 test("league-diversity retention accepts exactly nineteen of twenty healthy rows", () => {
   const decision = evaluateLeagueDiversityCheckpoint([{

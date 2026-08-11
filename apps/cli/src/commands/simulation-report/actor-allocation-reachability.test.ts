@@ -14,7 +14,7 @@ import {
 import { careerStateFromNewWorld } from "../career/scenarios.ts";
 import type { CliSaveId } from "../career/types.ts";
 
-test("task-quality allocation is reachable on real generated same-role players", () => {
+test("structural creator and shooter allocation reverse on real same-role task swaps", () => {
   const worldSeed = "phase81a-actor-allocation-reachability";
   const world = createFakeDomesticWorld({ worldSeed });
   const careerState = careerStateFromNewWorld(
@@ -57,21 +57,62 @@ test("task-quality allocation is reachable on real generated same-role players",
 
   const home = select(fixture.homeClubId);
   const away = select(fixture.awayClubId);
-  const pair = widestSameRoleTaskPair(home);
-  assert.ok(pair.qualityGap > 0, "real generated same-role players must differ in task quality");
+  for (const actor of ["creator", "shooter"] as const) {
+    const pair = widestSameRoleTaskPair(home, actor);
+    assert.ok(pair.qualityGap > 0, `real generated same-role ${actor}s must differ in task quality`);
 
-  const realCounts = actorCounts(home, away, pair, fixture.id, worldSeed, world);
-  const swappedCounts = actorCounts(
-    swapTaskAttributes(home, pair.strong.playerId, pair.weak.playerId),
+    const realCounts = actorCounts(home, away, pair, fixture.id, worldSeed, world, actor);
+    const swappedCounts = actorCounts(
+      swapTaskAttributes(home, pair.strong.playerId, pair.weak.playerId),
+      away,
+      pair,
+      fixture.id,
+      worldSeed,
+      world,
+      actor,
+    );
+
+    assert.ok(realCounts.strong > realCounts.weak, `${actor}:real:${JSON.stringify(realCounts)}`);
+    assert.ok(realCounts.weak > 0, `${actor}: the weaker eligible player must remain reachable`);
+    assert.ok(swappedCounts.strong < swappedCounts.weak, `${actor}:swapped:${JSON.stringify(swappedCounts)}`);
+  }
+
+  const equalized = equalizeShooterTaskAttributes(home);
+  const equalizedSimulation = createInitialMatchSimulationState({
+    fixtureId: fixture.id,
+    seed: worldSeed,
+    home: equalized,
     away,
-    pair,
-    fixture.id,
-    worldSeed,
-    world,
-  );
-
-  assert.ok(realCounts.strong > realCounts.weak, JSON.stringify(realCounts));
-  assert.ok(swappedCounts.strong < swappedCounts.weak, JSON.stringify(swappedCounts));
+    engineConfig: world.matchEngineConfig,
+    matchTacticsCalibration: world.matchTacticsCalibration,
+  });
+  const shooterCounts = new Map<string, number>();
+  for (let minute = 1; minute <= 10_000; minute += 1) {
+    const occasion = buildOccasionContext({
+      simulation: equalizedSimulation,
+      attackingSide: "home",
+      defendingSide: "away",
+      minute,
+      route: "central",
+      routeQualityEdge: 0,
+      scoreBeforeOccasion: { home: 0, away: 0 },
+    });
+    shooterCounts.set(occasion.shooterPlayerId, (shooterCounts.get(occasion.shooterPlayerId) ?? 0) + 1);
+  }
+  const observed = equalized.lineup
+    .filter((slot) => slot.canonicalRole !== "goalkeeper")
+    .map((slot) => ({
+      count: shooterCounts.get(slot.playerId) ?? 0,
+      propensity: world.matchTacticsCalibration.chanceActorSelection
+        .shooterPropensityBasisPointsByRole[slot.canonicalRole],
+    }));
+  assert.equal(observed.length, 10);
+  assert.equal(observed.every((row) => row.count > 0), true, "every real fielded outfielder must remain reachable");
+  const lowest = [...observed].sort((left, right) => left.propensity - right.propensity)[0];
+  const highest = [...observed].sort((left, right) => right.propensity - left.propensity)[0];
+  if (lowest === undefined || highest === undefined) throw new Error("Generated eleven has no outfield roles");
+  assert.ok(highest.propensity > lowest.propensity, "generated eleven must exercise distinct role propensities");
+  assert.ok(highest.count > lowest.count, `${highest.count}/${lowest.count}`);
 });
 
 interface RealTaskPair {
@@ -80,7 +121,7 @@ interface RealTaskPair {
   readonly qualityGap: number;
 }
 
-function widestSameRoleTaskPair(team: MatchTeamContext): RealTaskPair {
+function widestSameRoleTaskPair(team: MatchTeamContext, actor: "creator" | "shooter"): RealTaskPair {
   let widest: RealTaskPair | undefined;
   for (let leftIndex = 0; leftIndex < team.lineup.length; leftIndex += 1) {
     const left = team.lineup[leftIndex];
@@ -90,8 +131,8 @@ function widestSameRoleTaskPair(team: MatchTeamContext): RealTaskPair {
       if (right === undefined || right.canonicalRole !== left.canonicalRole) continue;
       const leftProfile = profileFor(team, left.playerId);
       const rightProfile = profileFor(team, right.playerId);
-      const leftQuality = openPlayTaskQuality(leftProfile);
-      const rightQuality = openPlayTaskQuality(rightProfile);
+      const leftQuality = openPlayTaskQuality(leftProfile, actor);
+      const rightQuality = openPlayTaskQuality(rightProfile, actor);
       const strong = leftQuality >= rightQuality ? leftProfile : rightProfile;
       const weak = leftQuality >= rightQuality ? rightProfile : leftProfile;
       const candidate = { strong, weak, qualityGap: Math.abs(leftQuality - rightQuality) };
@@ -109,6 +150,7 @@ function actorCounts(
   fixtureId: Parameters<typeof createInitialMatchSimulationState>[0]["fixtureId"],
   seed: string,
   world: ReturnType<typeof createFakeDomesticWorld>,
+  actor: "creator" | "shooter",
 ): { readonly strong: number; readonly weak: number } {
   const simulation = createInitialMatchSimulationState({
     fixtureId,
@@ -130,10 +172,9 @@ function actorCounts(
       routeQualityEdge: 0,
       scoreBeforeOccasion: { home: 0, away: 0 },
     });
-    for (const playerId of [occasion.creatorPlayerId, occasion.shooterPlayerId]) {
-      if (playerId === pair.strong.playerId) strong += 1;
-      if (playerId === pair.weak.playerId) weak += 1;
-    }
+    const selectedPlayerId = actor === "creator" ? occasion.creatorPlayerId : occasion.shooterPlayerId;
+    if (selectedPlayerId === pair.strong.playerId) strong += 1;
+    if (selectedPlayerId === pair.weak.playerId) weak += 1;
   }
   return { strong, weak };
 }
@@ -152,6 +193,20 @@ function swapTaskAttributes(
       if (profile.playerId === weakPlayerId) return withTaskAttributes(profile, strong);
       return profile;
     }),
+  };
+}
+
+/** Holds shooter execution equal so the real role propensity is observed alone. */
+function equalizeShooterTaskAttributes(team: MatchTeamContext): MatchTeamContext {
+  return {
+    ...team,
+    incidentProfiles: team.incidentProfiles.map((profile) => ({
+      ...profile,
+      finishing: 10,
+      composure: 10,
+      technique: 10,
+      anticipation: 10,
+    })),
   };
 }
 
@@ -177,16 +232,19 @@ function withTaskAttributes(
   };
 }
 
-function openPlayTaskQuality(profile: MatchPlayerIncidentProfile): number {
-  const creator = (
-    profile.passing * 3 + profile.vision * 3 + profile.technique * 2
-    + profile.dribbling + profile.anticipation
-  ) / 10;
-  const shooter = (
-    profile.finishing * 3 + profile.composure * 2 + profile.technique
-    + profile.anticipation
-  ) / 7;
-  return creator + shooter;
+function openPlayTaskQuality(
+  profile: MatchPlayerIncidentProfile,
+  actor: "creator" | "shooter",
+): number {
+  return actor === "creator"
+    ? (
+      profile.passing * 3 + profile.vision * 3 + profile.technique * 2
+      + profile.dribbling + profile.anticipation
+    ) / 10
+    : (
+      profile.finishing * 3 + profile.composure * 2 + profile.technique
+      + profile.anticipation
+    ) / 7;
 }
 
 function profileFor(
