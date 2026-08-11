@@ -221,6 +221,8 @@ export interface CareerWorldInspection {
   readonly analysisStrengthGapScale?: number;
   /** Phase 81A fixture-dated selector contrast; ordinary reports never set it. */
   readonly collectSelectionLoadDiagnostics?: boolean;
+  /** Phase 81A exact squad-use stages; ordinary reports never retain them. */
+  readonly collectSquadUseDiagnostics?: boolean;
   /**
    * Analysis-only 06B19 factorial arm. This is orchestration metadata, never
    * saved game state; Phase 81A closeout owns removal of both switches.
@@ -228,6 +230,8 @@ export interface CareerWorldInspection {
   readonly renewalAblationPolicy?: {
     readonly roleAwareMarket: boolean;
     readonly squadIdentityBlueprint: boolean;
+    /** Report-only ceiling oracle; absent preserves the versioned product value. */
+    readonly maximumActiveTalksOverride?: number;
   };
   /** Receives each completed selected-competition season. */
   readonly observeSeasonResult?: (context: {
@@ -4355,6 +4359,9 @@ function createCompetitionCareerSeasonInput(
     ...(inspection?.collectSelectionLoadDiagnostics === true
       ? { collectSelectionLoadDiagnostics: true }
       : {}),
+    ...(inspection?.collectSquadUseDiagnostics === true
+      ? { collectSquadUseDiagnostics: true }
+      : {}),
   };
 }
 
@@ -4615,9 +4622,20 @@ function advanceCareerForReport(
   const wagePolicy = selectPlayerWagePolicyConfig(
     careerStateWithParticipation.gameState.meta.calibrationVersions,
   );
-  const marketBehaviorPolicy = selectMarketBehaviorCalibration(
+  const selectedMarketBehaviorPolicy = selectMarketBehaviorCalibration(
     careerStateWithParticipation.gameState.meta.calibrationVersions,
   );
+  const maximumActiveTalksOverride = inspection?.renewalAblationPolicy
+    ?.maximumActiveTalksOverride;
+  const marketBehaviorPolicy = maximumActiveTalksOverride === undefined
+    ? selectedMarketBehaviorPolicy
+    : {
+        ...selectedMarketBehaviorPolicy,
+        aiLifecycle: {
+          ...selectedMarketBehaviorPolicy.aiLifecycle,
+          maximumActiveTalks: maximumActiveTalksOverride,
+        },
+      };
   const askingPriceConfig = selectAskingPriceCurves(
     careerStateWithParticipation.gameState.meta.calibrationVersions,
   );
@@ -4677,7 +4695,9 @@ function advanceCareerForReport(
   });
 
   if (advanced.status !== "advanced") {
-    throw new Error(`Cannot advance report career season ${context.seasonNumber}: ${advanced.reason}`);
+    throw new Error(
+      `Cannot advance report career ${worldSeed} season ${context.seasonNumber}: ${advanced.reason}`,
+    );
   }
   for (const signing of advanced.facts.squadMaintenance.freeAgentSignings) {
     const player = advanced.careerState.gameState.players[signing.playerId];

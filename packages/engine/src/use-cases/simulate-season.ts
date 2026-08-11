@@ -293,6 +293,8 @@ export interface SimulateSeasonInput {
   readonly analysisStrengthGapScale?: number;
   /** Retains compact fixture-dated age/load alternatives for the locked Phase 81A owner audit. */
   readonly collectSelectionLoadDiagnostics?: boolean;
+  /** Retains exact selector-stage IDs for the locked Phase 81A squad-use audit. */
+  readonly collectSquadUseDiagnostics?: boolean;
 }
 
 /**
@@ -404,6 +406,13 @@ export interface SimulateSeasonFixtureFieldedTeam {
     readonly veteranStarterCount: number;
     readonly qualityMatchedYoungerAlternativeCount: number;
     readonly fresherQualityMatchedYoungerAlternativeCount: number;
+  };
+  /** Analysis-only exact stages consumed by the canonical fixture selector. */
+  readonly squadUseDiagnostics?: {
+    readonly candidatePlayerIds: readonly PlayerId[];
+    readonly availablePlayerIds: readonly PlayerId[];
+    readonly selectorPoolPlayerIds: readonly PlayerId[];
+    readonly matchdayPlayerIds: readonly PlayerId[];
   };
 }
 
@@ -697,6 +706,8 @@ interface FixtureTeamSetup {
   readonly lifecycleDiagnostics?: SimulateSeasonFixtureFieldedTeam["lifecycleDiagnostics"];
   /** Analysis-only compact age/load contrast from the exact selector input. */
   readonly selectionLoadDiagnostics?: SimulateSeasonFixtureFieldedTeam["selectionLoadDiagnostics"];
+  /** Analysis-only exact squad-use stages from the same selector input. */
+  readonly squadUseDiagnostics?: SimulateSeasonFixtureFieldedTeam["squadUseDiagnostics"];
 }
 
 interface FixtureMatchSetup {
@@ -1101,6 +1112,7 @@ function fixtureTeamSetup(
       fixture,
       availabilityRuntime,
       input.collectSelectionLoadDiagnostics === true,
+      input.collectSquadUseDiagnostics === true,
     );
   }
 
@@ -1136,6 +1148,9 @@ function fieldedTeamForFixture(
     ...(setup.selectionLoadDiagnostics === undefined
       ? {}
       : { selectionLoadDiagnostics: setup.selectionLoadDiagnostics }),
+    ...(setup.squadUseDiagnostics === undefined
+      ? {}
+      : { squadUseDiagnostics: setup.squadUseDiagnostics }),
   };
 }
 
@@ -1610,6 +1625,7 @@ function aiSelectedMatchTeamContext(
   fixture: Fixture,
   availabilityRuntime: SeasonAvailabilityRuntime | undefined,
   collectSelectionLoadDiagnostics: boolean,
+  collectSquadUseDiagnostics: boolean,
 ): FixtureTeamSetup {
   if (team.aiSelection === undefined) {
     throw new SimulateSeasonError(
@@ -1777,6 +1793,24 @@ function aiSelectedMatchTeamContext(
               recentUse,
               playerStates: livePlayerStates ?? team.playerStates,
             }),
+          }
+        : {}),
+      ...(collectSquadUseDiagnostics
+        ? {
+            squadUseDiagnostics: {
+              candidatePlayerIds: distinctPlayerIds([
+                ...rosterPlayerIds,
+                ...callUpPlayerIds,
+                ...emergencyPlayerIds,
+              ]),
+              availablePlayerIds: distinctPlayerIds([
+                ...availableSeniorPlayerIds,
+                ...availableCallUpPlayerIds,
+                ...availableEmergencyPlayerIds,
+              ]),
+              selectorPoolPlayerIds: attemptedPlayerIds,
+              matchdayPlayerIds: selectedPlayerIds,
+            },
           }
         : {}),
     };

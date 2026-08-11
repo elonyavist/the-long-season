@@ -59,6 +59,10 @@ Le decisioni di prodotto sono:
 
 ### Tranche autorizzata
 
+**Aggiornamento dopo il verdetto L6.1:** le righe successive a 06B19 sono la
+sequenza preregistrata originale. Il `REFINE` di 06B19 le ha tenute chiuse e ha
+autorizzato soltanto l'addendum A6.1 in fondo a questo documento.
+
 | Step | Domanda | Comportamento | Exit |
 |---|---|---:|---|
 | 06B18 | hardening A6: registro, valutatore, rappresentazione `superseded` | no | verdict-neutrality provata su L5.4 in cache |
@@ -187,3 +191,46 @@ così L6.2 non può ereditare un rosso già attribuito e lasciato indietro.
 - allocazione attori strutturale al posto dei divisori derivati dall'output;
 - canary `7 x 10` consultabile in HTML con zero fallback e riconciliazioni;
 - solo dopo `GO` di L6.4 può ripartire il `100 x 10`.
+
+## Addendum A6.1 - Refinement After L6.1 `REFINE`
+
+L6.1 non autorizza una correzione. Ha però prodotto abbastanza evidenza per
+congelare prima del prossimo output un unico refinement causale:
+[`06b19a-checkpoint-l6-1a-renewal-pathway-and-squad-use-attribution.md`](../steps/81a-contextual-tactical-agency-manager-ai-decision-loop/06b19a-checkpoint-l6-1a-renewal-pathway-and-squad-use-attribution.md).
+
+La sequenza operativa locale diventa:
+
+| Step | Domanda | Comportamento | Exit |
+|---|---|---:|---|
+| 06B19A | L6.1A: cap trattative, percorso rinnovo, uso rosa e classifica hanno un owner causale? | no | owner completi o `REFINE`/`STOP` |
+| 06B20A | cap/capacità mercato, solo se L6.1A lo attribuisce | condizionale | checkpoint immediato |
+| 06B20B | supply/blueprint, solo se L6.1A lo attribuisce | condizionale | checkpoint immediato |
+| 06B20C | gerarchia, solo se L6.1A conferma `population_strength` | condizionale | checkpoint immediato |
+| 06B20D | un solo owner dell'uso rosa nominato da L6.1A | condizionale | checkpoint immediato |
+| 06B21 | L6.2 sul registro completo | no | soltanto dopo i checkpoint delle correzioni autorizzate |
+
+06B19A usa un solo profilo composito di `pnpm cli simulation-report` e un solo
+JSON. Il braccio corrente esegue `28 x 10`; i primi sette mondi sono condivisi
+con controllo, mercato, blueprint e oracolo del cap. Gli scenari girano in
+sequenza, sempre con esattamente sette worker. La dimensione `28` è congelata
+dal floor punti `0.5` e dalla deviazione standard per mondo `1.254136` di L6.1:
+con Student-t il batch `21` ha semiampiezza 95% `0.571`, mentre `28` raggiunge
+`0.486`; `28` è quindi il primo batch da sette che risolve quel floor.
+
+L'oracolo del cap modifica soltanto una copia report-only della policy e non è
+un valore prodotto. Il funnel uso-rosa conserva fatti esatti al confine della
+selezione; non ricostruisce disponibilità, panchina o trasferimenti a fine
+stagione. Il replay gerarchia riusa `analysisStrengthGapScale = 1.5` e
+`tableHierarchyOwner(...)` senza nuove soglie. Gli effetti locali sotto floor
+di L6.1 non ricevono una coorte scelta per farli crescere: il cap deve mostrare
+un miglioramento downstream materiale oppure resta assolto.
+
+06B20A-D restano soltanto slot condizionali. Nessun loro documento di gameplay
+può essere scritto prima del verdetto L6.1A; un'interazione ancora accoppiata
+non viene trasformata in una correzione doppia.
+
+**Esito 2026-08-10:** L6.1A è `STOP / RETHINK`. Uso rosa e classifica hanno
+owner diagnostici (`matchday_selection`, `population_strength`) e il cap
+trattative è assolto, ma un mondo del controllo pre-06B16 fallisce alla stagione
+9. Il fattoriale è `not_evaluated`; 06B20A-D e L6.2 restano chiusi. Il record
+canonico è `PHASE_81A_CHECKPOINT_L6_1A_RENEWAL_REFINEMENT.md`.

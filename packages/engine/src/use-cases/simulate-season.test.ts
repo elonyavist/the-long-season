@@ -958,6 +958,34 @@ test("selection-load diagnostics observe a real available younger alternative on
   ) > 0, true);
 });
 
+test("squad-use diagnostics retain exact nested selector stages only when requested", () => {
+  const base = seasonInputWithAiSelection("squad-use-diagnostic-seed", 100);
+  const clubIds = base.clubIds.slice(0, 2);
+  const teamsByClubId = Object.fromEntries(clubIds.map((clubId) => [
+    clubId,
+    base.teamsByClubId[clubId],
+  ])) as Readonly<Record<ClubId, SimulateSeasonTeamInput>>;
+  const input = { ...base, clubIds, teamsByClubId };
+  const ordinary = simulateSeason(input);
+  const observed = simulateSeason({ ...input, collectSquadUseDiagnostics: true });
+
+  assert.equal(ordinary.fixtureParticipation.every(({ fieldedTeams }) =>
+    fieldedTeams.home.squadUseDiagnostics === undefined
+      && fieldedTeams.away.squadUseDiagnostics === undefined), true);
+  for (const fixture of observed.fixtureParticipation) {
+    for (const team of [fixture.fieldedTeams.home, fixture.fieldedTeams.away]) {
+      const diagnostics = team.squadUseDiagnostics;
+      assert.ok(diagnostics !== undefined);
+      assert.equal(diagnostics.matchdayPlayerIds.length, 19);
+      assert.equal(diagnostics.selectorPoolPlayerIds.length >= diagnostics.matchdayPlayerIds.length, true);
+      assert.equal(diagnostics.availablePlayerIds.length >= diagnostics.selectorPoolPlayerIds.length, true);
+      assert.equal(diagnostics.candidatePlayerIds.length >= diagnostics.availablePlayerIds.length, true);
+      assert.equal(diagnostics.matchdayPlayerIds.every((playerId) =>
+        diagnostics.selectorPoolPlayerIds.includes(playerId)), true);
+    }
+  }
+});
+
 test("automatic season fixtures retain accepted substitutions and exact minutes for both AI teams", () => {
   const base = seasonInputWithAiSelection("progressive-ai-season-seed", 100);
   const { fitnessLifecycle: _fitnessLifecycle, ...withoutFitnessLifecycle } = base;

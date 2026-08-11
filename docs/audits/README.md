@@ -16,6 +16,13 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_L6_1A_RENEWAL_REFINEMENT.md` - **Checkpoint L6.1A,
+  `STOP / RETHINK`.** The corrected composite profile reconciles, attributes
+  squad use to `matchday_selection` in `28/28` worlds and standings to
+  `population_strength`, while absolving the active-talk cap. One declared
+  pre-06B16 control world fails canonically in season 9, so the factorial is
+  `not_evaluated` and no 06B20 correction is authorized.
+
 - `PHASE_81A_CHECKPOINT_L6_1_RENEWAL_ABLATION.md` - **Checkpoint L6.1,
   `REFINE`.** Four fresh same-seed `7 x 10` arms reconcile and preserve L5.4
   gameplay facts. Three target metrics have a material market/blueprint

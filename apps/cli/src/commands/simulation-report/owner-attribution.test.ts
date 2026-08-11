@@ -5,6 +5,7 @@ import {
   OwnerAttributionObserver,
   evaluateOwnerAttributionCheckpoint,
   evaluatePlayerRenewalLeadersCheckpoint,
+  evaluateSquadUseAttribution,
   leaderProductionOwner,
   ownerAttributionDecision,
   playerRenewalLeadersFailedGateKeys,
@@ -82,6 +83,38 @@ test("fresh A6 use gates isolate worlds and count a transferred player twice", (
 
   assert.equal(players.appearanceShare, 34 / (34 * 3));
   assert.equal(players.distinctUsersPerClubSeason, 1.5);
+});
+
+test("squad-use attribution identifies a reachable matchday ceiling on real appearance rows", () => {
+  const worlds = Array.from({ length: 28 }, (_, worldIndex): OwnerAttributionWorldFacts => ({
+    ...emptyOwnerWorld(),
+    worldSeed: `squad-use:${worldIndex + 1}`,
+    playerUseSeasons: Array.from({ length: 23 }, (_, playerIndex) => ({
+      competitionId: "competition:ita-1",
+      seasonNumber: 1,
+      clubId: "club:a",
+      playerId: `player:${playerIndex + 1}`,
+      appearances: playerIndex < 16 ? 21 : 20,
+    })),
+    squadUseSeasons: [{
+      competitionId: "competition:ita-1",
+      seasonNumber: 1,
+      clubId: "club:a",
+      fixtureCount: 34,
+      candidatePlayerCount: 31,
+      availablePlayerCount: 30,
+      selectorPoolPlayerCount: 29,
+      matchdayPlayerCount: 28,
+    }],
+  }));
+
+  const result = evaluateSquadUseAttribution(worlds);
+
+  assert.equal(result.owner, "substitution_realization");
+  assert.equal(result.ownerWorldCount, 28);
+  assert.equal(result.pooledCounterfactualDistinctUsersPerClubSeason, 26);
+  assert.equal(result.pooledCounterfactualAppearanceShare, 7 / 13);
+  assert.equal(result.reconciliationFailureCount, 0);
 });
 
 test("zero reconciliation cannot hide one unattributed red family", () => {

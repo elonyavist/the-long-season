@@ -122,6 +122,9 @@ test("renewal episodes reopen after fulfillment and reconcile both total taxonom
     { needEpisodeOrdinal: 1, terminalOutcome: "fulfilled" },
     { needEpisodeOrdinal: 2, terminalOutcome: "recruitment_impossible" },
   ]);
+  assert.equal(episodes[0]?.fulfilledPlayerId, target);
+  assert.equal(episodes[0]?.terminalDate, 12);
+  assert.equal(episodes[1]?.fulfilledPlayerId, undefined);
   assert.equal(evaluateRenewalNeedFunnel(episodes).reconciliationFailureCount, 0);
 });
 

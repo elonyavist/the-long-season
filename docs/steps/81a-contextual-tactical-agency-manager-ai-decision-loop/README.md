@@ -37,8 +37,12 @@ evaluator hardening first, then the L6.1 market/blueprint `2 x 2` ablation;
 corrections stay closed until L6.1 demonstrates owners. 06B18 is Done and
 06B19 completed with `REFINE`: local capacity and champion points are
 `not_reproduced`, three metrics are `shared_interaction`, and both new
-player-use gates are red across every arm. No 06B20 correction is authorized;
-the next work must refine attribution rather than tune an assumed owner.
+player-use gates are red across every arm. No 06B20 correction is authorized.
+Addendum A6.1 and 06B19A are implemented. The canary is `GO`; the full
+checkpoint is `STOP / RETHINK`. It attributes squad use to
+`matchday_selection` and standings to `population_strength`, and absolves the
+active-talk cap, but one declared pre-06B16 control world fails canonically in
+season 9. The factorial is `not_evaluated` and all corrections remain closed.
 
 This phase is governed by
 [`PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md`](../../audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md).
@@ -211,6 +215,7 @@ contexts; it never owns the analytic diversity gate.
 | 06B17 | [Checkpoint L5.4: integrated `7 x 10` JSON/HTML](06b17-checkpoint-l5-4-integrated-7x10-html.md) | no | **Done: `REFINE`; HTML produced, L1 closed** |
 | 06B18 | [A6 register and evaluator hardening](06b18-a6-register-and-evaluator-hardening.md) | no | Done: verdict-neutral on cached L5.4; opened 06B19 |
 | 06B19 | [Checkpoint L6.1: renewal ablation and funnel attribution](06b19-renewal-ablation-and-funnel-attribution.md) | no | Done: `REFINE`; 06B20A-C remain closed |
+| 06B19A | [Checkpoint L6.1A: renewal pathway and squad-use attribution](06b19a-checkpoint-l6-1a-renewal-pathway-and-squad-use-attribution.md) | no | Done: `STOP / RETHINK`; scenario completion failed, 06B20A-D closed |
 | 06C | [Checkpoint B2 conditioned tactical ceiling](06c-checkpoint-b2-conditioned-tactical-ceiling.md) | no | GO authorizes 07 |
 | 07 | [player task execution](07-player-task-execution.md) | yes | Step 08 |
 | 08 | [squad identity and lateral execution](08-squad-identity-and-lateral-execution.md) | yes | Step 09 |

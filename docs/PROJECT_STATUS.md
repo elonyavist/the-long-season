@@ -23,16 +23,14 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Step: Phase 81A **06B19 L6.1 is Done: `REFINE`; 06B20A-C are closed.** Four
-  fresh same-seed `7 x 10` arms reconcile and the combined replay preserves all
-  shared L5.4 facts. Local replacement and champion points are
-  `not_reproduced`; division replacement, formation retention and generated
-  leaders are `shared_interaction`, never a one-axis correction licence.
-- The first A6 use reading is red in every arm: appearance share
-  `0.6456..0.6496` vs `0.48..0.58`, distinct users `23.03..23.12` vs `26..31`.
-  The upper-division role-need funnel bottlenecks at `active_talk_limit_reached`.
-  Attribution must be refined before market, blueprint, rotation or hierarchy
-  changes; `100 x 10`, B2 and Steps 07-16 remain closed.
+- Step: Phase 81A **06B19A L6.1A is Done: `STOP / RETHINK`.** Canary purity is
+  `7/7`; full reconciliation is zero. One pre-06B16 control world fails
+  canonically in season 9, so the factorial is `not_evaluated` and no gameplay
+  correction is authorized.
+- Diagnostics name `matchday_selection` for squad use (`28/28`) and
+  `population_strength` for champion points (`28/28`), while removing the
+  active-talk cap worsens fulfilled-need share and is absolved. 06B20A-D,
+  `100 x 10`, B2 and Steps 07-16 remain closed pending a new design.
 - Step 03A Done; hard-cap probe **`FOUND`**, `21/21` reconciled. Its temporary
   projection hold is resolved by 06B7F1. Checkpoint A's `STOP / RETHINK` and
   frozen before-state stand.

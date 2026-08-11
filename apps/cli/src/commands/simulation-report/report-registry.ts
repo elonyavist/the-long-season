@@ -86,6 +86,8 @@ export const SIMULATION_REPORT_PROFILE_IDS = [
   "phase81a-renewal-ablation-l6-1-market-7x10",
   "phase81a-renewal-ablation-l6-1-blueprint-7x10",
   "phase81a-renewal-ablation-l6-1-combined-7x10",
+  "phase81a-renewal-refinement-l6-1a-canary-7x1",
+  "phase81a-renewal-refinement-l6-1a-28x10",
   "phase81a-league-diversity-canary-7x10",
   "phase81a-league-diversity-100x10",
   "phase81-tactical-shape",
@@ -120,6 +122,8 @@ const CAREER_PROFILE_CHECKPOINT_KIND = {
   "phase81a-renewal-ablation-l6-1-market-7x10": "renewal_ablation_l6_1",
   "phase81a-renewal-ablation-l6-1-blueprint-7x10": "renewal_ablation_l6_1",
   "phase81a-renewal-ablation-l6-1-combined-7x10": "renewal_ablation_l6_1",
+  "phase81a-renewal-refinement-l6-1a-canary-7x1": "renewal_refinement_l6_1a",
+  "phase81a-renewal-refinement-l6-1a-28x10": "renewal_refinement_l6_1a",
 } as const satisfies Partial<Readonly<Record<SimulationReportProfileId, CareerCheckpointKind>>>;
 
 const CAREER_PROFILE_CACHE_SUFFIX = {
@@ -149,6 +153,8 @@ const CAREER_PROFILE_CACHE_SUFFIX = {
   "phase81a-renewal-ablation-l6-1-market-7x10": "-facts-v2",
   "phase81a-renewal-ablation-l6-1-blueprint-7x10": "-facts-v2",
   "phase81a-renewal-ablation-l6-1-combined-7x10": "-facts-v2",
+  "phase81a-renewal-refinement-l6-1a-canary-7x1": "-facts-v1",
+  "phase81a-renewal-refinement-l6-1a-28x10": "-facts-v1",
 } as const satisfies Readonly<Record<keyof typeof CAREER_PROFILE_CHECKPOINT_KIND, string>>;
 
 /** Copy-pasteable commands rendered by help and parsed by command tests. */
@@ -381,6 +387,36 @@ export const SIMULATION_REPORT_PROFILES = {
     "simulationReport.profile.phase81aRenewalAblationCombined.title",
     "simulationReport.profile.phase81aRenewalAblationCombined.description",
   ),
+  "phase81a-renewal-refinement-l6-1a-canary-7x1": {
+    id: "phase81a-renewal-refinement-l6-1a-canary-7x1",
+    titleKey: "simulationReport.profile.phase81aRenewalRefinementCanary.title",
+    descriptionKey: "simulationReport.profile.phase81aRenewalRefinementCanary.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-renewal-refinement-l6-1a-canary-7x1",
+      worldCount: 7,
+      seasonCount: 1,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-renewal-refinement-l6-1a-canary-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-renewal-refinement-l6-1a-28x10": {
+    id: "phase81a-renewal-refinement-l6-1a-28x10",
+    titleKey: "simulationReport.profile.phase81aRenewalRefinement.title",
+    descriptionKey: "simulationReport.profile.phase81aRenewalRefinement.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-renewal-refinement-l6-1a-28x10",
+      worldCount: 28,
+      seasonCount: 10,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-renewal-refinement-l6-1a-v1",
+      workerCount: 7,
+    },
+  },
   "phase81a-substitution-minute-l2-7x1": {
     id: "phase81a-substitution-minute-l2-7x1",
     titleKey: "simulationReport.profile.phase81aSubstitutionMinuteL2.title",
@@ -977,6 +1013,7 @@ async function leagueDiversityExecution(
     readonly checkpointKind: CareerCheckpointKind;
     readonly readOnly?: boolean;
     readonly renewalAblationArm?: RenewalAblationArm;
+    readonly renewalRefinementMode?: "canary" | "full";
   };
 }> {
   if (profileId === null || !Object.hasOwn(CAREER_PROFILE_CHECKPOINT_KIND, profileId)) return {};
@@ -985,6 +1022,11 @@ async function leagueDiversityExecution(
     ? "phase81a-integrated-l5-4-7x10"
     : careerProfileId;
   const renewalAblationArm = renewalAblationArmForProfile(careerProfileId);
+  const renewalRefinementMode = careerProfileId === "phase81a-renewal-refinement-l6-1a-canary-7x1"
+    ? "canary" as const
+    : careerProfileId === "phase81a-renewal-refinement-l6-1a-28x10"
+      ? "full" as const
+      : undefined;
   return {
     leagueDiversityProfile: {
       profileId: cacheIdentityProfileId,
@@ -994,6 +1036,7 @@ async function leagueDiversityExecution(
       ),
       readOnly: careerProfileId === "phase81a-integrated-l5-4h-reeval-7x10",
       ...(renewalAblationArm === undefined ? {} : { renewalAblationArm }),
+      ...(renewalRefinementMode === undefined ? {} : { renewalRefinementMode }),
     },
   };
 }

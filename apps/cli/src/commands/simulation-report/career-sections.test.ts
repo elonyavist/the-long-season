@@ -9,9 +9,11 @@ import { GENERATED_SQUAD_IDENTITY_KEYS } from "@game/content";
 import {
   createCareerSectionsFacts,
   createRecoveryMatrixFacts,
+  coherentMaterialImprovementCount,
   evaluateAvailabilityAgingCheckpoint,
   evaluateIntegratedLeaderboardAgeGates,
   evaluateLeagueDiversityCheckpoint,
+  evaluatePairedHistoricalGuardrail,
   evaluateStandingsHierarchyCheckpoint,
   evaluateSubstitutionMinuteCheckpoint,
   type LeagueDiversityCompetitionSeasonFact,
@@ -20,6 +22,21 @@ import {
   type SubstitutionMinuteWorldFacts,
   type StandingsHierarchyWorldFacts,
 } from "./career-sections.ts";
+
+test("material coherence counts only deltas reaching the frozen floor", () => {
+  assert.equal(coherentMaterialImprovementCount([0.019, 0.02, 0.021, -0.5], 0.02), 2);
+});
+
+test("paired historical guardrail permits repair but rejects added distance", () => {
+  assert.equal(evaluatePairedHistoricalGuardrail("drawShare", 0.31, 0.29, {
+    min: 0.22,
+    max: 0.29,
+  }).held, true);
+  assert.equal(evaluatePairedHistoricalGuardrail("drawShare", 0.28, 0.31, {
+    min: 0.22,
+    max: 0.29,
+  }).held, false);
+});
 
 test("one real career execution feeds every reusable module and fields contextual AI shapes", async () => {
   const facts = await createCareerSectionsFacts({

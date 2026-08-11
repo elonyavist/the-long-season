@@ -43,6 +43,34 @@ export type TableHierarchyOwner =
 export type PlayerLoadOwner = "selection_load" | "renewal_quality" | "not_attributed";
 export type LeaderProductionOwner = "actor_allocation" | "occasion_execution" | "not_attributed";
 export type ClubIdentityOwner = "annual_intake_identity_erosion" | "not_attributed";
+export type SquadUseOwner =
+  | "substitution_realization"
+  | "matchday_selection"
+  | "call_up_or_selector_boundary"
+  | "availability"
+  | "squad_supply"
+  | "appearance_allocation"
+  | "not_attributed";
+
+export interface SquadUseAttributionWorldFact {
+  readonly worldSeed: string;
+  readonly owner: SquadUseOwner;
+  readonly clubSeasonCount: number;
+  readonly failedClubSeasonCount: number;
+  readonly reconciliationFailureCount: number;
+  readonly recoverableClubSeasonCountByOwner: Readonly<Record<SquadUseOwner, number>>;
+}
+
+export interface SquadUseAttributionDecision {
+  readonly owner: SquadUseOwner;
+  readonly appearanceShare: number | "not_observed";
+  readonly distinctUsersPerClubSeason: number | "not_observed";
+  readonly ownerWorldCount: number;
+  readonly pooledCounterfactualAppearanceShare: number | "not_observed";
+  readonly pooledCounterfactualDistinctUsersPerClubSeason: number | "not_observed";
+  readonly reconciliationFailureCount: number;
+  readonly worlds: readonly SquadUseAttributionWorldFact[];
+}
 
 export interface OwnerAttributionGapBucketFact {
   readonly bucket: StrengthGapBucket;
@@ -65,6 +93,7 @@ export interface OwnerAttributionTableSeasonFact {
   readonly pairedChampionPoints: number;
   readonly pairedLastPoints: number;
   readonly pairedPointsSpread: number;
+  readonly pairedGoalsPerMatch: number;
   readonly pairedDrawShare: number;
   readonly pairedPpgStandardDeviation: number;
   readonly kickoffStrengthMean: number;
@@ -111,6 +140,18 @@ export interface OwnerAttributionPlayerUseSeasonFact {
   readonly appearances: number;
 }
 
+/** Non-derivable club-season unions captured while the selector owns the IDs. */
+export interface OwnerAttributionSquadUseSeasonFact {
+  readonly competitionId: string;
+  readonly seasonNumber: number;
+  readonly clubId: string;
+  readonly fixtureCount: number;
+  readonly candidatePlayerCount: number;
+  readonly availablePlayerCount: number;
+  readonly selectorPoolPlayerCount: number;
+  readonly matchdayPlayerCount: number;
+}
+
 export interface OwnerAttributionClubIdentitySeasonFact {
   readonly competitionId: string;
   readonly seasonNumber: number;
@@ -134,6 +175,8 @@ export interface OwnerAttributionWorldFacts {
   readonly selectionLoadSeasons: readonly OwnerAttributionSelectionLoadSeasonFact[];
   /** Absent only in superseded cached cohorts created before Amendment A6. */
   readonly playerUseSeasons?: readonly OwnerAttributionPlayerUseSeasonFact[];
+  /** Present only for the locked L6.1A squad-use observer. */
+  readonly squadUseSeasons?: readonly OwnerAttributionSquadUseSeasonFact[];
   readonly clubIdentitySeasons: readonly OwnerAttributionClubIdentitySeasonFact[];
   readonly annualRolePlanReconciliationFailureCount: number;
   readonly annualRolePlanPositiveRoleCounts: readonly number[];
@@ -227,18 +270,24 @@ export class OwnerAttributionObserver {
   private readonly playerSeasons: OwnerAttributionPlayerSeasonFact[] = [];
   private readonly selectionLoadSeasons: OwnerAttributionSelectionLoadSeasonFact[] = [];
   private readonly playerUseSeasons: OwnerAttributionPlayerUseSeasonFact[] = [];
+  private readonly squadUseSeasons: OwnerAttributionSquadUseSeasonFact[] = [];
   private readonly clubIdentitySeasons: OwnerAttributionClubIdentitySeasonFact[] = [];
   private readonly annualRolePlanPositiveRoleCounts: number[] = [];
   private annualRolePlanReconciliationFailureCount = 0;
   private reconciliationFailureCount = 0;
   private readonly includeTableAttribution: boolean;
+  private readonly includeSquadUse: boolean;
 
   public constructor(
     worldSeed: string,
-    options: { readonly includeTableAttribution?: boolean } = {},
+    options: {
+      readonly includeTableAttribution?: boolean;
+      readonly includeSquadUse?: boolean;
+    } = {},
   ) {
     this.worldSeed = worldSeed;
     this.includeTableAttribution = options.includeTableAttribution ?? true;
+    this.includeSquadUse = options.includeSquadUse ?? false;
   }
 
   public observeOpening(careerState: CliCareerState): void {
@@ -280,6 +329,9 @@ export class OwnerAttributionObserver {
     this.reconciliationFailureCount += opportunityReconciliationFailureCount(input.result);
     this.playerSeasons.push(...playerSeasonFacts(input));
     this.playerUseSeasons.push(...playerUseSeasonFacts(input));
+    if (this.includeSquadUse) {
+      this.squadUseSeasons.push(...squadUseSeasonFacts(input));
+    }
     this.selectionLoadSeasons.push(selectionLoadSeasonFact(input));
     this.clubIdentitySeasons.push(...this.identitySeasonFacts(input));
   }
@@ -316,6 +368,7 @@ export class OwnerAttributionObserver {
       playerSeasons: this.playerSeasons,
       selectionLoadSeasons: this.selectionLoadSeasons,
       playerUseSeasons: this.playerUseSeasons,
+      ...(this.includeSquadUse ? { squadUseSeasons: this.squadUseSeasons } : {}),
       clubIdentitySeasons: this.clubIdentitySeasons,
       annualRolePlanReconciliationFailureCount: this.annualRolePlanReconciliationFailureCount,
       annualRolePlanPositiveRoleCounts: this.annualRolePlanPositiveRoleCounts,
@@ -710,6 +763,7 @@ function tableSeasonFact(input: {
     pairedChampionPoints: paired.championPoints,
     pairedLastPoints: paired.lastPoints,
     pairedPointsSpread: paired.pointsSpread,
+    pairedGoalsPerMatch: paired.goalsPerMatch,
     pairedDrawShare: paired.drawShare,
     pairedPpgStandardDeviation: paired.ppgStandardDeviation,
     kickoffStrengthMean: mean(clubStrengths),
@@ -836,6 +890,83 @@ function playerUseSeasonFacts(input: {
     left.clubId.localeCompare(right.clubId) || left.playerId.localeCompare(right.playerId));
 }
 
+/** Aggregates transient fixture selector IDs into one compact club-season row. */
+export function squadUseSeasonFacts(input: {
+  readonly seasonNumber: number;
+  readonly competitionId: string;
+  readonly result: SimulateSeasonResult;
+}): readonly OwnerAttributionSquadUseSeasonFact[] {
+  type MutableSquadUse = {
+    fixtureCount: number;
+    candidate: Set<string>;
+    available: Set<string>;
+    selectorPool: Set<string>;
+    matchday: Set<string>;
+  };
+  const byClub = new Map<string, MutableSquadUse>();
+  for (const fixture of input.result.fixtureParticipation) {
+    for (const team of [fixture.fieldedTeams.home, fixture.fieldedTeams.away]) {
+      const diagnostics = team.squadUseDiagnostics;
+      if (diagnostics === undefined) {
+        throw new Error(
+          `L6.1A squad-use diagnostic is missing: ${input.competitionId}:${input.seasonNumber}:${team.clubId}`,
+        );
+      }
+      const clubId = String(team.clubId);
+      const current = byClub.get(clubId) ?? {
+        fixtureCount: 0,
+        candidate: new Set<string>(),
+        available: new Set<string>(),
+        selectorPool: new Set<string>(),
+        matchday: new Set<string>(),
+      };
+      current.fixtureCount += 1;
+      addIds(current.candidate, diagnostics.candidatePlayerIds);
+      addIds(current.available, diagnostics.availablePlayerIds);
+      addIds(current.selectorPool, diagnostics.selectorPoolPlayerIds);
+      addIds(current.matchday, diagnostics.matchdayPlayerIds);
+      byClub.set(clubId, current);
+    }
+  }
+  return [...byClub.entries()].sort(([left], [right]) => left.localeCompare(right)).map(
+    ([clubId, row]) => {
+      assertSetSubset(row.matchday, row.selectorPool, "matchday", "selector_pool", clubId);
+      assertSetSubset(row.selectorPool, row.available, "selector_pool", "available", clubId);
+      assertSetSubset(row.available, row.candidate, "available", "candidate", clubId);
+      return {
+        competitionId: input.competitionId,
+        seasonNumber: input.seasonNumber,
+        clubId,
+        fixtureCount: row.fixtureCount,
+        candidatePlayerCount: row.candidate.size,
+        availablePlayerCount: row.available.size,
+        selectorPoolPlayerCount: row.selectorPool.size,
+        matchdayPlayerCount: row.matchday.size,
+      };
+    },
+  );
+}
+
+function addIds(target: Set<string>, playerIds: readonly unknown[]): void {
+  for (const playerId of playerIds) target.add(String(playerId));
+}
+
+function assertSetSubset(
+  subset: ReadonlySet<string>,
+  superset: ReadonlySet<string>,
+  subsetName: string,
+  supersetName: string,
+  clubId: string,
+): void {
+  for (const playerId of subset) {
+    if (!superset.has(playerId)) {
+      throw new Error(
+        `L6.1A ${subsetName} is not nested in ${supersetName}: ${clubId}:${playerId}`,
+      );
+    }
+  }
+}
+
 function appearanceShare(rows: readonly OwnerAttributionPlayerUseSeasonFact[]): number {
   if (rows.length === 0) return 0;
   return rows.reduce((sum, row) => sum + row.appearances, 0) / (34 * rows.length);
@@ -850,6 +981,194 @@ function distinctUserCountsPerClubSeason(
     counts.set(key, (counts.get(key) ?? 0) + 1);
   }
   return [...counts.values()];
+}
+
+/** Locates the first exact squad-use stage that can clear both frozen A6 bands. */
+export function evaluateSquadUseAttribution(
+  worlds: readonly OwnerAttributionWorldFacts[],
+): SquadUseAttributionDecision {
+  const worldFacts = worlds.map(squadUseWorldFact);
+  const ownerCounts = countBy(worldFacts.map(({ owner }) => owner), squadUseOwners());
+  const rankedOwners = squadUseOwners()
+    .filter((owner) => owner !== "not_attributed")
+    .sort((left, right) => ownerCounts[right] - ownerCounts[left] || left.localeCompare(right));
+  const first = rankedOwners[0];
+  const second = rankedOwners[1];
+  const owner = first !== undefined
+    && ownerCounts[first] >= 20
+    && (second === undefined || ownerCounts[first] > ownerCounts[second])
+    ? first
+    : "not_attributed";
+  const firstDivisionRows = worlds.flatMap(({ playerUseSeasons }) =>
+    (playerUseSeasons ?? []).filter(({ competitionId }) =>
+      competitionId === FIRST_DIVISION_COMPETITION_ID));
+  const totalAppearances = firstDivisionRows.reduce((sum, row) => sum + row.appearances, 0);
+  const currentDistinctCounts = worlds.flatMap(({ playerUseSeasons }) =>
+    distinctUserCountsPerClubSeason((playerUseSeasons ?? []).filter(({ competitionId }) =>
+      competitionId === FIRST_DIVISION_COMPETITION_ID)));
+  const observedClubSeasonCount = worlds.reduce((sum, world) => sum
+    + (world.squadUseSeasons ?? []).filter(({ competitionId }) =>
+      competitionId === FIRST_DIVISION_COMPETITION_ID).length, 0);
+  const counterfactualUsers = owner === "not_attributed"
+    ? []
+    : worlds.flatMap((world) => counterfactualUsersForOwner(world, owner));
+  const counterfactualUserTotal = counterfactualUsers.reduce((sum, count) => sum + count, 0);
+  const reconciliationFailureCount = worldFacts.reduce(
+    (sum, world) => sum + world.reconciliationFailureCount,
+    0,
+  );
+  return {
+    owner,
+    appearanceShare: ratio(totalAppearances, 34 * firstDivisionRows.length),
+    distinctUsersPerClubSeason: observedMean(currentDistinctCounts),
+    ownerWorldCount: owner === "not_attributed" ? 0 : ownerCounts[owner],
+    pooledCounterfactualAppearanceShare: counterfactualUserTotal === 0
+      ? "not_observed"
+      : totalAppearances / (34 * counterfactualUserTotal),
+    pooledCounterfactualDistinctUsersPerClubSeason: counterfactualUsers.length === 0
+      ? "not_observed"
+      : counterfactualUserTotal / counterfactualUsers.length,
+    reconciliationFailureCount:
+      reconciliationFailureCount + Number(
+        owner !== "not_attributed" && observedClubSeasonCount !== counterfactualUsers.length,
+      ),
+    worlds: worldFacts,
+  };
+}
+
+function squadUseWorldFact(world: OwnerAttributionWorldFacts): SquadUseAttributionWorldFact {
+  const upstream = (world.squadUseSeasons ?? []).filter(({ competitionId }) =>
+    competitionId === FIRST_DIVISION_COMPETITION_ID);
+  const playerUse = (world.playerUseSeasons ?? []).filter(({ competitionId }) =>
+    competitionId === FIRST_DIVISION_COMPETITION_ID);
+  const byClubSeason = new Map<string, OwnerAttributionPlayerUseSeasonFact[]>();
+  for (const row of playerUse) {
+    const key = playerUseClubSeasonKey(row);
+    const current = byClubSeason.get(key) ?? [];
+    current.push(row);
+    byClubSeason.set(key, current);
+  }
+  const recoverable = countBy([], squadUseOwners());
+  let failedClubSeasonCount = 0;
+  let reconciliationFailureCount = Number(upstream.length !== byClubSeason.size);
+  for (const row of upstream) {
+    const rows = byClubSeason.get(squadUseClubSeasonKey(row)) ?? [];
+    const appeared = rows.length;
+    const appearanceCount = rows.reduce((sum, player) => sum + player.appearances, 0);
+    reconciliationFailureCount += Number(
+      row.fixtureCount !== 34
+      || appeared > row.matchdayPlayerCount
+      || row.matchdayPlayerCount > row.selectorPoolPlayerCount
+      || row.selectorPoolPlayerCount > row.availablePlayerCount
+      || row.availablePlayerCount > row.candidatePlayerCount,
+    );
+    const currentShare = appearanceCount / (34 * Math.max(1, appeared));
+    const currentInside = appeared >= 26 && appeared <= 31
+      && currentShare >= HISTORICAL_FIRST_DIVISION_PLAYER_TARGETS.appearanceShare.min
+      && currentShare <= HISTORICAL_FIRST_DIVISION_PLAYER_TARGETS.appearanceShare.max;
+    if (currentInside) continue;
+    failedClubSeasonCount += 1;
+    const owner = appeared >= 26 && appeared <= 31
+      ? "appearance_allocation"
+      : firstRecoverableSquadUseOwner(row, appearanceCount);
+    recoverable[owner] += 1;
+  }
+  const ranked = squadUseOwners().sort((left, right) =>
+    recoverable[right] - recoverable[left] || left.localeCompare(right));
+  const first = ranked[0] ?? "not_attributed";
+  const second = ranked[1];
+  const owner = recoverable[first] > 0
+    && (second === undefined || recoverable[first] > recoverable[second])
+    ? first
+    : "not_attributed";
+  return {
+    worldSeed: world.worldSeed,
+    owner,
+    clubSeasonCount: upstream.length,
+    failedClubSeasonCount,
+    reconciliationFailureCount,
+    recoverableClubSeasonCountByOwner: recoverable,
+  };
+}
+
+function firstRecoverableSquadUseOwner(
+  row: OwnerAttributionSquadUseSeasonFact,
+  appearanceCount: number,
+): SquadUseOwner {
+  const stages: readonly [SquadUseOwner, number][] = [
+    ["substitution_realization", row.matchdayPlayerCount],
+    ["matchday_selection", row.selectorPoolPlayerCount],
+    ["call_up_or_selector_boundary", row.availablePlayerCount],
+    ["availability", row.candidatePlayerCount],
+  ];
+  for (const [owner, stageCount] of stages) {
+    if (counterfactualUserCount(appearanceCount, stageCount) !== undefined) return owner;
+  }
+  return "squad_supply";
+}
+
+function counterfactualUserCount(
+  appearanceCount: number,
+  stageCount: number,
+): number | undefined {
+  for (let users = 26; users <= Math.min(stageCount, 31); users += 1) {
+    const share = appearanceCount / (34 * users);
+    if (
+      share >= HISTORICAL_FIRST_DIVISION_PLAYER_TARGETS.appearanceShare.min
+      && share <= HISTORICAL_FIRST_DIVISION_PLAYER_TARGETS.appearanceShare.max
+    ) return users;
+  }
+  return undefined;
+}
+
+function counterfactualUsersForOwner(
+  world: OwnerAttributionWorldFacts,
+  owner: SquadUseOwner,
+): readonly number[] {
+  const upstream = (world.squadUseSeasons ?? []).filter(({ competitionId }) =>
+    competitionId === FIRST_DIVISION_COMPETITION_ID);
+  const playerUse = (world.playerUseSeasons ?? []).filter(({ competitionId }) =>
+    competitionId === FIRST_DIVISION_COMPETITION_ID);
+  return upstream.map((row) => {
+    const appearances = playerUse.filter((player) =>
+      playerUseClubSeasonKey(player) === squadUseClubSeasonKey(row));
+    const appearanceCount = appearances.reduce((sum, player) => sum + player.appearances, 0);
+    const stageCount = owner === "substitution_realization" ? row.matchdayPlayerCount
+      : owner === "matchday_selection" ? row.selectorPoolPlayerCount
+      : owner === "call_up_or_selector_boundary" ? row.availablePlayerCount
+      : owner === "availability" ? row.candidatePlayerCount
+      : appearances.length;
+    return counterfactualUserCount(appearanceCount, stageCount) ?? appearances.length;
+  });
+}
+
+function playerUseClubSeasonKey(row: OwnerAttributionPlayerUseSeasonFact): string {
+  return `${row.competitionId}|${row.seasonNumber}|${row.clubId}`;
+}
+
+function squadUseClubSeasonKey(row: OwnerAttributionSquadUseSeasonFact): string {
+  return `${row.competitionId}|${row.seasonNumber}|${row.clubId}`;
+}
+
+function squadUseOwners(): SquadUseOwner[] {
+  return [
+    "substitution_realization",
+    "matchday_selection",
+    "call_up_or_selector_boundary",
+    "availability",
+    "squad_supply",
+    "appearance_allocation",
+    "not_attributed",
+  ];
+}
+
+function countBy<Key extends string>(
+  values: readonly Key[],
+  keys: readonly Key[],
+): Record<Key, number> {
+  const result = Object.fromEntries(keys.map((key) => [key, 0])) as Record<Key, number>;
+  for (const value of values) result[value] += 1;
+  return result;
 }
 
 function selectionLoadSeasonFact(input: {

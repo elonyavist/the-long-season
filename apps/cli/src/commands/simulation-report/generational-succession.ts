@@ -312,6 +312,8 @@ export interface GenerationalPlayerOriginFact {
   readonly generatedSeasonNumber: number;
   readonly openingAge?: number;
   readonly openingCurrentAbility?: number;
+  /** Exact club at first observation; later transfers cannot reconstruct it. */
+  readonly entryClubId?: string;
 }
 
 /** Exit flow keeps the origin visible after the player leaves the active world. */
@@ -333,6 +335,7 @@ interface PlayerOriginFact {
   readonly generatedSeasonNumber: number;
   readonly openingAge?: number;
   readonly openingCurrentAbility?: number;
+  readonly entryClubId?: string;
 }
 
 type MutableRow = {
@@ -398,11 +401,13 @@ export class GenerationalSuccessionObserver {
     ) ?? []);
     for (const playerId of careerState.gameState.playerIds) {
       const player = careerState.gameState.players[playerId];
+      const entryClubId = clubForPlayer(careerState, String(playerId));
       if (player !== undefined) this.observeAbilityInvariants(player);
       const isAcademy = academyIds.has(String(playerId));
       this.origins.set(String(playerId), {
         origin: isAcademy ? "opening_academy" : "opening_senior",
         generatedSeasonNumber: 0,
+        ...(entryClubId === undefined ? {} : { entryClubId }),
         ...(player === undefined ? {} : {
           openingAge: completedPlayerAge(
             player.birthDate,
@@ -597,9 +602,11 @@ export class GenerationalSuccessionObserver {
     for (const playerId of input.careerState.gameState.playerIds) {
       const key = String(playerId);
       if (this.origins.has(key)) continue;
+      const entryClubId = clubForPlayer(input.careerState, key);
       this.origins.set(key, {
         origin: acceptedYouthIds.has(key) ? "annual_academy_intake" : "annual_senior_intake",
         generatedSeasonNumber: input.seasonNumber,
+        ...(entryClubId === undefined ? {} : { entryClubId }),
       });
       if (previousIds.has(key)) this.unknownOriginIds.add(key);
     }

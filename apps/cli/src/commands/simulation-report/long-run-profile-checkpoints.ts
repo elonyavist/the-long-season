@@ -57,6 +57,21 @@ const CAREER_SECTION_WORLD_CHECKPOINT_KEYS = [
   "projection",
 ] as const;
 
+/** Exact fields retained when one deterministic career world fails closed. */
+const CAREER_SECTION_WORLD_FAILURE_CHECKPOINT_KEYS = [
+  "schemaVersion",
+  "reportKind",
+  "profileId",
+  "worldSeed",
+  "worldIndex",
+  "worldCount",
+  "seasonCount",
+  "detail",
+  "sectionIds",
+  "failureHash",
+  "error",
+] as const;
+
 /** Exact schema-4 envelope keys for the dedicated development checkpoint. */
 const PLAYER_DEVELOPMENT_COHORT_CHECKPOINT_KEYS = [
   "schemaVersion",
@@ -168,6 +183,24 @@ interface CareerSectionWorldCheckpoint {
   readonly projection: SimulationReportJsonValue;
 }
 
+interface CareerSectionWorldFailureCheckpoint {
+  readonly schemaVersion: typeof CAREER_SECTION_WORLD_CHECKPOINT_VERSION;
+  readonly reportKind: "simulation-report-career-world-failure";
+  readonly profileId: string;
+  readonly worldSeed: string;
+  readonly worldIndex: number;
+  readonly worldCount: number;
+  readonly seasonCount: number;
+  readonly detail: SimulationReportDetail;
+  readonly sectionIds: readonly string[];
+  readonly failureHash: string;
+  readonly error: string;
+}
+
+export type CareerSectionWorldCheckpointOutcome =
+  | { readonly status: "complete"; readonly projection: SimulationReportJsonValue }
+  | { readonly status: "failed"; readonly error: string };
+
 /**
  * Reads one complete career-world projection or reports that it does not exist.
  *
@@ -177,6 +210,17 @@ interface CareerSectionWorldCheckpoint {
 export async function readCareerSectionWorldCheckpoint(
   identity: CareerSectionWorldCheckpointIdentity,
 ): Promise<SimulationReportJsonValue | undefined> {
+  const outcome = await readCareerSectionWorldCheckpointOutcome(identity);
+  if (outcome?.status === "failed") {
+    throw new Error(`Cached career-section world failed: ${identity.worldSeed}: ${outcome.error}`);
+  }
+  return outcome?.projection;
+}
+
+/** Reads either the complete projection or the exact deterministic failure. */
+export async function readCareerSectionWorldCheckpointOutcome(
+  identity: CareerSectionWorldCheckpointIdentity,
+): Promise<CareerSectionWorldCheckpointOutcome | undefined> {
   const path = careerSectionWorldCheckpointPath(identity);
   let parsed: unknown;
   try {
@@ -189,13 +233,19 @@ export async function readCareerSectionWorldCheckpoint(
     throw error;
   }
 
-  if (!isMatchingCareerSectionWorldCheckpoint(parsed, identity)) {
-    throw new Error(`Career-section checkpoint metadata or shape is invalid: ${path}`);
+  if (isMatchingCareerSectionWorldCheckpoint(parsed, identity)) {
+    if (stableSimulationReportHash(parsed.projection) !== parsed.projectionHash) {
+      throw new Error(`Career-section checkpoint hash mismatch: ${path}`);
+    }
+    return { status: "complete", projection: parsed.projection };
   }
-  if (stableSimulationReportHash(parsed.projection) !== parsed.projectionHash) {
-    throw new Error(`Career-section checkpoint hash mismatch: ${path}`);
+  if (isMatchingCareerSectionWorldFailureCheckpoint(parsed, identity)) {
+    if (stableSimulationReportHash({ error: parsed.error }) !== parsed.failureHash) {
+      throw new Error(`Career-section failure checkpoint hash mismatch: ${path}`);
+    }
+    return { status: "failed", error: parsed.error };
   }
-  return parsed.projection;
+  throw new Error(`Career-section checkpoint metadata or shape is invalid: ${path}`);
 }
 
 /** Publishes one complete career-world projection through an atomic rename. */
@@ -203,7 +253,6 @@ export async function writeCareerSectionWorldCheckpoint(
   identity: CareerSectionWorldCheckpointIdentity,
   projection: SimulationReportJsonValue,
 ): Promise<void> {
-  await mkdir(identity.checkpointDirectoryPath, { recursive: true });
   const checkpoint: CareerSectionWorldCheckpoint = {
     schemaVersion: CAREER_SECTION_WORLD_CHECKPOINT_VERSION,
     reportKind: "simulation-report-career-world",
@@ -217,15 +266,28 @@ export async function writeCareerSectionWorldCheckpoint(
     projectionHash: stableSimulationReportHash(projection),
     projection,
   };
-  const path = careerSectionWorldCheckpointPath(identity);
-  const temporaryPath = `${path}.${process.pid}.tmp`;
-  try {
-    await writeFile(temporaryPath, JSON.stringify(checkpoint), "utf8");
-    await rename(temporaryPath, path);
-  } catch (error) {
-    await rm(temporaryPath, { force: true });
-    throw error;
-  }
+  await publishCareerSectionWorldCheckpoint(identity, checkpoint);
+}
+
+/** Persists a failed declared world so resume cannot silently choose a new corpus. */
+export async function writeCareerSectionWorldFailureCheckpoint(
+  identity: CareerSectionWorldCheckpointIdentity,
+  error: string,
+): Promise<void> {
+  const checkpoint: CareerSectionWorldFailureCheckpoint = {
+    schemaVersion: CAREER_SECTION_WORLD_CHECKPOINT_VERSION,
+    reportKind: "simulation-report-career-world-failure",
+    profileId: identity.profileId,
+    worldSeed: identity.worldSeed,
+    worldIndex: identity.worldIndex,
+    worldCount: identity.worldCount,
+    seasonCount: identity.seasonCount,
+    detail: identity.detail,
+    sectionIds: identity.sectionIds,
+    failureHash: stableSimulationReportHash({ error }),
+    error,
+  };
+  await publishCareerSectionWorldCheckpoint(identity, checkpoint);
 }
 
 /** One shard together with its stable one-based index. */
@@ -922,6 +984,45 @@ function isMatchingCareerSectionWorldCheckpoint(
     && value.sectionIds.every((sectionId, index) => sectionId === identity.sectionIds[index])
     && typeof value.projectionHash === "string"
     && isSimulationReportJsonValue(value.projection);
+}
+
+/** Refuses stale metadata and unvalidated prose in deterministic failure shards. */
+function isMatchingCareerSectionWorldFailureCheckpoint(
+  value: unknown,
+  identity: CareerSectionWorldCheckpointIdentity,
+): value is CareerSectionWorldFailureCheckpoint {
+  return hasExactRecordKeys(value, CAREER_SECTION_WORLD_FAILURE_CHECKPOINT_KEYS)
+    && value.schemaVersion === CAREER_SECTION_WORLD_CHECKPOINT_VERSION
+    && value.reportKind === "simulation-report-career-world-failure"
+    && value.profileId === identity.profileId
+    && value.worldSeed === identity.worldSeed
+    && value.worldIndex === identity.worldIndex
+    && value.worldCount === identity.worldCount
+    && value.seasonCount === identity.seasonCount
+    && value.detail === identity.detail
+    && Array.isArray(value.sectionIds)
+    && value.sectionIds.length === identity.sectionIds.length
+    && value.sectionIds.every((sectionId, index) => sectionId === identity.sectionIds[index])
+    && typeof value.failureHash === "string"
+    && typeof value.error === "string"
+    && value.error.length > 0;
+}
+
+/** Atomically publishes the one terminal outcome owned by a career-world path. */
+async function publishCareerSectionWorldCheckpoint(
+  identity: CareerSectionWorldCheckpointIdentity,
+  checkpoint: CareerSectionWorldCheckpoint | CareerSectionWorldFailureCheckpoint,
+): Promise<void> {
+  await mkdir(identity.checkpointDirectoryPath, { recursive: true });
+  const path = careerSectionWorldCheckpointPath(identity);
+  const temporaryPath = `${path}.${process.pid}.tmp`;
+  try {
+    await writeFile(temporaryPath, JSON.stringify(checkpoint), "utf8");
+    await rename(temporaryPath, path);
+  } catch (error) {
+    await rm(temporaryPath, { force: true });
+    throw error;
+  }
 }
 
 /** Validates a parsed checkpoint payload before its hash or consumer reads it. */

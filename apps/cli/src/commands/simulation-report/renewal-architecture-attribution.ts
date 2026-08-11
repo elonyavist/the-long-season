@@ -48,6 +48,10 @@ export interface RenewalNeedEpisodeFact {
   readonly firstAppearanceDate: number;
   readonly maximumStage: RenewalNeedStage;
   readonly terminalOutcome: RenewalNeedTerminalOutcome;
+  /** Exact acquired player; present only when the lifecycle fulfilled this episode. */
+  readonly fulfilledPlayerId?: string;
+  /** Exact lifecycle date that fulfilled the episode. */
+  readonly terminalDate?: number;
 }
 
 export interface RenewalNeedFunnelEvaluation {
@@ -130,6 +134,8 @@ interface MutableRenewalNeedEpisode {
   maximumStage: RenewalNeedStage;
   lastReason?: AiMarketDiagnosticReason;
   terminalOutcome?: RenewalNeedTerminalOutcome;
+  fulfilledPlayerId?: string;
+  terminalDate?: number;
 }
 
 /**
@@ -217,6 +223,8 @@ export function renewalNeedEpisodesForSeason(input: {
     ) {
       episode.maximumStage = "fulfilled";
       episode.terminalOutcome = "fulfilled";
+      episode.fulfilledPlayerId = String(event.fact.playerId);
+      episode.terminalDate = event.date;
       completed.push(episode);
       open.delete(key);
     } else if (
@@ -334,12 +342,17 @@ const RENEWAL_ABLATION_MATERIAL_FLOORS = {
   championPoints: 0.5,
 } as const satisfies Readonly<Record<RenewalAblationMetric, number>>;
 
+/** Returns the one preregistered material floor owned by the factorial model. */
+export function renewalAblationMaterialFloor(metric: RenewalAblationMetric): number {
+  return RENEWAL_ABLATION_MATERIAL_FLOORS[metric];
+}
+
 /** Applies the frozen 2x2 contrast, coherence and interaction rules. */
 export function evaluateRenewalAblation(
   arms: Readonly<Record<RenewalAblationArmKey, RenewalAblationArmFacts>>,
 ): RenewalAblationDecision {
   const metrics = RENEWAL_ABLATION_METRICS.map((metric): RenewalAblationMetricDecision => {
-    const floor = RENEWAL_ABLATION_MATERIAL_FLOORS[metric];
+    const floor = renewalAblationMaterialFloor(metric);
     const marketWithoutBlueprint = arms.market.values[metric] - arms.control.values[metric];
     const marketWithBlueprint = arms.combined.values[metric] - arms.blueprint.values[metric];
     const blueprintWithoutMarket = arms.blueprint.values[metric] - arms.control.values[metric];
