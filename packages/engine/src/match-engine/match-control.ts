@@ -1,5 +1,6 @@
 import type { MatchTeamContext } from "./match-context.ts";
 import type { OpportunityRoutePlan } from "./opportunity-route.ts";
+import { strengthContestPair } from "./strength-contest.ts";
 import type {
   MatchControlUnits,
   MatchScore,
@@ -69,6 +70,11 @@ function controlWeight(
 ): number {
   const team = teamFor(simulation, side);
   const opponent = teamFor(simulation, oppositeSide(side));
+  const midfieldContest = strengthContestPair(
+    team.strength.midfield,
+    opponent.strength.midfield,
+    simulation.context.engineConfig.strengthGapMultiplier,
+  );
   const condition = averageLineupCondition(team, telemetry);
   const opponentCondition = averageLineupCondition(opponent, telemetry);
   const lineupRatio = team.lineup.length / Math.max(1, opponent.lineup.length);
@@ -76,7 +82,7 @@ function controlWeight(
   const homeFactor = side === "home" ? Math.sqrt(simulation.context.engineConfig.homeAdvantageFactor) : 1;
   return Math.max(
     0.01,
-    team.strength.midfield *
+    midfieldContest.own *
       plan.controlMultiplier *
       scorePressure *
       homeFactor *

@@ -5,6 +5,7 @@ import {
   assignGeneratedSquadIdentities,
   createFakeDomesticWorld,
   GENERATED_SQUAD_IDENTITY_KEYS,
+  PRODUCT_STRENGTH_GAP_MULTIPLIER,
   selectPlayerStateCurvesConfig,
   squadIdentityPositionForSlot,
   type FakeDomesticWorld,
@@ -64,9 +65,11 @@ import {
   evaluateSquadUseAttribution,
   evaluateOwnerAttributionCheckpoint,
   evaluatePlayerRenewalLeadersCheckpoint,
+  type OwnerAttributionTableSeasonFact,
   type OwnerAttributionWorldFacts,
 } from "./owner-attribution.ts";
 import {
+  evaluateRenewalCommonSupport,
   evaluateRenewalNeedFunnel,
   evaluateRenewalAblation,
   RENEWAL_ABLATION_METRICS,
@@ -76,11 +79,13 @@ import {
   type RenewalAblationArmFacts,
   type RenewalAblationMetric,
   type RenewalAblationMetricRow,
+  type RenewalCommonSupportLinkedPath,
   type RenewalNeedEpisodeFact,
   type RenewalPopulationSeasonSignature,
 } from "./renewal-architecture-attribution.ts";
 import {
   HISTORICAL_DIVISION_TABLE_TARGETS,
+  HISTORICAL_FIRST_DIVISION_PLAYER_TARGETS,
   INTEGRATED_LEADER_AGE_DRIFT_TARGET,
 } from "./historical-simulation-targets.ts";
 
@@ -115,10 +120,19 @@ export type CareerCheckpointKind =
   | "player_renewal_leaders_l5_3"
   | "renewal_architecture_l5_3c"
   | "renewal_ablation_l6_1"
-  | "renewal_refinement_l6_1a";
+  | "renewal_refinement_l6_1a"
+  | "independent_owners_l6_1b"
+  | "strength_contest_l6_1d"
+  | "renewal_common_support_l6_1c";
+
+/** Versioned readers sharing the one product-versus-legacy contest producer. */
+export type StrengthContestMode = "canary" | "full" | "retry_canary" | "retry_full";
 
 export const RENEWAL_ABLATION_ARMS = ["control", "market", "blueprint", "combined"] as const;
 export type RenewalAblationArm = typeof RENEWAL_ABLATION_ARMS[number];
+
+/** Absolute analysis override reproducing the pre-06B20C department contest. */
+const LEGACY_STRENGTH_GAP_MULTIPLIER = 1;
 
 const CHECKPOINT_OBSERVES_GENERATIONAL_SUCCESSION = {
   league_diversity_l1: false,
@@ -138,6 +152,9 @@ const CHECKPOINT_OBSERVES_GENERATIONAL_SUCCESSION = {
   renewal_architecture_l5_3c: true,
   renewal_ablation_l6_1: true,
   renewal_refinement_l6_1a: true,
+  independent_owners_l6_1b: true,
+  strength_contest_l6_1d: false,
+  renewal_common_support_l6_1c: true,
 } as const satisfies Readonly<Record<CareerCheckpointKind, boolean>>;
 
 /** Keeps observer and checkpoint-section routing on one exhaustive policy. */
@@ -146,7 +163,7 @@ function observesGenerationalSuccession(kind: CareerCheckpointKind | undefined):
 }
 
 function checkpointSectionId(kind: CareerCheckpointKind): "formations" | "development" | "standings" {
-  if (kind === "standings_hierarchy_l5_2") return "standings";
+  if (kind === "standings_hierarchy_l5_2" || kind === "strength_contest_l6_1d") return "standings";
   return observesGenerationalSuccession(kind) ? "development" : "formations";
 }
 
@@ -571,6 +588,36 @@ interface RenewalRefinementScenarioWorlds {
   }[];
 }
 
+interface IndependentOwnersObservation {
+  readonly current: readonly CareerWorldProjection[];
+  readonly purityShadow?: readonly CareerWorldProjection[];
+}
+
+type RenewalCommonSupportScenario =
+  | "current"
+  | "without_market"
+  | "without_blueprint"
+  | "purity_shadow"
+  | "historical_control";
+
+interface RenewalCommonSupportObservation {
+  readonly current: readonly CareerWorldProjection[];
+  readonly withoutMarket: readonly CareerWorldProjection[];
+  readonly withoutBlueprint: readonly CareerWorldProjection[];
+  readonly purityShadow?: readonly CareerWorldProjection[];
+  readonly historicalControl: {
+    readonly worldSeed: string;
+    readonly outcome: "counterfactual_nonviable" | "unresolved";
+    readonly failedOperation: string | "not_observed";
+    readonly error: string | "not_observed";
+  };
+  readonly failures: readonly {
+    readonly scenario: Exclude<RenewalCommonSupportScenario, "current" | "historical_control">;
+    readonly worldSeed: string;
+    readonly error: string;
+  }[];
+}
+
 async function executeCareerWorldBatch(input: {
   readonly worldSeeds: readonly string[];
   readonly seasonCount: number;
@@ -698,6 +745,221 @@ async function executeRenewalRefinementScenarios(input: {
   };
 }
 
+async function executeIndependentOwnersPurityShadow(input: {
+  readonly currentWorlds: readonly CareerWorldProjection[];
+  readonly currentWorldSeeds: readonly string[];
+  readonly seasonCount: number;
+  readonly workerCount: number;
+  readonly detail: SimulationReportDetail;
+  readonly sectionIds: readonly CareerSectionId[];
+  readonly profile: {
+    readonly profileId: string;
+    readonly checkpointDirectoryPath: string;
+    readonly checkpointKind: CareerCheckpointKind;
+    readonly independentOwnersMode: "canary" | "full";
+  };
+}): Promise<IndependentOwnersObservation> {
+  if (input.profile.independentOwnersMode === "full") {
+    return { current: input.currentWorlds };
+  }
+  const purityShadow = await executeCareerWorldBatch({
+    worldSeeds: input.currentWorldSeeds,
+    seasonCount: input.seasonCount,
+    workerCount: input.workerCount,
+    detail: input.detail,
+    sectionIds: input.sectionIds,
+    checkpointProfile: {
+      profileId: `${input.profile.profileId}:purity-shadow`,
+      checkpointKind: input.profile.checkpointKind,
+      checkpointDirectoryPath: `${input.profile.checkpointDirectoryPath}/purity-shadow`,
+    },
+    projectionInput: (seed) => independentOwnersProjectionInput({
+      seed,
+      seasonCount: input.seasonCount,
+      detail: input.detail,
+      sectionIds: input.sectionIds,
+      analysisEnabled: false,
+    }),
+  });
+  return { current: input.currentWorlds, purityShadow };
+}
+
+const L6_1C_HISTORICAL_CONTROL_WORLD_SEED =
+  "phase81a-renewal-refinement-l6-1a-v1-world-00005";
+
+async function executeRenewalCommonSupportScenarios(input: {
+  readonly currentWorlds: readonly CareerWorldProjection[];
+  readonly worldSeeds: readonly string[];
+  readonly seasonCount: number;
+  readonly workerCount: number;
+  readonly detail: SimulationReportDetail;
+  readonly sectionIds: readonly CareerSectionId[];
+  readonly profile: {
+    readonly profileId: string;
+    readonly checkpointDirectoryPath: string;
+    readonly checkpointKind: CareerCheckpointKind;
+    readonly renewalCommonSupportMode: "canary" | "full";
+  };
+}): Promise<RenewalCommonSupportObservation> {
+  const historicalErrors: string[] = [];
+  const historicalWorlds = await executeCareerWorldBatch({
+    worldSeeds: [L6_1C_HISTORICAL_CONTROL_WORLD_SEED],
+    seasonCount: 10,
+    workerCount: 1,
+    detail: input.detail,
+    sectionIds: input.sectionIds,
+    checkpointProfile: renewalCommonSupportCheckpointProfile(
+      input.profile,
+      "historical_control",
+    ),
+    captureFailure: (_worldSeed, error) => historicalErrors.push(error),
+    projectionInput: (seed) => renewalCommonSupportProjectionInput({
+      seed,
+      seasonCount: 10,
+      detail: input.detail,
+      sectionIds: input.sectionIds,
+      scenario: "historical_control",
+    }),
+  });
+  const historicalError = historicalErrors[0];
+  const operationMatch = historicalError?.match(
+    /finance_lifecycle_rejected:(annual_payroll|season_distribution|annual_transfer_budget_refresh)/,
+  );
+  const historicalControl: RenewalCommonSupportObservation["historicalControl"] =
+    historicalWorlds.length === 0
+      && historicalErrors.length === 1
+      && operationMatch !== undefined
+      && operationMatch !== null
+      ? {
+          worldSeed: L6_1C_HISTORICAL_CONTROL_WORLD_SEED,
+          outcome: "counterfactual_nonviable",
+          failedOperation: operationMatch?.[1] ?? "not_observed",
+          error: historicalError ?? "not_observed",
+        }
+      : {
+          worldSeed: L6_1C_HISTORICAL_CONTROL_WORLD_SEED,
+          outcome: "unresolved",
+          failedOperation: "not_observed",
+          error: historicalError ?? "not_observed",
+        };
+  if (historicalControl.outcome !== "counterfactual_nonviable") {
+    return {
+      current: input.currentWorlds,
+      withoutMarket: [],
+      withoutBlueprint: [],
+      historicalControl,
+      failures: [],
+    };
+  }
+
+  const failures: RenewalCommonSupportObservation["failures"][number][] = [];
+  const execute = (
+    scenario: "without_market" | "without_blueprint" | "purity_shadow",
+  ) => executeCareerWorldBatch({
+    worldSeeds: input.worldSeeds,
+    seasonCount: input.seasonCount,
+    workerCount: input.workerCount,
+    detail: input.detail,
+    sectionIds: input.sectionIds,
+    checkpointProfile: renewalCommonSupportCheckpointProfile(input.profile, scenario),
+    captureFailure: (worldSeed, error) => failures.push({ scenario, worldSeed, error }),
+    projectionInput: (seed) => renewalCommonSupportProjectionInput({
+      seed,
+      seasonCount: input.seasonCount,
+      detail: input.detail,
+      sectionIds: input.sectionIds,
+      scenario,
+    }),
+  });
+  // The arms are serial so only one seven-worker pool can exist at a time.
+  const withoutMarket = await execute("without_market");
+  const withoutBlueprint = await execute("without_blueprint");
+  const purityShadow = input.profile.renewalCommonSupportMode === "canary"
+    ? await execute("purity_shadow")
+    : undefined;
+  return {
+    current: input.currentWorlds,
+    withoutMarket,
+    withoutBlueprint,
+    ...(purityShadow === undefined ? {} : { purityShadow }),
+    historicalControl,
+    failures: failures.sort((left, right) => left.scenario.localeCompare(right.scenario)
+      || left.worldSeed.localeCompare(right.worldSeed)),
+  };
+}
+
+function renewalCommonSupportCheckpointProfile(
+  profile: {
+    readonly profileId: string;
+    readonly checkpointDirectoryPath: string;
+    readonly checkpointKind: CareerCheckpointKind;
+  },
+  scenario: RenewalCommonSupportScenario,
+) {
+  return {
+    profileId: `${profile.profileId}:${scenario}`,
+    checkpointKind: profile.checkpointKind,
+    checkpointDirectoryPath: `${profile.checkpointDirectoryPath}/${scenario}`,
+  } as const;
+}
+
+function renewalCommonSupportProjectionInput(input: {
+  readonly seed: string;
+  readonly seasonCount: number;
+  readonly detail: SimulationReportDetail;
+  readonly sectionIds: readonly CareerSectionId[];
+  readonly scenario: RenewalCommonSupportScenario;
+}): CareerWorldProjectionInput {
+  const analysisEnabled = input.scenario !== "purity_shadow"
+    && input.scenario !== "historical_control";
+  const arm: RenewalAblationArm = input.scenario === "without_market"
+    ? "blueprint"
+    : input.scenario === "without_blueprint"
+      ? "market"
+      : input.scenario === "historical_control"
+        ? "control"
+        : "combined";
+  return {
+    seed: input.seed,
+    seasonCount: input.seasonCount,
+    detail: input.detail,
+    sectionIds: input.sectionIds,
+    leagueDiversity: true,
+    generationalSuccession: analysisEnabled,
+    ownerAttribution: analysisEnabled,
+    renewalArchitecture: analysisEnabled,
+    standingsHierarchy: analysisEnabled,
+    marketTargeting: false,
+    collectSquadUse: analysisEnabled,
+    collectRenewalAnalysis: analysisEnabled,
+    renewalAblationArm: arm,
+  };
+}
+
+function independentOwnersProjectionInput(input: {
+  readonly seed: string;
+  readonly seasonCount: number;
+  readonly detail: SimulationReportDetail;
+  readonly sectionIds: readonly CareerSectionId[];
+  readonly analysisEnabled: boolean;
+}): CareerWorldProjectionInput {
+  return {
+    seed: input.seed,
+    seasonCount: input.seasonCount,
+    detail: input.detail,
+    sectionIds: input.sectionIds,
+    leagueDiversity: true,
+    generationalSuccession: input.analysisEnabled,
+    ownerAttribution: input.analysisEnabled,
+    renewalArchitecture: false,
+    standingsHierarchy: false,
+    marketTargeting: false,
+    ...(input.analysisEnabled ? { analysisStrengthGapScale: 1.5 } : {}),
+    collectSquadUse: input.analysisEnabled,
+    collectRenewalAnalysis: false,
+  };
+}
+
 function renewalRefinementCheckpointProfile(
   profile: {
     readonly profileId: string;
@@ -739,8 +1001,9 @@ function renewalRefinementProjectionInput(input: {
     renewalArchitecture: analysisEnabled,
     standingsHierarchy: analysisEnabled,
     marketTargeting: analysisEnabled,
-    useOwnerAttributionStrengthOracle:
-      input.scenario === "current" || input.scenario === "purity_shadow",
+    ...(input.scenario === "current" || input.scenario === "purity_shadow"
+      ? { analysisStrengthGapScale: 1.5 }
+      : {}),
     collectSquadUse: input.scenario === "current",
     collectRenewalAnalysis: analysisEnabled,
     ...(arm === undefined ? {} : { renewalAblationArm: arm }),
@@ -774,6 +1037,9 @@ export async function createCareerSectionsFacts(input: {
     readonly readOnly?: boolean;
     readonly renewalAblationArm?: RenewalAblationArm;
     readonly renewalRefinementMode?: "canary" | "full";
+    readonly independentOwnersMode?: "canary" | "full";
+    readonly strengthContestMode?: StrengthContestMode;
+    readonly renewalCommonSupportMode?: "canary" | "full";
   };
 }): Promise<CareerSectionsExecutionFacts> {
   const worlds = await executeCareerWorldBatch({
@@ -785,11 +1051,29 @@ export async function createCareerSectionsFacts(input: {
     ...(input.leagueDiversityProfile === undefined
       ? {}
       : {
-          checkpointProfile: input.leagueDiversityProfile.renewalRefinementMode === undefined
-            ? input.leagueDiversityProfile
-            : renewalRefinementCheckpointProfile(input.leagueDiversityProfile, "current"),
+          checkpointProfile: input.leagueDiversityProfile.renewalCommonSupportMode !== undefined
+            ? renewalCommonSupportCheckpointProfile(input.leagueDiversityProfile, "current")
+            : input.leagueDiversityProfile.renewalRefinementMode === undefined
+              ? input.leagueDiversityProfile
+              : renewalRefinementCheckpointProfile(input.leagueDiversityProfile, "current"),
         }),
-    projectionInput: (seed) => input.leagueDiversityProfile?.renewalRefinementMode === undefined
+    projectionInput: (seed) => input.leagueDiversityProfile?.renewalCommonSupportMode !== undefined
+      ? renewalCommonSupportProjectionInput({
+          seed,
+          seasonCount: input.seasonCount,
+          detail: input.detail,
+          sectionIds: input.sectionIds,
+          scenario: "current",
+        })
+      : input.leagueDiversityProfile?.independentOwnersMode !== undefined
+      ? independentOwnersProjectionInput({
+          seed,
+          seasonCount: input.seasonCount,
+          detail: input.detail,
+          sectionIds: input.sectionIds,
+          analysisEnabled: true,
+        })
+      : input.leagueDiversityProfile?.renewalRefinementMode === undefined
       ? ({
           seed,
           seasonCount: input.seasonCount,
@@ -805,7 +1089,9 @@ export async function createCareerSectionsFacts(input: {
             || input.leagueDiversityProfile?.checkpointKind === "renewal_architecture_l5_3c"
             || input.leagueDiversityProfile?.checkpointKind === "integrated_player_world_l5_4"
             || input.leagueDiversityProfile?.checkpointKind === "renewal_ablation_l6_1"
-            || input.leagueDiversityProfile?.checkpointKind === "renewal_refinement_l6_1a",
+            || input.leagueDiversityProfile?.checkpointKind === "renewal_refinement_l6_1a"
+            || input.leagueDiversityProfile?.checkpointKind === "independent_owners_l6_1b"
+            || input.leagueDiversityProfile?.checkpointKind === "strength_contest_l6_1d",
           renewalArchitecture:
             input.leagueDiversityProfile?.checkpointKind === "renewal_architecture_l5_3c"
             || input.leagueDiversityProfile?.checkpointKind === "integrated_player_world_l5_4"
@@ -820,13 +1106,18 @@ export async function createCareerSectionsFacts(input: {
             input.leagueDiversityProfile?.checkpointKind === "integrated_player_world_l5_4"
             || input.leagueDiversityProfile?.checkpointKind === "renewal_ablation_l6_1"
             || input.leagueDiversityProfile?.checkpointKind === "renewal_refinement_l6_1a",
-          useOwnerAttributionStrengthOracle:
-            input.leagueDiversityProfile?.checkpointKind === "owner_attribution_l5_1"
+          ...(input.leagueDiversityProfile?.checkpointKind === "owner_attribution_l5_1"
             || input.leagueDiversityProfile?.checkpointKind === "player_renewal_leaders_l5_3"
             || input.leagueDiversityProfile?.checkpointKind === "renewal_architecture_l5_3c"
-            || input.leagueDiversityProfile?.checkpointKind === "renewal_refinement_l6_1a",
+            || input.leagueDiversityProfile?.checkpointKind === "renewal_refinement_l6_1a"
+            || input.leagueDiversityProfile?.checkpointKind === "independent_owners_l6_1b"
+              ? { analysisStrengthGapScale: 1.5 }
+              : input.leagueDiversityProfile?.checkpointKind === "strength_contest_l6_1d"
+                ? { analysisStrengthGapScale: LEGACY_STRENGTH_GAP_MULTIPLIER }
+                : {}),
           collectSquadUse:
-            input.leagueDiversityProfile?.checkpointKind === "renewal_refinement_l6_1a",
+            input.leagueDiversityProfile?.checkpointKind === "renewal_refinement_l6_1a"
+            || input.leagueDiversityProfile?.checkpointKind === "independent_owners_l6_1b",
           collectRenewalAnalysis:
             input.leagueDiversityProfile?.checkpointKind === "renewal_refinement_l6_1a",
           ...(input.leagueDiversityProfile?.renewalAblationArm === undefined
@@ -857,6 +1148,39 @@ export async function createCareerSectionsFacts(input: {
           renewalRefinementMode: input.leagueDiversityProfile.renewalRefinementMode,
         },
       });
+  const independentOwnersObservation = input.leagueDiversityProfile?.independentOwnersMode === undefined
+    ? undefined
+    : await executeIndependentOwnersPurityShadow({
+        currentWorlds: worlds,
+        currentWorldSeeds: input.worldSeeds,
+        seasonCount: input.seasonCount,
+        workerCount: input.workerCount,
+        detail: input.detail,
+        sectionIds: input.sectionIds,
+        profile: {
+          profileId: input.leagueDiversityProfile.profileId,
+          checkpointDirectoryPath: input.leagueDiversityProfile.checkpointDirectoryPath,
+          checkpointKind: input.leagueDiversityProfile.checkpointKind,
+          independentOwnersMode: input.leagueDiversityProfile.independentOwnersMode,
+        },
+      });
+  const renewalCommonSupportObservation =
+    input.leagueDiversityProfile?.renewalCommonSupportMode === undefined
+      ? undefined
+      : await executeRenewalCommonSupportScenarios({
+          currentWorlds: worlds,
+          worldSeeds: input.worldSeeds,
+          seasonCount: input.seasonCount,
+          workerCount: input.workerCount,
+          detail: input.detail,
+          sectionIds: input.sectionIds,
+          profile: {
+            profileId: input.leagueDiversityProfile.profileId,
+            checkpointDirectoryPath: input.leagueDiversityProfile.checkpointDirectoryPath,
+            checkpointKind: input.leagueDiversityProfile.checkpointKind,
+            renewalCommonSupportMode: input.leagueDiversityProfile.renewalCommonSupportMode,
+          },
+        });
   const first = worlds[0];
   if (first === undefined) throw new Error("Career report needs at least one world");
   for (const world of worlds) {
@@ -867,6 +1191,23 @@ export async function createCareerSectionsFacts(input: {
 
   const checkpoint = input.leagueDiversityProfile === undefined
     ? undefined
+    : input.leagueDiversityProfile.checkpointKind === "renewal_common_support_l6_1c"
+      ? evaluateRenewalCommonSupportCheckpoint(
+          requiredRenewalCommonSupportObservation(renewalCommonSupportObservation),
+          input.seasonCount,
+          input.leagueDiversityProfile.renewalCommonSupportMode ?? "full",
+        )
+    : input.leagueDiversityProfile.checkpointKind === "strength_contest_l6_1d"
+      ? evaluateStrengthContestCheckpoint(
+          worlds.map(requiredOwnerAttributionFacts),
+          input.seasonCount,
+          input.leagueDiversityProfile.strengthContestMode ?? "full",
+        )
+    : input.leagueDiversityProfile.checkpointKind === "independent_owners_l6_1b"
+      ? evaluateIndependentOwnersCheckpoint(
+          requiredIndependentOwnersObservation(independentOwnersObservation),
+          input.leagueDiversityProfile.independentOwnersMode ?? "full",
+        )
     : input.leagueDiversityProfile.checkpointKind === "renewal_refinement_l6_1a"
       ? evaluateRenewalRefinementCheckpoint(
           requiredRenewalRefinementScenarios(renewalRefinementScenarios),
@@ -994,11 +1335,7 @@ export async function createCareerSectionsFacts(input: {
     sections,
     calibrationVersions: first.calibrationVersions,
     worldSeeds: worlds.map(({ seed }) => seed),
-    decision: checkpoint === undefined
-      || checkpoint.decision === "GO"
-      || checkpoint.decision === "OWNER_IDENTIFIED"
-      ? "PASS"
-      : "FAIL",
+    decision: checkpointPasses(checkpoint) ? "PASS" : "FAIL",
   };
 }
 
@@ -1020,7 +1357,7 @@ function createCareerWorldProjection(input: {
   readonly renewalArchitecture: boolean;
   readonly standingsHierarchy: boolean;
   readonly marketTargeting: boolean;
-  readonly useOwnerAttributionStrengthOracle: boolean;
+  readonly analysisStrengthGapScale?: number;
   readonly collectSquadUse: boolean;
   readonly collectRenewalAnalysis: boolean;
   readonly renewalAblationArm?: RenewalAblationArm;
@@ -1039,7 +1376,9 @@ function createCareerWorldProjection(input: {
     : undefined;
   const ownerAttributionObserver = input.ownerAttribution
     ? new OwnerAttributionObserver(input.seed, {
-        includeTableAttribution: input.useOwnerAttributionStrengthOracle,
+        ...(input.analysisStrengthGapScale === undefined
+          ? {}
+          : { tableAttributionScale: input.analysisStrengthGapScale }),
         includeSquadUse: input.collectSquadUse,
       })
     : undefined;
@@ -1059,7 +1398,9 @@ function createCareerWorldProjection(input: {
     },
     {
       selectCatalogFormation: true,
-      ...(input.useOwnerAttributionStrengthOracle ? { analysisStrengthGapScale: 1.5 } : {}),
+      ...(input.analysisStrengthGapScale === undefined
+        ? {}
+        : { analysisStrengthGapScale: input.analysisStrengthGapScale }),
       ...(input.ownerAttribution ? { collectSelectionLoadDiagnostics: true } : {}),
       ...(input.collectSquadUse ? { collectSquadUseDiagnostics: true } : {}),
       ...(input.renewalAblationArm === undefined && input.maximumActiveTalksOverride === undefined
@@ -2342,6 +2683,564 @@ function requiredRenewalRefinementScenarios(
   return value;
 }
 
+function requiredIndependentOwnersObservation(
+  value: IndependentOwnersObservation | undefined,
+): IndependentOwnersObservation {
+  if (value === undefined) throw new Error("L6.1B current-world observation is missing");
+  return value;
+}
+
+function requiredRenewalCommonSupportObservation(
+  value: RenewalCommonSupportObservation | undefined,
+): RenewalCommonSupportObservation {
+  if (value === undefined) throw new Error("L6.1C common-support observation is missing");
+  return value;
+}
+
+const RENEWAL_COMMON_SUPPORT_POLICY_SIGNATURES = {
+  current: "roleAwareMarket:on|squadIdentityBlueprint:on",
+  without_market: "roleAwareMarket:off|squadIdentityBlueprint:on",
+  without_blueprint: "roleAwareMarket:on|squadIdentityBlueprint:off",
+} as const;
+
+/** Composes the L6.1C execution account and its non-factorial decision. */
+function evaluateRenewalCommonSupportCheckpoint(
+  observation: RenewalCommonSupportObservation,
+  seasonCount: number,
+  mode: "canary" | "full",
+) {
+  const purity = evaluateRenewalRefinementPurity(
+    observation.current,
+    observation.purityShadow,
+  );
+  const scenarioManifest = [
+    {
+      key: "current" as const,
+      policySignature: RENEWAL_COMMON_SUPPORT_POLICY_SIGNATURES.current,
+      worldCount: observation.current.length,
+    },
+    {
+      key: "without_market" as const,
+      policySignature: RENEWAL_COMMON_SUPPORT_POLICY_SIGNATURES.without_market,
+      worldCount: observation.withoutMarket.length,
+    },
+    {
+      key: "without_blueprint" as const,
+      policySignature: RENEWAL_COMMON_SUPPORT_POLICY_SIGNATURES.without_blueprint,
+      worldCount: observation.withoutBlueprint.length,
+    },
+  ];
+  const complete = scenarioManifest.every(({ worldCount }) => worldCount === 7);
+  const purityHeld = purity === "not_evaluated" || purity.mismatchWorldCount === 0;
+  if (
+    observation.historicalControl.outcome !== "counterfactual_nonviable"
+    || !complete
+    || observation.failures.length > 0
+    || !purityHeld
+  ) {
+    return {
+      decision: "STOP_RETHINK" as const,
+      balanceDecision: "not_evaluated" as const,
+      mainEffects: "not_identifiable_under_common_support" as const,
+      interaction: "not_identifiable_under_common_support" as const,
+      historicalControl: observation.historicalControl,
+      scenarioManifest,
+      purity,
+      scenarioFailures: observation.failures,
+      failedGateKeys: [
+        ...(observation.historicalControl.outcome === "counterfactual_nonviable"
+          ? [] : ["historical_control_account"]),
+        ...(complete ? [] : ["scenario_completion"]),
+        ...(observation.failures.length === 0 ? [] : ["scenario_failure"]),
+        ...(purityHeld ? [] : ["observer_purity"]),
+      ],
+    };
+  }
+  if (mode === "canary") {
+    const reconciliationFailureCount = commonSupportCanaryReconciliation([
+      observation.current,
+      observation.withoutMarket,
+      observation.withoutBlueprint,
+    ]);
+    return {
+      decision: reconciliationFailureCount === 0 ? "GO" as const : "STOP_RETHINK" as const,
+      balanceDecision: "not_evaluated" as const,
+      mainEffects: "not_identifiable_under_common_support" as const,
+      interaction: "not_identifiable_under_common_support" as const,
+      historicalControl: observation.historicalControl,
+      scenarioManifest,
+      purity,
+      scenarioFailures: observation.failures,
+      reconciliationFailureCount,
+      failedGateKeys: reconciliationFailureCount === 0 ? [] : ["linked_path_reconciliation"],
+    };
+  }
+  const marketPath = commonSupportLinkedPath(
+    observation.current,
+    observation.withoutMarket,
+    seasonCount,
+  );
+  const blueprintPath = commonSupportLinkedPath(
+    observation.current,
+    observation.withoutBlueprint,
+    seasonCount,
+  );
+  const commonSupport = evaluateRenewalCommonSupport({
+    current: renewalAblationArmFacts(observation.current, seasonCount, "combined"),
+    withoutMarket: renewalAblationArmFacts(
+      observation.withoutMarket,
+      seasonCount,
+      "blueprint",
+    ),
+    withoutBlueprint: renewalAblationArmFacts(
+      observation.withoutBlueprint,
+      seasonCount,
+      "market",
+    ),
+    marketPath,
+    blueprintPath,
+  });
+  return {
+    ...commonSupport,
+    balanceDecision: commonSupport.decision,
+    historicalControl: observation.historicalControl,
+    scenarioManifest,
+    purity,
+    scenarioFailures: observation.failures,
+    failedGateKeys: commonSupport.decision === "GO" ? [] : [
+      commonSupport.decision === "STOP_RETHINK"
+        ? "common_support_invalid"
+        : "common_support_owner",
+    ],
+  };
+}
+
+function commonSupportCanaryReconciliation(
+  arms: readonly (readonly CareerWorldProjection[])[],
+): number {
+  return arms.reduce((total, worlds) => total + worlds.reduce((worldTotal, world) => {
+    const episodes = world.renewalNeedEpisodes ?? [];
+    const uniqueEpisodes = uniqueEpisodeMap(episodes);
+    return worldTotal
+      + requiredOwnerAttributionFacts(world).reconciliationFailureCount
+      + requiredGenerationalSuccessionFacts(world).unknownOriginCount
+      + Number(world.renewalArchitecture === undefined)
+      + Number(world.renewalPopulationSignatures === undefined)
+      + episodes.length - uniqueEpisodes.size;
+  }, 0), 0);
+}
+
+function commonSupportLinkedPath(
+  currentWorlds: readonly CareerWorldProjection[],
+  removalWorlds: readonly CareerWorldProjection[],
+  seasonCount: number,
+): RenewalCommonSupportLinkedPath {
+  const removalBySeed = new Map(removalWorlds.map((world) => [world.seed, world]));
+  let changedNeedEpisodeCount = 0;
+  let changedFulfilledPlayerCount = 0;
+  let realizedChangedPlayerCount = 0;
+  let downstreamIntersectionCount = 0;
+  let reconciliationFailureCount = 0;
+  for (const current of currentWorlds) {
+    const removal = removalBySeed.get(current.seed);
+    if (removal === undefined) {
+      reconciliationFailureCount += 1;
+      continue;
+    }
+    const currentEpisodes = current.renewalNeedEpisodes ?? [];
+    const removalEpisodes = removal.renewalNeedEpisodes ?? [];
+    const removalEpisodesByKey = uniqueEpisodeMap(removalEpisodes);
+    const currentEpisodesByKey = uniqueEpisodeMap(currentEpisodes);
+    reconciliationFailureCount += removalEpisodes.length - removalEpisodesByKey.size;
+    reconciliationFailureCount += currentEpisodes.length - currentEpisodesByKey.size;
+    const architecture = evaluateRenewalArchitectureCheckpoint({
+      ownerWorlds: [requiredOwnerAttributionFacts(current)],
+      generationalWorlds: [requiredGenerationalSuccessionFacts(current)],
+      architectureWorlds: [requiredRenewalArchitectureFacts(current)],
+    });
+    reconciliationFailureCount += architecture.reconciliationFailureCount;
+    const worldArchitecture = architecture.worlds[0];
+    if (worldArchitecture === undefined) {
+      reconciliationFailureCount += 1;
+      continue;
+    }
+    const downstreamPlayerIds = new Set([
+      ...worldArchitecture.leaderPlayerIds,
+      ...worldArchitecture.localReplacementPlayerIds,
+      ...worldArchitecture.divisionReplacementPlayerIds,
+    ]);
+    const origins = new Map(requiredRenewalArchitectureFacts(current).playerOrigins.map((row) =>
+      [row.playerId, row.origin]));
+    const playerUse = requiredOwnerAttributionFacts(current).playerUseSeasons ?? [];
+    for (const [key, episode] of currentEpisodesByKey) {
+      const paired = removalEpisodesByKey.get(key);
+      if (
+        paired?.maximumStage === episode.maximumStage
+        && paired.terminalOutcome === episode.terminalOutcome
+        && paired.fulfilledPlayerId === episode.fulfilledPlayerId
+      ) continue;
+      changedNeedEpisodeCount += 1;
+      if (episode.terminalOutcome !== "fulfilled") continue;
+      if (episode.fulfilledPlayerId === undefined || episode.terminalDate === undefined) {
+        reconciliationFailureCount += 1;
+        continue;
+      }
+      const origin = origins.get(episode.fulfilledPlayerId);
+      if (origin === undefined || origin === "unknown") {
+        reconciliationFailureCount += 1;
+        continue;
+      }
+      if (!isCareerGeneratedOrigin(origin)) continue;
+      changedFulfilledPlayerCount += 1;
+      const realized = playerUse.some((row) =>
+        row.playerId === episode.fulfilledPlayerId
+        && row.clubId === episode.clubId
+        && (row.seasonNumber === episode.seasonNumber
+          || row.seasonNumber === episode.seasonNumber + 1));
+      if (!realized) continue;
+      realizedChangedPlayerCount += 1;
+      if (downstreamPlayerIds.has(episode.fulfilledPlayerId)) {
+        downstreamIntersectionCount += 1;
+      }
+    }
+  }
+  reconciliationFailureCount += Number(currentWorlds.length !== removalWorlds.length);
+  return {
+    changedNeedEpisodeCount,
+    changedFulfilledPlayerCount,
+    realizedChangedPlayerCount,
+    downstreamIntersectionCount,
+    reconciliationFailureCount,
+  };
+}
+
+function uniqueEpisodeMap(
+  episodes: readonly RenewalNeedEpisodeFact[],
+): ReadonlyMap<string, RenewalNeedEpisodeFact> {
+  return new Map(episodes.map((episode) => [
+    `${episode.worldSeed}|${episode.divisionLevel}|${episode.clubId}|${episode.seasonNumber}`
+      + `|${episode.role}|${episode.needEpisodeOrdinal}`,
+    episode,
+  ]));
+}
+
+/**
+ * Evaluates the two independent L6.1B questions without merging their verdicts.
+ *
+ * Sharing the expensive current-world observation is safe; sharing a decision
+ * is not. A red hierarchy must not erase a reproduced squad-use owner, and the
+ * inverse is equally true.
+ */
+function evaluateIndependentOwnersCheckpoint(
+  observation: IndependentOwnersObservation,
+  mode: "canary" | "full",
+) {
+  const purity = evaluateRenewalRefinementPurity(
+    observation.current,
+    observation.purityShadow,
+  );
+  if (mode === "canary") {
+    const purityHeld = purity !== "not_evaluated" && purity.mismatchWorldCount === 0;
+    return {
+      mode,
+      purity,
+      squadUseLane: {
+        decision: purityHeld ? "GO" as const : "STOP_RETHINK" as const,
+        balanceDecision: "not_evaluated" as const,
+        failedGateKeys: purityHeld ? [] : ["observer_purity"],
+      },
+      hierarchyLane: {
+        decision: purityHeld ? "GO" as const : "STOP_RETHINK" as const,
+        balanceDecision: "not_evaluated" as const,
+        failedGateKeys: purityHeld ? [] : ["observer_purity"],
+      },
+    };
+  }
+  const squadUse = evaluateSquadUseAttribution(
+    observation.current.map(requiredOwnerAttributionFacts),
+  );
+  const hierarchy = evaluateRenewalRefinementHierarchy(observation.current, 10);
+  return {
+    mode,
+    purity,
+    squadUseLane: independentSquadUseLaneDecision(squadUse, observation.current.length),
+    hierarchyLane: independentHierarchyLaneDecision(hierarchy, observation.current.length),
+  };
+}
+
+/** Total L6.1B-S rule over the canonical squad-use attribution facts. */
+export function independentSquadUseLaneDecision(
+  squadUse: ReturnType<typeof evaluateSquadUseAttribution>,
+  observedWorldCount: number,
+) {
+  const targets = HISTORICAL_FIRST_DIVISION_PLAYER_TARGETS;
+  const currentInside = insideObserved(
+    squadUse.appearanceShare,
+    targets.appearanceShare.min,
+    targets.appearanceShare.max,
+  ) && insideObserved(
+    squadUse.distinctUsersPerClubSeason,
+    targets.distinctUsersPerClubSeason.min,
+    targets.distinctUsersPerClubSeason.max,
+  );
+  const structuralLimitInside = insideObserved(
+    squadUse.pooledCounterfactualAppearanceShare,
+    targets.appearanceShare.min,
+    targets.appearanceShare.max,
+  ) && insideObserved(
+    squadUse.pooledCounterfactualDistinctUsersPerClubSeason,
+    targets.distinctUsersPerClubSeason.min,
+    targets.distinctUsersPerClubSeason.max,
+  );
+  if (observedWorldCount !== 28 || squadUse.worlds.length !== 28) {
+    return {
+      decision: "STOP_RETHINK" as const,
+      outcome: "incomplete_population" as const,
+      failedGateKeys: ["world_count"],
+      squadUse,
+    };
+  }
+  if (squadUse.reconciliationFailureCount > 0) {
+    return {
+      decision: "STOP_RETHINK" as const,
+      outcome: "reconciliation_failure" as const,
+      failedGateKeys: ["reconciliation"],
+      squadUse,
+    };
+  }
+  if (currentInside) {
+    return {
+      decision: "GO" as const,
+      outcome: "no_correction" as const,
+      failedGateKeys: [],
+      squadUse,
+    };
+  }
+  if (
+    squadUse.owner !== "not_attributed"
+    && squadUse.ownerWorldCount >= 20
+    && structuralLimitInside
+  ) {
+    return {
+      decision: "GO" as const,
+      outcome: "owner_identified" as const,
+      failedGateKeys: [],
+      squadUse,
+    };
+  }
+  return {
+    decision: "REFINE" as const,
+    outcome: "not_attributed" as const,
+    failedGateKeys: ["structural_stage_owner"],
+    squadUse,
+  };
+}
+
+/** Total L6.1B-H rule over the frozen paired hierarchy replay. */
+export function independentHierarchyLaneDecision(
+  hierarchy: ReturnType<typeof evaluateRenewalRefinementHierarchy>,
+  observedWorldCount: number,
+) {
+  if (observedWorldCount !== 28) {
+    return {
+      decision: "STOP_RETHINK" as const,
+      outcome: "incomplete_population" as const,
+      failedGateKeys: ["world_count"],
+      hierarchy,
+    };
+  }
+  if (hierarchy.reconciliationFailureCount > 0) {
+    return {
+      decision: "STOP_RETHINK" as const,
+      outcome: "reconciliation_failure" as const,
+      failedGateKeys: ["reconciliation"],
+      hierarchy,
+    };
+  }
+  if (hierarchy.owner === "sampling_resolution") {
+    return {
+      decision: "GO" as const,
+      outcome: "no_correction" as const,
+      failedGateKeys: [],
+      hierarchy,
+    };
+  }
+  if (
+    hierarchy.owner === "population_strength"
+    && hierarchy.coherentWorldCount >= 20
+    && hierarchy.guardrailsHeld
+  ) {
+    return {
+      decision: "GO" as const,
+      outcome: "owner_identified" as const,
+      failedGateKeys: [],
+      hierarchy,
+    };
+  }
+  return {
+    decision: "REFINE" as const,
+    outcome: "not_attributed" as const,
+    failedGateKeys: ["population_strength_owner"],
+    hierarchy,
+  };
+}
+
+/** Evaluates the fresh product-versus-legacy department-contest checkpoint. */
+export function evaluateStrengthContestCheckpoint(
+  worlds: readonly {
+    readonly worldSeed: string;
+    readonly tableSeasons: readonly OwnerAttributionTableSeasonFact[];
+    readonly reconciliationFailureCount: number;
+  }[],
+  seasonCount: number,
+  mode: StrengthContestMode,
+) {
+  const canary = mode === "canary" || mode === "retry_canary";
+  const retry = mode === "retry_canary" || mode === "retry_full";
+  const expectedWorldCount = canary ? 7 : 28;
+  const reconciliationFailureCount = numberSum(worlds.map(({ reconciliationFailureCount }) =>
+    reconciliationFailureCount));
+  const tableRows = worlds.flatMap(({ tableSeasons }) => tableSeasons);
+  const expectedTableRowCount = expectedWorldCount * seasonCount * 3;
+  const complete = worlds.length === expectedWorldCount
+    && tableRows.length === expectedTableRowCount;
+  if (!complete || reconciliationFailureCount > 0) {
+    return {
+      decision: "STOP_RETHINK" as const,
+      balanceDecision: canary ? "not_evaluated" as const : "STOP_RETHINK" as const,
+      worldCount: worlds.length,
+      seasonCount,
+      competitionSeasonCount: tableRows.length,
+      reconciliationFailureCount,
+      failedGateKeys: [
+        ...(complete ? [] : ["population_completion"]),
+        ...(reconciliationFailureCount === 0 ? [] : ["reconciliation"]),
+      ],
+    };
+  }
+  if (canary) {
+    return {
+      decision: "GO" as const,
+      balanceDecision: "not_evaluated" as const,
+      worldCount: worlds.length,
+      seasonCount,
+      competitionSeasonCount: tableRows.length,
+      reconciliationFailureCount,
+      failedGateKeys: [],
+    };
+  }
+
+  const firstDivisionRows = tableRows.filter(({ competitionId }) =>
+    competitionId === "competition:ita-1");
+  const productChampionPointsMean = averageNumbers(firstDivisionRows.map(({ championPoints }) =>
+    championPoints));
+  const legacyChampionPointsMean = averageNumbers(firstDivisionRows.map(({ pairedChampionPoints }) =>
+    pairedChampionPoints));
+  const championBand = HISTORICAL_DIVISION_TABLE_TARGETS[1].championPoints;
+  const worldResponses = worlds.map((world) => {
+    const rows = world.tableSeasons.filter(({ competitionId }) =>
+      competitionId === "competition:ita-1");
+    const product = averageNumbers(rows.map(({ championPoints }) => championPoints));
+    const legacy = averageNumbers(rows.map(({ pairedChampionPoints }) => pairedChampionPoints));
+    const legacyDistance = distanceToBand(legacy, championBand);
+    const productDistance = distanceToBand(product, championBand);
+    const distanceImprovement = legacyDistance - productDistance;
+    const championPointDelta = product - legacy;
+    return {
+      championPointDelta,
+      distanceImprovement,
+      legacyInside: legacyDistance === 0,
+      productInside: productDistance === 0,
+      distanceImproved: distanceImprovement >= 0.5,
+      healthPreserved:
+        (legacyDistance === 0 && productDistance === 0) || distanceImprovement >= 0.5,
+      directionPreserved: championPointDelta >= 0.5,
+    };
+  });
+  const championPointDeltas = worldResponses.map(({ championPointDelta }) => championPointDelta);
+  const worldDistanceImprovements = worldResponses.map(({ distanceImprovement }) =>
+    distanceImprovement);
+  const legacyInsideWorldCount = worldResponses.filter(({ legacyInside }) => legacyInside).length;
+  const productInsideWorldCount = worldResponses.filter(({ productInside }) => productInside).length;
+  const distanceImprovedWorldCount = worldResponses.filter(({ distanceImproved }) =>
+    distanceImproved).length;
+  const healthPreservedWorldCount = worldResponses.filter(({ healthPreserved }) =>
+    healthPreserved).length;
+  const directionPreservedWorldCount = worldResponses.filter(({ directionPreserved }) =>
+    directionPreserved).length;
+  const coherentWorldCount = retry ? healthPreservedWorldCount : distanceImprovedWorldCount;
+  const guardrails = STRENGTH_CONTEST_TABLE_METRICS.flatMap((metric) =>
+    ([1, 2, 3] as const).flatMap((divisionLevel) => {
+      if (divisionLevel === 1 && metric.target === "championPoints") return [];
+      const competitionId = `competition:ita-${divisionLevel}`;
+      const rows = tableRows.filter((row) => row.competitionId === competitionId);
+      const legacyMean = averageNumbers(rows.map((row) => row[metric.legacy]));
+      const productMean = averageNumbers(rows.map((row) => row[metric.product]));
+      return [{
+        divisionLevel,
+        ...evaluatePairedHistoricalGuardrail(
+          metric.target,
+          legacyMean,
+          productMean,
+          HISTORICAL_DIVISION_TABLE_TARGETS[divisionLevel][metric.target],
+        ),
+      }];
+    }));
+  const guardrailsHeld = guardrails.every(({ held }) => held);
+  const championInside = productChampionPointsMean >= championBand.min
+    && productChampionPointsMean <= championBand.max;
+  const responseCoherent = coherentWorldCount >= 20;
+  const directionCoherent = !retry || directionPreservedWorldCount >= 20;
+  const decision = championInside && responseCoherent && directionCoherent && guardrailsHeld
+    ? "GO" as const
+    : "REFINE" as const;
+  return {
+    decision,
+    balanceDecision: decision,
+    worldCount: worlds.length,
+    seasonCount,
+    competitionSeasonCount: tableRows.length,
+    productStrengthGapMultiplier: PRODUCT_STRENGTH_GAP_MULTIPLIER,
+    legacyStrengthGapMultiplier: LEGACY_STRENGTH_GAP_MULTIPLIER,
+    productChampionPointsMean,
+    legacyChampionPointsMean,
+    championPointDelta: averageNumbers(championPointDeltas),
+    championPointDeltaUncertainty: sampleUncertainty(championPointDeltas),
+    distanceImprovementMean: averageNumbers(worldDistanceImprovements),
+    distanceImprovementUncertainty: sampleUncertainty(worldDistanceImprovements),
+    coherenceRule: retry ? "health_and_direction" as const : "distance_only" as const,
+    legacyInsideWorldCount,
+    productInsideWorldCount,
+    distanceImprovedWorldCount,
+    healthPreservedWorldCount,
+    directionPreservedWorldCount,
+    coherentWorldCount,
+    guardrailsHeld,
+    guardrails,
+    reconciliationFailureCount,
+    failedGateKeys: [
+      ...(championInside ? [] : ["first_division_champion_points"]),
+      ...(responseCoherent
+        ? []
+        : [retry ? "paired_health_coherence" : "paired_response_coherence"]),
+      ...(directionCoherent ? [] : ["paired_direction_coherence"]),
+      ...(guardrailsHeld ? [] : ["table_guardrails"]),
+    ],
+  };
+}
+
+function checkpointPasses(checkpoint: unknown): boolean {
+  if (checkpoint === undefined) return true;
+  const row = unknownRecord(checkpoint);
+  if (row === undefined) return false;
+  const squadUseLane = unknownRecord(row.squadUseLane);
+  const hierarchyLane = unknownRecord(row.hierarchyLane);
+  if (squadUseLane !== undefined || hierarchyLane !== undefined) {
+    return squadUseLane?.decision === "GO" && hierarchyLane?.decision === "GO";
+  }
+  return row.decision === "GO" || row.decision === "OWNER_IDENTIFIED";
+}
+
 function evaluateRenewalRefinementCheckpoint(
   scenarios: RenewalRefinementScenarioWorlds,
   seasonCount: number,
@@ -2720,23 +3619,29 @@ function evaluateRenewalRefinementHierarchy(
     pairedChampionPointsMean: paired,
     coherentWorldCount,
     tableOwner: owner.owners.tableHierarchy,
+    reconciliationFailureCount: owner.reconciliationFailureCount,
     guardrailsHeld,
     guardrails,
   };
 }
 
-function hierarchyGuardrailMetrics() {
-  return [
-    { target: "lastClubPoints", current: "lastPoints", paired: "pairedLastPoints" },
-    { target: "pointsSpread", current: "pointsSpread", paired: "pairedPointsSpread" },
+const STRENGTH_CONTEST_TABLE_METRICS = [
+    { target: "championPoints", product: "championPoints", legacy: "pairedChampionPoints" },
+    { target: "lastClubPoints", product: "lastPoints", legacy: "pairedLastPoints" },
+    { target: "pointsSpread", product: "pointsSpread", legacy: "pairedPointsSpread" },
     {
       target: "ppgStandardDeviation",
-      current: "ppgStandardDeviation",
-      paired: "pairedPpgStandardDeviation",
+      product: "ppgStandardDeviation",
+      legacy: "pairedPpgStandardDeviation",
     },
-    { target: "goalsPerMatch", current: "goalsPerMatch", paired: "pairedGoalsPerMatch" },
-    { target: "drawShare", current: "drawShare", paired: "pairedDrawShare" },
+    { target: "goalsPerMatch", product: "goalsPerMatch", legacy: "pairedGoalsPerMatch" },
+    { target: "drawShare", product: "drawShare", legacy: "pairedDrawShare" },
   ] as const;
+
+function hierarchyGuardrailMetrics() {
+  return STRENGTH_CONTEST_TABLE_METRICS
+    .filter(({ target }) => target !== "championPoints")
+    .map(({ target, product, legacy }) => ({ target, current: product, paired: legacy }));
 }
 
 function distanceToBand(

@@ -837,6 +837,7 @@ function validConfig(options: {
       },
     ],
     homeAdvantageFactor: 1.05,
+    strengthGapMultiplier: 1,
     tacticalDistributionCaps: {
       directness: { minInclusive: -1, maxInclusive: 1 },
       pressing: { minInclusive: -1, maxInclusive: 1 },

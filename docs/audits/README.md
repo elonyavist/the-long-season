@@ -16,6 +16,34 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_L6_1D2_STRENGTH_CONTEST_RETRY.md` - **`GO`.** On fresh
+  `28 x 10` seeds the `1.25` product records champion points `75.2143`, health
+  `25/28`, direction `28/28`, all `17` table guardrails and zero reconciliation.
+  It accepts the contest multiplier without rewriting L6.1D's `REFINE`.
+
+- `PHASE_81A_CHECKPOINT_L6_1D_STRENGTH_CONTEST.md` - **`REFINE`.** The frozen
+  `1.25` department-contest candidate moves the First-Division champion mean
+  `71.4286 -> 73.7714` and keeps all `17` guardrails, but the preregistered
+  distance-only coherence reader records `17/28` against `20/28`. Nine healthy
+  legacy worlds were already inside the band, making that reader arithmetically
+  impassable on the observed population. The candidate is not yet accepted.
+
+- `PHASE_81A_CHECKPOINT_L6_1C_COMMON_SUPPORT_RENEWAL.md` - **`STOP / RETHINK:
+  antagonistic`.** Three viable `7 x 10` arms reconcile and link players, but
+  market-on reduces four-formation replication materially in `5/7`; no renewal
+  correction opens. The historical off/off failure is `annual_payroll`.
+
+- `PHASE_81A_CHECKPOINT_L6_1B_INDEPENDENT_OWNERS.md` - **two independent
+  decisions on a fresh current-product `28 x 10`.** Squad use is `REFINE`: the
+  structural limit misses the distinct-user floor by `0.0222`. Hierarchy is
+  `GO: owner_identified: population_strength` in `28/28`, opening only 06B20C.
+
+- `PHASE_81A_POST_L6_1A_DECISION_DISENTANGLEMENT_TRANCHE.md` - **Addendum A6.2
+  thesis and operational contract.** L6.1A remains `STOP / RETHINK`; fresh
+  current worlds decide squad use and hierarchy independently, while renewal
+  uses a three-arm common-support estimand that never pretends to recover the
+  missing factorial interaction.
+
 - `PHASE_81A_CHECKPOINT_L6_1A_RENEWAL_REFINEMENT.md` - **Checkpoint L6.1A,
   `STOP / RETHINK`.** The corrected composite profile reconciles, attributes
   squad use to `matchday_selection` in `28/28` worlds and standings to

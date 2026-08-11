@@ -68,6 +68,8 @@ export interface MatchEngineConfig {
   readonly conversionBands: readonly ConversionBand[];
   /** Multiplier applied later to home-side distribution or strength inputs. */
   readonly homeAdvantageFactor: number;
+  /** Multiplier applied only to the gap between opposing department scores. */
+  readonly strengthGapMultiplier: number;
   /** Caps for future tactical distribution knobs. */
   readonly tacticalDistributionCaps: TacticalDistributionCaps;
 }
@@ -93,6 +95,8 @@ export function isValidMatchEngineConfig(config: MatchEngineConfig | undefined):
     config.rates.maxOpportunityRatePerMinute >= config.rates.baseOpportunityRatePerMinute &&
     Number.isFinite(config.homeAdvantageFactor) &&
     config.homeAdvantageFactor > 0 &&
+    Number.isFinite(config.strengthGapMultiplier) &&
+    config.strengthGapMultiplier > 0 &&
     config.conversionBands.length > 0 &&
     config.conversionBands.every(isValidConversionBand) &&
     isValidTacticalDistributionCaps(config.tacticalDistributionCaps)

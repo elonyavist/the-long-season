@@ -284,7 +284,7 @@ export interface SimulateSeasonInput {
   /** Competition point rules for the final derived table. */
   readonly tableRules: LeagueTableRules;
   /**
-   * Analysis-only paired replay that amplifies centred kickoff-strength gaps.
+   * Analysis-only paired replay using an absolute department-contest scale.
    *
    * The canonical season remains untouched. The replay shares its selected
    * players, seed and policy and contributes only a second table for causal
@@ -776,29 +776,12 @@ function validateAnalysisStrengthGapScale(scale: number | undefined): void {
   }
 }
 
-function scaledStrengthMatchContext(context: MatchContext, scale: number): MatchContext {
+function strengthGapOverrideMatchContext(context: MatchContext, scale: number): MatchContext {
   return {
     ...context,
-    home: scaledStrengthTeamContext(context.home, context.away.strength, scale),
-    away: scaledStrengthTeamContext(context.away, context.home.strength, scale),
-  };
-}
-
-function scaledStrengthTeamContext(
-  team: MatchTeamContext,
-  opponentStrength: TeamStrength,
-  scale: number,
-): MatchTeamContext {
-  const centred = (value: number, opponent: number): number =>
-    (value + opponent) / 2 + (value - opponent) * scale / 2;
-  return {
-    ...team,
-    strength: {
-      attack: centred(team.strength.attack, opponentStrength.attack),
-      midfield: centred(team.strength.midfield, opponentStrength.midfield),
-      defense: centred(team.strength.defense, opponentStrength.defense),
-      goalkeeper: centred(team.strength.goalkeeper, opponentStrength.goalkeeper),
-      overall: centred(team.strength.overall, opponentStrength.overall),
+    engineConfig: {
+      ...context.engineConfig,
+      strengthGapMultiplier: scale,
     },
   };
 }
@@ -812,7 +795,7 @@ function completeSeasonFixture(
 ): CompletedSeasonFixture {
   const matchContext = analysisStrengthGapScale === undefined
     ? setup.matchContext
-    : scaledStrengthMatchContext(setup.matchContext, analysisStrengthGapScale);
+    : strengthGapOverrideMatchContext(setup.matchContext, analysisStrengthGapScale);
   const home = setup.home.liveTeam;
   const away = setup.away.liveTeam;
   if (home === undefined || away === undefined) {
@@ -858,9 +841,7 @@ function completeSeasonFixture(
         livePlayerStates,
         playerCondition,
       );
-      if (analysisStrengthGapScale === undefined) return rebuilt;
-      const opponent = team.side === "home" ? setup.matchContext.away : setup.matchContext.home;
-      return scaledStrengthTeamContext(rebuilt, opponent.strength, analysisStrengthGapScale);
+      return rebuilt;
     },
   });
   const state = completed.state;

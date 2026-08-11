@@ -467,6 +467,16 @@ export interface AdvanceCareerOneSeasonInvalid {
   readonly reason: AdvanceCareerOneSeasonInvalidReason;
   /** Related fixture ID when available. */
   readonly fixtureId?: FixtureId;
+  /**
+   * Exact canonical finance operation that rejected the transaction.
+   *
+   * The generic reason cannot distinguish payroll, distribution and budget
+   * refresh. Reports may observe this fact; no caller may use it as a fallback.
+   */
+  readonly failedOperation?: Extract<
+    CareerSeasonAdvancementOperation,
+    "annual_payroll" | "season_distribution" | "annual_transfer_budget_refresh"
+  >;
 }
 
 /** Canonical season advancement result. */
@@ -517,6 +527,7 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
       status: "invalid",
       careerState: input.careerState,
       reason: "finance_lifecycle_rejected",
+      failedOperation: "annual_payroll",
     };
   }
   if (annualPayroll !== undefined) operationOrder.push("annual_payroll");
@@ -564,6 +575,7 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
           status: "invalid",
           careerState: input.careerState,
           reason: "finance_lifecycle_rejected",
+          failedOperation: "season_distribution",
         };
       }
       stateAfterDistribution = distributed.careerState;
@@ -580,6 +592,7 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
       status: "invalid",
       careerState: input.careerState,
       reason: "finance_lifecycle_rejected",
+      failedOperation: "annual_transfer_budget_refresh",
     };
   }
   if (refreshedTransferBudgets !== undefined) operationOrder.push("annual_transfer_budget_refresh");

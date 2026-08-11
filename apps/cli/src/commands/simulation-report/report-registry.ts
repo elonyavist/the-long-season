@@ -34,6 +34,7 @@ import {
   type CareerCheckpointKind,
   type CareerSectionId,
   type RenewalAblationArm,
+  type StrengthContestMode,
 } from "./career-sections.ts";
 import {
   createLockedProfileFacts,
@@ -88,6 +89,14 @@ export const SIMULATION_REPORT_PROFILE_IDS = [
   "phase81a-renewal-ablation-l6-1-combined-7x10",
   "phase81a-renewal-refinement-l6-1a-canary-7x1",
   "phase81a-renewal-refinement-l6-1a-28x10",
+  "phase81a-independent-owners-l6-1b-canary-7x1",
+  "phase81a-independent-owners-l6-1b-28x10",
+  "phase81a-strength-contest-l6-1d-canary-7x1",
+  "phase81a-strength-contest-l6-1d-28x10",
+  "phase81a-strength-contest-l6-1d2-canary-7x1",
+  "phase81a-strength-contest-l6-1d2-28x10",
+  "phase81a-renewal-common-support-l6-1c-canary-7x1",
+  "phase81a-renewal-common-support-l6-1c-7x10",
   "phase81a-league-diversity-canary-7x10",
   "phase81a-league-diversity-100x10",
   "phase81-tactical-shape",
@@ -124,6 +133,14 @@ const CAREER_PROFILE_CHECKPOINT_KIND = {
   "phase81a-renewal-ablation-l6-1-combined-7x10": "renewal_ablation_l6_1",
   "phase81a-renewal-refinement-l6-1a-canary-7x1": "renewal_refinement_l6_1a",
   "phase81a-renewal-refinement-l6-1a-28x10": "renewal_refinement_l6_1a",
+  "phase81a-independent-owners-l6-1b-canary-7x1": "independent_owners_l6_1b",
+  "phase81a-independent-owners-l6-1b-28x10": "independent_owners_l6_1b",
+  "phase81a-strength-contest-l6-1d-canary-7x1": "strength_contest_l6_1d",
+  "phase81a-strength-contest-l6-1d-28x10": "strength_contest_l6_1d",
+  "phase81a-strength-contest-l6-1d2-canary-7x1": "strength_contest_l6_1d",
+  "phase81a-strength-contest-l6-1d2-28x10": "strength_contest_l6_1d",
+  "phase81a-renewal-common-support-l6-1c-canary-7x1": "renewal_common_support_l6_1c",
+  "phase81a-renewal-common-support-l6-1c-7x10": "renewal_common_support_l6_1c",
 } as const satisfies Partial<Readonly<Record<SimulationReportProfileId, CareerCheckpointKind>>>;
 
 const CAREER_PROFILE_CACHE_SUFFIX = {
@@ -155,6 +172,14 @@ const CAREER_PROFILE_CACHE_SUFFIX = {
   "phase81a-renewal-ablation-l6-1-combined-7x10": "-facts-v2",
   "phase81a-renewal-refinement-l6-1a-canary-7x1": "-facts-v1",
   "phase81a-renewal-refinement-l6-1a-28x10": "-facts-v1",
+  "phase81a-independent-owners-l6-1b-canary-7x1": "-facts-v1",
+  "phase81a-independent-owners-l6-1b-28x10": "-facts-v1",
+  "phase81a-strength-contest-l6-1d-canary-7x1": "-facts-v1",
+  "phase81a-strength-contest-l6-1d-28x10": "-facts-v1",
+  "phase81a-strength-contest-l6-1d2-canary-7x1": "-facts-v1",
+  "phase81a-strength-contest-l6-1d2-28x10": "-facts-v1",
+  "phase81a-renewal-common-support-l6-1c-canary-7x1": "-facts-v1",
+  "phase81a-renewal-common-support-l6-1c-7x10": "-facts-v1",
 } as const satisfies Readonly<Record<keyof typeof CAREER_PROFILE_CHECKPOINT_KIND, string>>;
 
 /** Copy-pasteable commands rendered by help and parsed by command tests. */
@@ -414,6 +439,126 @@ export const SIMULATION_REPORT_PROFILES = {
       includedSectionIds: CAREER_SECTION_IDS,
       detail: "diagnostic",
       seedPrefix: "phase81a-renewal-refinement-l6-1a-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-independent-owners-l6-1b-canary-7x1": {
+    id: "phase81a-independent-owners-l6-1b-canary-7x1",
+    titleKey: "simulationReport.profile.phase81aIndependentOwnersCanary.title",
+    descriptionKey: "simulationReport.profile.phase81aIndependentOwnersCanary.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-independent-owners-l6-1b-canary-7x1",
+      worldCount: 7,
+      seasonCount: 1,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-independent-owners-l6-1b-canary-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-independent-owners-l6-1b-28x10": {
+    id: "phase81a-independent-owners-l6-1b-28x10",
+    titleKey: "simulationReport.profile.phase81aIndependentOwners.title",
+    descriptionKey: "simulationReport.profile.phase81aIndependentOwners.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-independent-owners-l6-1b-28x10",
+      worldCount: 28,
+      seasonCount: 10,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-independent-owners-l6-1b-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-strength-contest-l6-1d-canary-7x1": {
+    id: "phase81a-strength-contest-l6-1d-canary-7x1",
+    titleKey: "simulationReport.profile.phase81aStrengthContestCanary.title",
+    descriptionKey: "simulationReport.profile.phase81aStrengthContestCanary.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-strength-contest-l6-1d-canary-7x1",
+      worldCount: 7,
+      seasonCount: 1,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-strength-contest-l6-1d-canary-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-strength-contest-l6-1d-28x10": {
+    id: "phase81a-strength-contest-l6-1d-28x10",
+    titleKey: "simulationReport.profile.phase81aStrengthContest.title",
+    descriptionKey: "simulationReport.profile.phase81aStrengthContest.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-strength-contest-l6-1d-28x10",
+      worldCount: 28,
+      seasonCount: 10,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-strength-contest-l6-1d-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-strength-contest-l6-1d2-canary-7x1": {
+    id: "phase81a-strength-contest-l6-1d2-canary-7x1",
+    titleKey: "simulationReport.profile.phase81aStrengthContestRetryCanary.title",
+    descriptionKey: "simulationReport.profile.phase81aStrengthContestRetryCanary.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-strength-contest-l6-1d2-canary-7x1",
+      worldCount: 7,
+      seasonCount: 1,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-strength-contest-l6-1d2-canary-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-strength-contest-l6-1d2-28x10": {
+    id: "phase81a-strength-contest-l6-1d2-28x10",
+    titleKey: "simulationReport.profile.phase81aStrengthContestRetry.title",
+    descriptionKey: "simulationReport.profile.phase81aStrengthContestRetry.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-strength-contest-l6-1d2-28x10",
+      worldCount: 28,
+      seasonCount: 10,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-strength-contest-l6-1d2-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-renewal-common-support-l6-1c-canary-7x1": {
+    id: "phase81a-renewal-common-support-l6-1c-canary-7x1",
+    titleKey: "simulationReport.profile.phase81aRenewalCommonSupportCanary.title",
+    descriptionKey: "simulationReport.profile.phase81aRenewalCommonSupportCanary.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-renewal-common-support-l6-1c-canary-7x1",
+      worldCount: 7,
+      seasonCount: 1,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-renewal-common-support-l6-1c-canary-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-renewal-common-support-l6-1c-7x10": {
+    id: "phase81a-renewal-common-support-l6-1c-7x10",
+    titleKey: "simulationReport.profile.phase81aRenewalCommonSupport.title",
+    descriptionKey: "simulationReport.profile.phase81aRenewalCommonSupport.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-renewal-common-support-l6-1c-7x10",
+      worldCount: 7,
+      seasonCount: 10,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-renewal-common-support-l6-1c-v1",
       workerCount: 7,
     },
   },
@@ -1014,6 +1159,9 @@ async function leagueDiversityExecution(
     readonly readOnly?: boolean;
     readonly renewalAblationArm?: RenewalAblationArm;
     readonly renewalRefinementMode?: "canary" | "full";
+    readonly independentOwnersMode?: "canary" | "full";
+    readonly strengthContestMode?: StrengthContestMode;
+    readonly renewalCommonSupportMode?: "canary" | "full";
   };
 }> {
   if (profileId === null || !Object.hasOwn(CAREER_PROFILE_CHECKPOINT_KIND, profileId)) return {};
@@ -1027,6 +1175,26 @@ async function leagueDiversityExecution(
     : careerProfileId === "phase81a-renewal-refinement-l6-1a-28x10"
       ? "full" as const
       : undefined;
+  const independentOwnersMode = careerProfileId === "phase81a-independent-owners-l6-1b-canary-7x1"
+    ? "canary" as const
+    : careerProfileId === "phase81a-independent-owners-l6-1b-28x10"
+      ? "full" as const
+      : undefined;
+  const strengthContestMode = careerProfileId === "phase81a-strength-contest-l6-1d-canary-7x1"
+    ? "canary" as const
+    : careerProfileId === "phase81a-strength-contest-l6-1d-28x10"
+      ? "full" as const
+      : careerProfileId === "phase81a-strength-contest-l6-1d2-canary-7x1"
+        ? "retry_canary" as const
+        : careerProfileId === "phase81a-strength-contest-l6-1d2-28x10"
+          ? "retry_full" as const
+          : undefined;
+  const renewalCommonSupportMode =
+    careerProfileId === "phase81a-renewal-common-support-l6-1c-canary-7x1"
+      ? "canary" as const
+      : careerProfileId === "phase81a-renewal-common-support-l6-1c-7x10"
+        ? "full" as const
+        : undefined;
   return {
     leagueDiversityProfile: {
       profileId: cacheIdentityProfileId,
@@ -1037,6 +1205,9 @@ async function leagueDiversityExecution(
       readOnly: careerProfileId === "phase81a-integrated-l5-4h-reeval-7x10",
       ...(renewalAblationArm === undefined ? {} : { renewalAblationArm }),
       ...(renewalRefinementMode === undefined ? {} : { renewalRefinementMode }),
+      ...(independentOwnersMode === undefined ? {} : { independentOwnersMode }),
+      ...(strengthContestMode === undefined ? {} : { strengthContestMode }),
+      ...(renewalCommonSupportMode === undefined ? {} : { renewalCommonSupportMode }),
     },
   };
 }

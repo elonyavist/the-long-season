@@ -299,6 +299,7 @@ function traceConfig(): MatchEngineConfig {
     rates: { baseOpportunityRatePerMinute: 0.04, maxOpportunityRatePerMinute: 0.2 },
     conversionBands: [{ bandKey: "low", minQualityInclusive: 0, maxQualityExclusive: 1, goalProbability: 0.1 }],
     homeAdvantageFactor: 1.05,
+    strengthGapMultiplier: 1,
     tacticalDistributionCaps: {
       directness: { minInclusive: -1, maxInclusive: 1 },
       pressing: { minInclusive: -1, maxInclusive: 1 },

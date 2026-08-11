@@ -154,6 +154,126 @@ describe("simulation-report planner", () => {
     })).toThrow(/refuses measurement overrides/);
   });
 
+  it("freezes the independent L6.1B canary and powered current-world cohort", () => {
+    const canary = createSimulationReportPlan({
+      profileId: "phase81a-independent-owners-l6-1b-canary-7x1",
+      workerCount: 7,
+    });
+    const full = createSimulationReportPlan({
+      profileId: "phase81a-independent-owners-l6-1b-28x10",
+      workerCount: 7,
+    });
+
+    expect(canary.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 1,
+      workerCount: 7,
+      seedPrefix: "phase81a-independent-owners-l6-1b-canary-v1",
+      includedSectionIds: CAREER_SECTION_IDS,
+    });
+    expect(full.measurementRequest).toMatchObject({
+      worldCount: 28,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-independent-owners-l6-1b-v1",
+      includedSectionIds: CAREER_SECTION_IDS,
+    });
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-independent-owners-l6-1b-28x10",
+      worldCount: 7,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
+  it("freezes the L6.1D strength-contest canary and powered paired cohort", () => {
+    const canary = createSimulationReportPlan({
+      profileId: "phase81a-strength-contest-l6-1d-canary-7x1",
+      workerCount: 7,
+    });
+    const full = createSimulationReportPlan({
+      profileId: "phase81a-strength-contest-l6-1d-28x10",
+      workerCount: 7,
+    });
+
+    expect(canary.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 1,
+      workerCount: 7,
+      seedPrefix: "phase81a-strength-contest-l6-1d-canary-v1",
+      includedSectionIds: CAREER_SECTION_IDS,
+    });
+    expect(full.measurementRequest).toMatchObject({
+      worldCount: 28,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-strength-contest-l6-1d-v1",
+      includedSectionIds: CAREER_SECTION_IDS,
+    });
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-strength-contest-l6-1d-28x10",
+      seasonCount: 2,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
+  it("freezes the fresh L6.1D2 strength-contest retry profiles", () => {
+    const canary = createSimulationReportPlan({
+      profileId: "phase81a-strength-contest-l6-1d2-canary-7x1",
+      workerCount: 7,
+    });
+    const full = createSimulationReportPlan({
+      profileId: "phase81a-strength-contest-l6-1d2-28x10",
+      workerCount: 7,
+    });
+
+    expect(canary.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 1,
+      workerCount: 7,
+      seedPrefix: "phase81a-strength-contest-l6-1d2-canary-v1",
+      includedSectionIds: CAREER_SECTION_IDS,
+    });
+    expect(full.measurementRequest).toMatchObject({
+      worldCount: 28,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-strength-contest-l6-1d2-v1",
+      includedSectionIds: CAREER_SECTION_IDS,
+    });
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-strength-contest-l6-1d2-28x10",
+      worldCount: 7,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
+  it("freezes the three-arm L6.1C canary and common-support cohort", () => {
+    const canary = createSimulationReportPlan({
+      profileId: "phase81a-renewal-common-support-l6-1c-canary-7x1",
+      workerCount: 7,
+    });
+    const full = createSimulationReportPlan({
+      profileId: "phase81a-renewal-common-support-l6-1c-7x10",
+      workerCount: 7,
+    });
+
+    expect(canary.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 1,
+      workerCount: 7,
+      seedPrefix: "phase81a-renewal-common-support-l6-1c-canary-v1",
+      includedSectionIds: CAREER_SECTION_IDS,
+    });
+    expect(full.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-renewal-common-support-l6-1c-v1",
+      includedSectionIds: CAREER_SECTION_IDS,
+    });
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-renewal-common-support-l6-1c-7x10",
+      seasonCount: 9,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
   it("freezes L5.2 to seven worlds, two seasons and three-division table facts", () => {
     const plan = createSimulationReportPlan({
       profileId: "phase81a-standings-hierarchy-l5-2-7x2",

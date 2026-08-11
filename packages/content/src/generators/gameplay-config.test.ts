@@ -1,7 +1,10 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
-import { createFakeGameplayConfig } from "./gameplay-config.ts";
+import {
+  createFakeGameplayConfig,
+  PRODUCT_STRENGTH_GAP_MULTIPLIER,
+} from "./gameplay-config.ts";
 import { createFakeLeagueSystem } from "./league-system.ts";
 
 /** Shared gameplay configuration tests prevent facade-specific tuning copies. */
@@ -11,6 +14,7 @@ test("focused league uses the reusable generated gameplay configuration", () => 
 
   assert.deepEqual(league.matchEngineConfig, expected.matchEngineConfig);
   assert.deepEqual(league.roleWeights, expected.roleWeights);
+  assert.equal(league.matchEngineConfig.strengthGapMultiplier, PRODUCT_STRENGTH_GAP_MULTIPLIER);
   assert.deepEqual(league.stateMultiplierCurves, expected.stateMultiplierCurves);
 });
 

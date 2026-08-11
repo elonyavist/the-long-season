@@ -4696,7 +4696,8 @@ function advanceCareerForReport(
 
   if (advanced.status !== "advanced") {
     throw new Error(
-      `Cannot advance report career ${worldSeed} season ${context.seasonNumber}: ${advanced.reason}`,
+      `Cannot advance report career ${worldSeed} season ${context.seasonNumber}: ${advanced.reason}`
+        + (advanced.failedOperation === undefined ? "" : `:${advanced.failedOperation}`),
     );
   }
   for (const signing of advanced.facts.squadMaintenance.freeAgentSignings) {

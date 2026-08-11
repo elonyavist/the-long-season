@@ -442,6 +442,7 @@ function validConfig(minuteCount: number): MatchEngineConfig {
       },
     ],
     homeAdvantageFactor: 1.05,
+    strengthGapMultiplier: 1,
     tacticalDistributionCaps: {
       directness: { minInclusive: -1, maxInclusive: 1 },
       pressing: { minInclusive: -1, maxInclusive: 1 },
@@ -521,7 +522,7 @@ const GOLDEN_MATCH_RESULT: SimulateMatchResult = {
       // `direct` are `open_play`, so the chance type could never say which of
       // them this was - which is the whole reason the finer fact is persisted.
       outcome: "save",
-      quality: 0.4893385191819542,
+      quality: 0.48933851918195415,
       isShotOnTarget: true,
       shotType: "normal",
       chanceType: "open_play",
@@ -535,7 +536,7 @@ const GOLDEN_MATCH_RESULT: SimulateMatchResult = {
       minute: 5,
       side: "home",
       outcome: "save",
-      quality: 0.5917270209652412,
+      quality: 0.5917270209652413,
       isShotOnTarget: true,
       shotType: "normal",
       // This line moved earlier, when chance type stopped being inferred from

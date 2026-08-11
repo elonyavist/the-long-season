@@ -1,6 +1,7 @@
 import type { MatchTeamContext } from "./match-context.ts";
 import type { MatchSide } from "./match-simulation-state.ts";
 import type { OccasionResolution, OccasionResolver, ResolveOccasionInput } from "./occasion-resolver.ts";
+import { strengthContestPair } from "./strength-contest.ts";
 import type { Rng } from "@game/shared";
 
 /**
@@ -55,6 +56,7 @@ export class AggregateOccasionResolver implements OccasionResolver {
       defendingTeam,
       occasion.attackingSide,
       input.simulation.context.engineConfig.homeAdvantageFactor,
+      input.simulation.context.engineConfig.strengthGapMultiplier,
       occasion.routeQualityEdge,
       occasion.shooterQualityEdge,
       rng,
@@ -66,6 +68,7 @@ export class AggregateOccasionResolver implements OccasionResolver {
       attackingTeam,
       defendingTeam,
       occasion.primaryDefenderBlockEdge,
+      input.simulation.context.engineConfig.strengthGapMultiplier,
     );
     const onTargetProbability = deriveOnTargetProbability(quality, blockProbability);
     const goalProbability = deriveGoalProbability(
@@ -74,6 +77,7 @@ export class AggregateOccasionResolver implements OccasionResolver {
       attackingTeam,
       defendingTeam,
       onTargetProbability,
+      input.simulation.context.engineConfig.strengthGapMultiplier,
     );
 
     if (placementRoll < blockProbability) {
@@ -154,13 +158,17 @@ function deriveOpportunityQuality(
   defendingTeam: MatchTeamContext,
   attackingSide: MatchSide,
   homeAdvantageFactor: number,
+  strengthGapMultiplier: number,
   routeQualityEdge: number,
   shooterQualityEdge: number,
   rng: Rng,
 ): number {
   const homeFactor = attackingSide === "home" ? homeAdvantageFactor : 1;
-  const attackingScore = (attackingTeam.strength.attack * 0.7 + attackingTeam.strength.midfield * 0.3) * homeFactor;
-  const defendingScore = defendingTeam.strength.defense * 0.7 + defendingTeam.strength.midfield * 0.3;
+  const rawAttackingScore = attackingTeam.strength.attack * 0.7 + attackingTeam.strength.midfield * 0.3;
+  const rawDefendingScore = defendingTeam.strength.defense * 0.7 + defendingTeam.strength.midfield * 0.3;
+  const contest = strengthContestPair(rawAttackingScore, rawDefendingScore, strengthGapMultiplier);
+  const attackingScore = contest.own * homeFactor;
+  const defendingScore = contest.opponent;
   const strengthEdge = (attackingScore - defendingScore) / 40;
   const randomTexture = (rng.nextFloat() - 0.5) * 0.3;
 
@@ -179,10 +187,16 @@ function deriveBlockProbability(
   attackingTeam: MatchTeamContext,
   defendingTeam: MatchTeamContext,
   primaryDefenderBlockEdge: number,
+  strengthGapMultiplier: number,
 ): number {
+  const contest = strengthContestPair(
+    defendingTeam.strength.defense,
+    attackingTeam.strength.attack,
+    strengthGapMultiplier,
+  );
   return clamp(
     BASE_BLOCK_PROBABILITY
-      + (defendingTeam.strength.defense - attackingTeam.strength.attack) / BLOCK_STRENGTH_DIVISOR
+      + (contest.own - contest.opponent) / BLOCK_STRENGTH_DIVISOR
       + primaryDefenderBlockEdge,
     MIN_BLOCK_PROBABILITY,
     MAX_BLOCK_PROBABILITY,
@@ -235,9 +249,15 @@ function deriveGoalProbability(
   attackingTeam: MatchTeamContext,
   defendingTeam: MatchTeamContext,
   onTargetProbability: number,
+  strengthGapMultiplier: number,
 ): number {
+  const contest = strengthContestPair(
+    attackingTeam.strength.attack,
+    defendingTeam.strength.goalkeeper,
+    strengthGapMultiplier,
+  );
   const keeperFactor = clamp(
-    1 + (attackingTeam.strength.attack - defendingTeam.strength.goalkeeper) / KEEPER_CONTEST_DIVISOR,
+    1 + (contest.own - contest.opponent) / KEEPER_CONTEST_DIVISOR,
     MIN_KEEPER_FACTOR,
     MAX_KEEPER_FACTOR,
   );

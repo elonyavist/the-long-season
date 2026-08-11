@@ -23,14 +23,14 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Step: Phase 81A **06B19A L6.1A is Done: `STOP / RETHINK`.** Canary purity is
-  `7/7`; full reconciliation is zero. One pre-06B16 control world fails
-  canonically in season 9, so the factorial is `not_evaluated` and no gameplay
-  correction is authorized.
-- Diagnostics name `matchday_selection` for squad use (`28/28`) and
-  `population_strength` for champion points (`28/28`), while removing the
-  active-talk cap worsens fulfilled-need share and is absolved. 06B20A-D,
-  `100 x 10`, B2 and Steps 07-16 remain closed pending a new design.
+- Step: Phase 81A **06B20C1 is Done: L6.1D2 `GO`.** Fresh `28 x 10` seeds
+  accept `1.25`: champion points `75.2143`, health `25/28`, direction `28/28`,
+  all `17` guardrails and zero reconciliation. L6.1D remains `REFINE`.
+- No later step is active. Integrated L6.2 needs a documented contract; its
+  upset diagnostics must split the broad `1+` strength bucket and pre-match
+  rank gaps before claiming first-versus-last historical calibration.
+- L6.1C remains `STOP / RETHINK: antagonistic`; 06B20A/B/D/E, `100 x 10`, B2 and Steps
+  07-16 remain closed; no further implementation step is currently documented.
 - Step 03A Done; hard-cap probe **`FOUND`**, `21/21` reconciled. Its temporary
   projection hold is resolved by 06B7F1. Checkpoint A's `STOP / RETHINK` and
   frozen before-state stand.

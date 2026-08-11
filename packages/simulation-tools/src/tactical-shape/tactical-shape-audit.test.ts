@@ -36,6 +36,7 @@ const ENGINE_CONFIG: MatchEngineConfig = {
     { bandKey: "high", minQualityInclusive: 0.7, maxQualityExclusive: 1.01, goalProbability: 0.3 },
   ],
   homeAdvantageFactor: 1.05,
+  strengthGapMultiplier: 1,
   tacticalDistributionCaps: {
     directness: { minInclusive: 0, maxInclusive: 1 },
     pressing: { minInclusive: 0, maxInclusive: 1 },

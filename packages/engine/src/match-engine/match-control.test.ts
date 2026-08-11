@@ -130,6 +130,16 @@ test("possession is a contest, so the two shares are one distribution", () => {
   assert.equal(control.possession.home > control.possession.away, true);
 });
 
+test("the product contest exposes more of a real midfield gap and nothing for equal midfields", () => {
+  const ordinary = possessionWith({ homeMidfield: 16, awayMidfield: 11, strengthGapMultiplier: 1 });
+  const product = possessionWith({ homeMidfield: 16, awayMidfield: 11, strengthGapMultiplier: 1.25 });
+  const equalOrdinary = possessionWith({ homeMidfield: 13, awayMidfield: 13, strengthGapMultiplier: 1 });
+  const equalProduct = possessionWith({ homeMidfield: 13, awayMidfield: 13, strengthGapMultiplier: 1.25 });
+
+  assert.equal(product > ordinary, true);
+  assert.equal(equalProduct, equalOrdinary);
+});
+
 /** What one case varies; anything unset stays neutral and mirrored. */
 interface ControlOptions {
   readonly homePressing?: number;
@@ -138,6 +148,9 @@ interface ControlOptions {
   readonly homeRisk?: number;
   readonly awayDirectness?: number;
   readonly homeShape?: Partial<Record<TacticalShapeCapacity, number>>;
+  readonly homeMidfield?: number;
+  readonly awayMidfield?: number;
+  readonly strengthGapMultiplier?: number;
   /** Overrides for the control magnitudes both sides are calibrated with. */
   readonly control?: Partial<Record<TacticKnob, number>>;
 }
@@ -186,6 +199,7 @@ function simulationFor(options: ControlOptions): MatchSimulationState {
     seed: "control-seed",
     home: team("home", {
       shape: shapeFor(options.homeShape),
+      midfield: options.homeMidfield ?? 10,
       directness: options.homeDirectness ?? NEUTRAL_KNOB,
       pressing: options.homePressing ?? NEUTRAL_KNOB,
       width: options.homeWidth ?? NEUTRAL_KNOB,
@@ -193,12 +207,13 @@ function simulationFor(options: ControlOptions): MatchSimulationState {
     }),
     away: team("away", {
       shape: shapeFor(undefined),
+      midfield: options.awayMidfield ?? 10,
       directness: options.awayDirectness ?? NEUTRAL_KNOB,
       pressing: NEUTRAL_KNOB,
       width: NEUTRAL_KNOB,
       risk: NEUTRAL_KNOB,
     }),
-    engineConfig: engineConfig(),
+    engineConfig: engineConfig(options.strengthGapMultiplier),
     matchTacticsCalibration: calibration(options.control),
   };
 
@@ -207,6 +222,7 @@ function simulationFor(options: ControlOptions): MatchSimulationState {
 
 interface TeamOptions {
   readonly shape: TacticalShapeProfile;
+  readonly midfield: number;
   readonly directness: number;
   readonly pressing: number;
   readonly width: number;
@@ -223,7 +239,7 @@ function team(side: "home" | "away", options: TeamOptions): MatchTeamContext {
         canonicalRole: index === 1 ? "goalkeeper" : "central_midfielder",
       }),
     ),
-    strength: { attack: 10, midfield: 10, defense: 10, goalkeeper: 10, overall: 10 },
+    strength: { attack: 10, midfield: options.midfield, defense: 10, goalkeeper: 10, overall: 10 },
     shape: options.shape,
     tacticalDistribution: {
       directness: options.directness,
@@ -258,7 +274,7 @@ function calibration(
   };
 }
 
-function engineConfig(): MatchEngineConfig {
+function engineConfig(strengthGapMultiplier = 1): MatchEngineConfig {
   const cap = { minInclusive: 0, maxInclusive: 1 };
 
   return {
@@ -266,6 +282,7 @@ function engineConfig(): MatchEngineConfig {
     rates: { baseOpportunityRatePerMinute: 0.04, maxOpportunityRatePerMinute: 0.2 },
     conversionBands: [{ bandKey: "low", minQualityInclusive: 0, maxQualityExclusive: 1, goalProbability: 0.1 }],
     homeAdvantageFactor: 1,
+    strengthGapMultiplier,
     tacticalDistributionCaps: { directness: cap, pressing: cap, width: cap, risk: cap },
   };
 }

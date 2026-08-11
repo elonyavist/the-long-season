@@ -234,3 +234,13 @@ owner diagnostici (`matchday_selection`, `population_strength`) e il cap
 trattative è assolto, ma un mondo del controllo pre-06B16 fallisce alla stagione
 9. Il fattoriale è `not_evaluated`; 06B20A-D e L6.2 restano chiusi. Il record
 canonico è `PHASE_81A_CHECKPOINT_L6_1A_RENEWAL_REFINEMENT.md`.
+
+## Addendum A6.2 - Decision Disentanglement After L6.1A `STOP / RETHINK`
+
+L6.1A resta fermo e nessuna sua diagnostica viene promossa retroattivamente.
+Il nuovo contratto separa le popolazioni di uso rosa/gerarchia dal rinnovo e
+sostituisce, per quest'ultimo, il quarto angolo non vitale con un estimand
+leave-one-component-out a tre bracci vitali. Tesi, regole di attribuzione,
+stop rules e sequenza 06B19B-06B19C vivono in
+[`PHASE_81A_POST_L6_1A_DECISION_DISENTANGLEMENT_TRANCHE.md`](PHASE_81A_POST_L6_1A_DECISION_DISENTANGLEMENT_TRANCHE.md).
+06B20A-E restano slot condizionali e non hanno ancora documenti di gameplay.

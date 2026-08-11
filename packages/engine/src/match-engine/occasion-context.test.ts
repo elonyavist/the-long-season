@@ -363,6 +363,7 @@ function engineConfig(): MatchEngineConfig {
       { bandKey: "high", minQualityInclusive: 0.7, maxQualityExclusive: 1.01, goalProbability: 0.26 },
     ],
     homeAdvantageFactor: 1.05,
+    strengthGapMultiplier: 1,
     tacticalDistributionCaps: { directness: knob, pressing: knob, width: knob, risk: knob },
   };
 }

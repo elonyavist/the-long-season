@@ -82,6 +82,24 @@ test("analysis strength replay leaves the canonical season byte-identical", () =
   assert.notDeepEqual(analysisStrengthReplay.table, control.table);
 });
 
+test("analysis scale one is an absolute replay of the legacy contest beside the product contest", () => {
+  const input = seasonInput("analysis-strength-legacy-seed");
+  const productInput = {
+    ...input,
+    matchEngineConfig: { ...input.matchEngineConfig, strengthGapMultiplier: 1.25 },
+    analysisStrengthGapScale: 1,
+  };
+  const withReplay = simulateSeason(productInput);
+  const { analysisStrengthGapScale: _analysisScale, ...canonicalInput } = productInput;
+  const productOnly = simulateSeason(canonicalInput);
+  const { analysisStrengthReplay, ...canonicalResult } = withReplay;
+
+  assert.ok(analysisStrengthReplay !== undefined);
+  assert.equal(analysisStrengthReplay.scale, 1);
+  assert.deepEqual(canonicalResult, productOnly);
+  assert.notDeepEqual(analysisStrengthReplay.table, productOnly.table);
+});
+
 test("analysis strength replay rejects scales outside its frozen oracle domain", () => {
   const input = seasonInput("analysis-strength-invalid-seed");
 
@@ -1096,6 +1114,7 @@ function seasonInput(seed: string): SimulateSeasonInput {
         },
       ],
       homeAdvantageFactor: 1.05,
+      strengthGapMultiplier: 1,
       tacticalDistributionCaps: {
         directness: { minInclusive: 0, maxInclusive: 1 },
         pressing: { minInclusive: 0, maxInclusive: 1 },

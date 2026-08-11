@@ -1162,6 +1162,7 @@ function matchEngineConfigFixture(): MatchEngineConfig {
       },
     ],
     homeAdvantageFactor: 1.1,
+    strengthGapMultiplier: 1,
     tacticalDistributionCaps: {
       directness: { minInclusive: 0, maxInclusive: 1 },
       pressing: { minInclusive: 0, maxInclusive: 1 },

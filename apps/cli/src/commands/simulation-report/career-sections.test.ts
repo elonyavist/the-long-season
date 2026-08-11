@@ -12,6 +12,9 @@ import {
   coherentMaterialImprovementCount,
   evaluateAvailabilityAgingCheckpoint,
   evaluateIntegratedLeaderboardAgeGates,
+  evaluateStrengthContestCheckpoint,
+  independentHierarchyLaneDecision,
+  independentSquadUseLaneDecision,
   evaluateLeagueDiversityCheckpoint,
   evaluatePairedHistoricalGuardrail,
   evaluateStandingsHierarchyCheckpoint,
@@ -22,6 +25,10 @@ import {
   type SubstitutionMinuteWorldFacts,
   type StandingsHierarchyWorldFacts,
 } from "./career-sections.ts";
+import type {
+  OwnerAttributionTableSeasonFact,
+  SquadUseAttributionDecision,
+} from "./owner-attribution.ts";
 
 test("material coherence counts only deltas reaching the frozen floor", () => {
   assert.equal(coherentMaterialImprovementCount([0.019, 0.02, 0.021, -0.5], 0.02), 2);
@@ -37,6 +44,194 @@ test("paired historical guardrail permits repair but rejects added distance", ()
     max: 0.29,
   }).held, false);
 });
+
+test("independent squad-use lane opens only one structural owner", () => {
+  const worlds = Array.from({ length: 28 }, (_, worldIndex) => ({
+    worldSeed: `l6-1b-s:${worldIndex + 1}`,
+    owner: "matchday_selection" as const,
+    clubSeasonCount: 180,
+    failedClubSeasonCount: 180,
+    reconciliationFailureCount: 0,
+    recoverableClubSeasonCountByOwner: {
+      substitution_realization: 0,
+      matchday_selection: 180,
+      call_up_or_selector_boundary: 0,
+      availability: 0,
+      squad_supply: 0,
+      appearance_allocation: 0,
+      not_attributed: 0,
+    },
+  }));
+  const decision = independentSquadUseLaneDecision({
+    owner: "matchday_selection",
+    appearanceShare: 0.65,
+    distinctUsersPerClubSeason: 23,
+    ownerWorldCount: 28,
+    pooledCounterfactualAppearanceShare: 0.55,
+    pooledCounterfactualDistinctUsersPerClubSeason: 27,
+    reconciliationFailureCount: 0,
+    worlds,
+  } satisfies SquadUseAttributionDecision, 28);
+
+  assert.equal(decision.decision, "GO");
+  assert.equal(decision.outcome, "owner_identified");
+  assert.equal(decision.squadUse.owner, "matchday_selection");
+});
+
+test("independent hierarchy lane keeps owner and reconciliation fail-closed", () => {
+  const healthy = {
+    owner: "population_strength" as const,
+    seasonCount: 10,
+    currentChampionPointsMean: 71,
+    pairedChampionPointsMean: 76,
+    coherentWorldCount: 28,
+    tableOwner: "population_strength" as const,
+    reconciliationFailureCount: 0,
+    guardrailsHeld: true,
+    guardrails: [],
+  };
+
+  assert.equal(independentHierarchyLaneDecision(healthy, 28).decision, "GO");
+  assert.equal(independentHierarchyLaneDecision(healthy, 28).outcome, "owner_identified");
+  assert.equal(independentHierarchyLaneDecision({
+    ...healthy,
+    reconciliationFailureCount: 1,
+  }, 28).decision, "STOP_RETHINK");
+});
+
+test("strength-contest checkpoint requires the fresh champion repair and every division guardrail", () => {
+  const healthy = strengthContestWorlds();
+  const decision = evaluateStrengthContestCheckpoint(healthy, 10, "full");
+
+  assert.equal(decision.decision, "GO");
+  assert.equal(decision.coherentWorldCount, 28);
+  assert.equal(decision.guardrails.length, 17);
+  assert.equal(decision.guardrailsHeld, true);
+
+  const brokenLowerDivision = healthy.map((world) => ({
+    ...world,
+    tableSeasons: world.tableSeasons.map((row) => row.competitionId === "competition:ita-2"
+      ? { ...row, goalsPerMatch: 4 }
+      : row),
+  }));
+  const broken = evaluateStrengthContestCheckpoint(brokenLowerDivision, 10, "full");
+  assert.equal(broken.decision, "REFINE");
+  assert.equal(broken.guardrailsHeld, false);
+
+  assert.equal(evaluateStrengthContestCheckpoint(healthy.slice(1), 10, "full").decision, "STOP_RETHINK");
+});
+
+test("strength-contest retry credits healthy bands without losing directional coherence", () => {
+  const alreadyHealthy = rewriteFirstDivisionChampion(strengthContestWorlds(), () => ({
+    product: 75,
+    legacy: 74,
+  }));
+  const historicalReader = evaluateStrengthContestCheckpoint(alreadyHealthy, 10, "full");
+  const retryReader = evaluateStrengthContestCheckpoint(alreadyHealthy, 10, "retry_full");
+
+  assert.equal(historicalReader.decision, "REFINE");
+  assert.equal(historicalReader.coherenceRule, "distance_only");
+  assert.equal(historicalReader.coherentWorldCount, 0);
+  assert.equal(retryReader.decision, "GO");
+  assert.equal(retryReader.coherenceRule, "health_and_direction");
+  assert.equal(retryReader.legacyInsideWorldCount, 28);
+  assert.equal(retryReader.productInsideWorldCount, 28);
+  assert.equal(retryReader.healthPreservedWorldCount, 28);
+  assert.equal(retryReader.directionPreservedWorldCount, 28);
+
+  const directionBroken = rewriteFirstDivisionChampion(
+    alreadyHealthy,
+    (worldIndex) => worldIndex < 9
+      ? { product: 74, legacy: 75 }
+      : { product: 75, legacy: 74 },
+  );
+  const directionDecision = evaluateStrengthContestCheckpoint(
+    directionBroken,
+    10,
+    "retry_full",
+  );
+  assert.equal(directionDecision.healthPreservedWorldCount, 28);
+  assert.equal(directionDecision.directionPreservedWorldCount, 19);
+  assert.equal(directionDecision.decision, "REFINE");
+  assert.ok(directionDecision.failedGateKeys.includes("paired_direction_coherence"));
+
+  const healthBroken = rewriteFirstDivisionChampion(
+    alreadyHealthy,
+    (worldIndex) => worldIndex < 9
+      ? { product: 90, legacy: 80 }
+      : { product: 75, legacy: 74 },
+  );
+  const healthDecision = evaluateStrengthContestCheckpoint(healthBroken, 10, "retry_full");
+  assert.equal(healthDecision.healthPreservedWorldCount, 19);
+  assert.equal(healthDecision.directionPreservedWorldCount, 28);
+  assert.equal(healthDecision.decision, "REFINE");
+  assert.ok(healthDecision.failedGateKeys.includes("paired_health_coherence"));
+});
+
+function rewriteFirstDivisionChampion(
+  worlds: ReturnType<typeof strengthContestWorlds>,
+  valuesForWorld: (worldIndex: number) => {
+    readonly product: number;
+    readonly legacy: number;
+  },
+) {
+  return worlds.map((world, worldIndex) => {
+    const values = valuesForWorld(worldIndex);
+    return {
+      ...world,
+      tableSeasons: world.tableSeasons.map((row) => row.competitionId === "competition:ita-1"
+        ? {
+            ...row,
+            championPoints: values.product,
+            pairedChampionPoints: values.legacy,
+          }
+        : row),
+    };
+  });
+}
+
+function strengthContestWorlds() {
+  return Array.from({ length: 28 }, (_, worldIndex) => ({
+    worldSeed: `strength-contest:${worldIndex + 1}`,
+    reconciliationFailureCount: 0,
+    tableSeasons: Array.from({ length: 10 }, (_, seasonIndex) =>
+      ([1, 2, 3] as const).map((divisionLevel) =>
+        strengthContestTableRow(divisionLevel, seasonIndex + 1))).flat(),
+  }));
+}
+
+function strengthContestTableRow(
+  divisionLevel: 1 | 2 | 3,
+  seasonNumber: number,
+): OwnerAttributionTableSeasonFact {
+  const values = divisionLevel === 1
+    ? { champion: 75, legacyChampion: 70, last: 23, spread: 52, ppg: 0.4, goals: 2.8, draws: 0.26 }
+    : divisionLevel === 2
+      ? { champion: 66, legacyChampion: 66, last: 25, spread: 41, ppg: 0.3, goals: 2.5, draws: 0.28 }
+      : { champion: 68, legacyChampion: 68, last: 24, spread: 44, ppg: 0.34, goals: 2.65, draws: 0.27 };
+  return {
+    competitionId: `competition:ita-${divisionLevel}`,
+    seasonNumber,
+    fixtureCount: 306,
+    championPoints: values.champion,
+    lastPoints: values.last,
+    pointsSpread: values.spread,
+    goalsPerMatch: values.goals,
+    drawShare: values.draws,
+    ppgStandardDeviation: values.ppg,
+    pairedChampionPoints: values.legacyChampion,
+    pairedLastPoints: values.last,
+    pairedPointsSpread: values.spread,
+    pairedGoalsPerMatch: values.goals,
+    pairedDrawShare: values.draws,
+    pairedPpgStandardDeviation: values.ppg,
+    kickoffStrengthMean: 13,
+    kickoffStrengthSpread: 4,
+    strengthPointsRankCorrelation: "not_observed",
+    tiedStrengthFixtureCount: 0,
+    gapBuckets: [],
+  };
+}
 
 test("one real career execution feeds every reusable module and fields contextual AI shapes", async () => {
   const facts = await createCareerSectionsFacts({

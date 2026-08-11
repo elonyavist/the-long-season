@@ -43,6 +43,19 @@ checkpoint is `STOP / RETHINK`. It attributes squad use to
 `matchday_selection` and standings to `population_strength`, and absolves the
 active-talk cap, but one declared pre-06B16 control world fails canonically in
 season 9. The factorial is `not_evaluated` and all corrections remain closed.
+Addendum A6.2 split the questions. 06B19B is Done: squad use remains `REFINE`
+because its structural limit reaches `25.9778` distinct users against `26`,
+while hierarchy is `GO: owner_identified: population_strength` in `28/28` and
+opens only 06B20C. 06B19C is Done with `STOP / RETHINK: antagonistic`: all
+three common-support arms reconcile, but market-on reduces four-formation
+replication materially in `5/7`. No renewal correction opens.
+Step 06B20C is implemented but L6.1D recorded `REFINE`. The frozen `1.25`
+department-contest candidate moved the champion mean inside its band and kept
+all `17` guardrails; its distance-only coherence reader reached `17/28` against
+`20/28` because nine legacy worlds already inside the band could not improve
+distance. Step 06B20C1 is Done with `GO`: fresh seeds record health `25/28`,
+direction `28/28`, all `17` guardrails and zero reconciliation, accepting
+`1.25`. An integrated L6.2 must be documented before any further run.
 
 This phase is governed by
 [`PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md`](../../audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md).
@@ -216,6 +229,10 @@ contexts; it never owns the analytic diversity gate.
 | 06B18 | [A6 register and evaluator hardening](06b18-a6-register-and-evaluator-hardening.md) | no | Done: verdict-neutral on cached L5.4; opened 06B19 |
 | 06B19 | [Checkpoint L6.1: renewal ablation and funnel attribution](06b19-renewal-ablation-and-funnel-attribution.md) | no | Done: `REFINE`; 06B20A-C remain closed |
 | 06B19A | [Checkpoint L6.1A: renewal pathway and squad-use attribution](06b19a-checkpoint-l6-1a-renewal-pathway-and-squad-use-attribution.md) | no | Done: `STOP / RETHINK`; scenario completion failed, 06B20A-D closed |
+| 06B19B | [Checkpoint L6.1B: independent squad use and hierarchy](06b19b-checkpoint-l6-1b-independent-squad-use-and-hierarchy.md) | no | Done: squad `REFINE`; hierarchy `GO: population_strength` |
+| 06B19C | [Checkpoint L6.1C: common-support renewal attribution](06b19c-checkpoint-l6-1c-common-support-renewal-attribution.md) | no | Done: `STOP / RETHINK: antagonistic`; no renewal owner |
+| 06B20C | [population-strength contest translation](06b20c-population-strength-contest-translation.md) | yes | Implemented; L6.1D `REFINE`, candidate unaccepted |
+| 06B20C1 | [Checkpoint L6.1D2 strength-contest retry](06b20c1-checkpoint-l6-1d2-strength-contest-retry.md) | no | Done: `GO`; `1.25` accepted |
 | 06C | [Checkpoint B2 conditioned tactical ceiling](06c-checkpoint-b2-conditioned-tactical-ceiling.md) | no | GO authorizes 07 |
 | 07 | [player task execution](07-player-task-execution.md) | yes | Step 08 |
 | 08 | [squad identity and lateral execution](08-squad-identity-and-lateral-execution.md) | yes | Step 09 |
@@ -312,6 +329,14 @@ market/blueprint interaction is material, two metrics are not reproduced, and
 the new player-use gates expose a separate red family. Corrections remain
 closed because no complete owner model exists. Thesis and operational contract:
 [`PHASE_81A_POST_L5_4_HARDENING_AND_ABLATION_TRANCHE.md`](../../audits/PHASE_81A_POST_L5_4_HARDENING_AND_ABLATION_TRANCHE.md).
+
+**Addendum A6.2 preserves L6.1A's `STOP / RETHINK` and separates its three
+questions prospectively.** 06B19B uses fresh current-product worlds and returns
+independent squad-use and hierarchy decisions. 06B19C uses only the three
+viable common-support corners around the current game; it reports conditional
+necessity and explicitly marks main effects and interaction not identifiable.
+No L6.1A diagnostic is itself authorization. Thesis and operational contract:
+[`PHASE_81A_POST_L6_1A_DECISION_DISENTANGLEMENT_TRANCHE.md`](../../audits/PHASE_81A_POST_L6_1A_DECISION_DISENTANGLEMENT_TRANCHE.md).
 
 ## Checkpoint Decisions
 

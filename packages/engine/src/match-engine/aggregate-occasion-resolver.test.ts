@@ -140,6 +140,16 @@ test("a stronger defence blocks more of what it faces", () => {
   assert.equal(stout.block > porous.block, true, `${stout.block} blocks against ${porous.block}`);
 });
 
+test("a stronger department gap has more effect while equal departments remain unchanged", () => {
+  const ordinaryGap = outcomesOver({ attack: 17, defense: 11, goalkeeper: 11, strengthGapMultiplier: 1 });
+  const exposedGap = outcomesOver({ attack: 17, defense: 11, goalkeeper: 11, strengthGapMultiplier: 1.25 });
+  const equalAtOne = outcomesOver({ strengthGapMultiplier: 1 });
+  const equalAtProduct = outcomesOver({ strengthGapMultiplier: 1.25 });
+
+  assert.equal(exposedGap.goal > ordinaryGap.goal, true);
+  assert.deepEqual(equalAtProduct, equalAtOne);
+});
+
 test("one occasion always advances the stream by the same amount", () => {
   // Outcomes take different branches, so a chain that drew its rolls lazily
   // would leave the stream in a different place depending on what happened.
@@ -171,6 +181,7 @@ interface DepartmentStrengths {
 /** What a case varies; anything unset stays ordinary or evenly contested. */
 interface StrengthOptions extends Partial<DepartmentStrengths> {
   readonly routeQualityEdge?: number;
+  readonly strengthGapMultiplier?: number;
 }
 
 interface OutcomeCounts {
@@ -215,7 +226,7 @@ function occasionFor(options: StrengthOptions): ResolveOccasionInput {
       defense: options.defense ?? 13,
       goalkeeper: options.goalkeeper ?? 13,
     }),
-    engineConfig: engineConfig(),
+    engineConfig: engineConfig(options.strengthGapMultiplier),
     matchTacticsCalibration: matchTacticsCalibrationFixture(),
   };
   const simulation = createInitialMatchSimulationState(context);
@@ -252,7 +263,7 @@ function teamFor(side: MatchSide, strength: DepartmentStrengths): MatchTeamConte
   });
 }
 
-function engineConfig(): MatchEngineConfig {
+function engineConfig(strengthGapMultiplier = 1): MatchEngineConfig {
   const knob = { minInclusive: 0, maxInclusive: 1 };
 
   return {
@@ -264,6 +275,7 @@ function engineConfig(): MatchEngineConfig {
       { bandKey: "high", minQualityInclusive: 0.7, maxQualityExclusive: 1.01, goalProbability: 0.26 },
     ],
     homeAdvantageFactor: 1.05,
+    strengthGapMultiplier,
     tacticalDistributionCaps: { directness: knob, pressing: knob, width: knob, risk: knob },
   };
 }

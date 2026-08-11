@@ -87,6 +87,7 @@ function matchContext(options: MatchContextOptions = {}): MatchContext {
       rates: { baseOpportunityRatePerMinute: 0.08, maxOpportunityRatePerMinute: 0.4 },
       conversionBands: [{ bandKey: "all", minQualityInclusive: 0, maxQualityExclusive: 1, goalProbability: 0.1 }],
       homeAdvantageFactor: 1,
+      strengthGapMultiplier: 1,
       tacticalDistributionCaps: {
         directness: { minInclusive: 0, maxInclusive: 1 },
         pressing: { minInclusive: 0, maxInclusive: 1 },

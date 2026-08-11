@@ -275,18 +275,18 @@ export class OwnerAttributionObserver {
   private readonly annualRolePlanPositiveRoleCounts: number[] = [];
   private annualRolePlanReconciliationFailureCount = 0;
   private reconciliationFailureCount = 0;
-  private readonly includeTableAttribution: boolean;
+  private readonly tableAttributionScale: number | undefined;
   private readonly includeSquadUse: boolean;
 
   public constructor(
     worldSeed: string,
     options: {
-      readonly includeTableAttribution?: boolean;
+      readonly tableAttributionScale?: number;
       readonly includeSquadUse?: boolean;
     } = {},
   ) {
     this.worldSeed = worldSeed;
-    this.includeTableAttribution = options.includeTableAttribution ?? true;
+    this.tableAttributionScale = options.tableAttributionScale;
     this.includeSquadUse = options.includeSquadUse ?? false;
   }
 
@@ -323,8 +323,8 @@ export class OwnerAttributionObserver {
     readonly result: SimulateSeasonResult;
     readonly careerState: CliCareerState;
   }): void {
-    if (this.includeTableAttribution) {
-      this.tableSeasons.push(tableSeasonFact(input));
+    if (this.tableAttributionScale !== undefined) {
+      this.tableSeasons.push(tableSeasonFact(input, this.tableAttributionScale));
     }
     this.reconciliationFailureCount += opportunityReconciliationFailureCount(input.result);
     this.playerSeasons.push(...playerSeasonFacts(input));
@@ -704,14 +704,14 @@ function tableSeasonFact(input: {
   readonly seasonNumber: number;
   readonly competitionId: string;
   readonly result: SimulateSeasonResult;
-}): OwnerAttributionTableSeasonFact {
+}, expectedAnalysisScale: number): OwnerAttributionTableSeasonFact {
   const champion = input.result.table[0];
   const last = input.result.table.at(-1);
   if (champion === undefined || last === undefined || input.result.fixtures.length === 0) {
     throw new Error(`L5.1 table is empty: ${input.competitionId}:${input.seasonNumber}`);
   }
   const pairedTable = input.result.analysisStrengthReplay?.table;
-  if (input.result.analysisStrengthReplay?.scale !== 1.5 || pairedTable === undefined) {
+  if (input.result.analysisStrengthReplay?.scale !== expectedAnalysisScale || pairedTable === undefined) {
     throw new Error(`L5.1 paired table is missing: ${input.competitionId}:${input.seasonNumber}`);
   }
   const fixtures = new Map(input.result.fixtures.map((fixture) => [fixture.id, fixture]));

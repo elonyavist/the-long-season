@@ -19,9 +19,7 @@ import {
 import type { GenerationalSuccessionWorldFacts } from "./generational-succession.ts";
 
 test("canonical integrated observation can omit only the paired-table lane", () => {
-  const facts = new OwnerAttributionObserver("canonical-integrated", {
-    includeTableAttribution: false,
-  }).facts();
+  const facts = new OwnerAttributionObserver("canonical-integrated").facts();
 
   assert.deepEqual(facts.tableSeasons, []);
   assert.equal(facts.worldSeed, "canonical-integrated");

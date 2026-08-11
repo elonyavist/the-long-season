@@ -200,6 +200,7 @@ function validConfig(): MatchEngineConfig {
       { bandKey: "high", minQualityInclusive: 0.7, maxQualityExclusive: 1.01, goalProbability: 0.5 },
     ],
     homeAdvantageFactor: 1.05,
+    strengthGapMultiplier: 1,
     tacticalDistributionCaps: {
       directness: { minInclusive: -1, maxInclusive: 1 },
       pressing: { minInclusive: -1, maxInclusive: 1 },

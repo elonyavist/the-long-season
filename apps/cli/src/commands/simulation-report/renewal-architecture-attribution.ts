@@ -502,6 +502,8 @@ export interface RenewalArchitectureWorldEvaluation {
   readonly worldSeed: string;
   readonly leaderSlotCount: number;
   readonly distinctLeaderPlayerCount: number;
+  /** Stable IDs make later causal reports join the leader path without rebuilding it. */
+  readonly leaderPlayerIds: readonly string[];
   readonly leaderSlotsByOrigin: Readonly<Record<GenerationalOrigin, number>>;
   readonly openingSeniorLeaderPlayerCount: number;
   readonly openingSeniorLeaderOpeningAgeMean: number | "not_observed";
@@ -510,6 +512,9 @@ export interface RenewalArchitectureWorldEvaluation {
   readonly openingSeniorLeaderAbilityDeltaMean: number | "not_observed";
   readonly localReplacementMatchCount: number;
   readonly divisionReplacementMatchCount: number;
+  /** Exact matched replacements; counts alone cannot prove a linked player path. */
+  readonly localReplacementPlayerIds: readonly string[];
+  readonly divisionReplacementPlayerIds: readonly string[];
   readonly matureAcademyCurrentP90: number | "not_observed";
   readonly openingSeniorCurrentMedian: number | "not_observed";
   readonly matureAcademyMeetsOpeningMedian: boolean;
@@ -696,6 +701,16 @@ function evaluateWorld(input: {
   const candidates = seasonTenPlayers
     .filter((row) => row.age >= 21 && row.age <= 29 && origins.get(row.playerId)?.origin !== "opening_senior")
     .map(matchingPlayer);
+  const localReplacementMatches = maximumReplacementMatching({
+    incumbents,
+    candidates,
+    sameClub: true,
+  });
+  const divisionReplacementMatches = maximumReplacementMatching({
+    incumbents,
+    candidates,
+    sameClub: false,
+  });
   const openingLeaderFacts = openingSeniorLeaderIds.flatMap((playerId) => {
     const origin = origins.get(playerId);
     const current = playerById.get(playerId);
@@ -744,14 +759,21 @@ function evaluateWorld(input: {
     worldSeed: ownerWorld.worldSeed,
     leaderSlotCount: leaderSlots.length,
     distinctLeaderPlayerCount: leaderIds.size,
+    leaderPlayerIds: [...leaderIds].sort(),
     leaderSlotsByOrigin,
     openingSeniorLeaderPlayerCount: openingSeniorLeaderIds.length,
     openingSeniorLeaderOpeningAgeMean: observedMean(openingAges),
     openingSeniorLeaderOpeningAbilityMean: observedMean(openingAbilities),
     openingSeniorLeaderCurrentAbilityMean: observedMean(currentAbilities),
     openingSeniorLeaderAbilityDeltaMean: observedMean(deltas),
-    localReplacementMatchCount: maximumReplacementMatching({ incumbents, candidates, sameClub: true }).length,
-    divisionReplacementMatchCount: maximumReplacementMatching({ incumbents, candidates, sameClub: false }).length,
+    localReplacementMatchCount: localReplacementMatches.length,
+    divisionReplacementMatchCount: divisionReplacementMatches.length,
+    localReplacementPlayerIds: localReplacementMatches
+      .map(({ replacementPlayerId }) => replacementPlayerId)
+      .sort(),
+    divisionReplacementPlayerIds: divisionReplacementMatches
+      .map(({ replacementPlayerId }) => replacementPlayerId)
+      .sort(),
     matureAcademyCurrentP90,
     openingSeniorCurrentMedian,
     matureAcademyMeetsOpeningMedian:
@@ -800,6 +822,7 @@ function emptyWorldEvaluation(worldSeed: string): RenewalArchitectureWorldEvalua
     worldSeed,
     leaderSlotCount: 0,
     distinctLeaderPlayerCount: 0,
+    leaderPlayerIds: [],
     leaderSlotsByOrigin: originCountRecord(),
     openingSeniorLeaderPlayerCount: 0,
     openingSeniorLeaderOpeningAgeMean: "not_observed",
@@ -808,6 +831,8 @@ function emptyWorldEvaluation(worldSeed: string): RenewalArchitectureWorldEvalua
     openingSeniorLeaderAbilityDeltaMean: "not_observed",
     localReplacementMatchCount: 0,
     divisionReplacementMatchCount: 0,
+    localReplacementPlayerIds: [],
+    divisionReplacementPlayerIds: [],
     matureAcademyCurrentP90: "not_observed",
     openingSeniorCurrentMedian: "not_observed",
     matureAcademyMeetsOpeningMedian: false,
@@ -821,6 +846,228 @@ function emptyWorldEvaluation(worldSeed: string): RenewalArchitectureWorldEvalua
     exits: [],
     reconciliationFailureCount: 1,
   };
+}
+
+export type RenewalCommonSupportClassification =
+  | "market_required"
+  | "blueprint_required"
+  | "coupled_required"
+  | "antagonistic"
+  | "not_reproduced"
+  | "not_attributed";
+
+export interface RenewalCommonSupportLinkedPath {
+  readonly changedNeedEpisodeCount: number;
+  readonly changedFulfilledPlayerCount: number;
+  readonly realizedChangedPlayerCount: number;
+  readonly downstreamIntersectionCount: number;
+  readonly reconciliationFailureCount: number;
+}
+
+export interface RenewalCommonSupportMetricDecision {
+  readonly metric: RenewalAblationMetric;
+  readonly marketGivenBlueprint: number;
+  readonly blueprintGivenMarket: number;
+  /** Positive means the current arm moves toward the metric's frozen target. */
+  readonly marketHealthyDelta: number;
+  /** Positive means the current arm moves toward the metric's frozen target. */
+  readonly blueprintHealthyDelta: number;
+  readonly marketCoherentWorldCount: number;
+  readonly blueprintCoherentWorldCount: number;
+  readonly marketAntagonisticWorldCount: number;
+  readonly blueprintAntagonisticWorldCount: number;
+  readonly marketHalfWidth95: number;
+  readonly blueprintHalfWidth95: number;
+  readonly materialFloor: number;
+}
+
+export interface RenewalCommonSupportDecision {
+  readonly decision: "GO" | "REFINE" | "STOP_RETHINK";
+  readonly classification: RenewalCommonSupportClassification;
+  readonly mainEffects: "not_identifiable_under_common_support";
+  readonly interaction: "not_identifiable_under_common_support";
+  readonly metrics: readonly RenewalCommonSupportMetricDecision[];
+  readonly armValues: {
+    readonly current: Readonly<Record<RenewalAblationMetric, number>>;
+    readonly withoutMarket: Readonly<Record<RenewalAblationMetric, number>>;
+    readonly withoutBlueprint: Readonly<Record<RenewalAblationMetric, number>>;
+  };
+  readonly marketPath: RenewalCommonSupportLinkedPath;
+  readonly blueprintPath: RenewalCommonSupportLinkedPath;
+  readonly reconciliationFailureCount: number;
+}
+
+const RENEWAL_COMMON_SUPPORT_HEALTH_POLICY = {
+  localReplacementCapacity: { kind: "higher" },
+  divisionReplacementCapacity: { kind: "higher" },
+  fourReplicatedFormationRetentionShare: { kind: "higher" },
+  careerGeneratedLeaderShareSeasonTen: { kind: "higher" },
+  championPoints: { kind: "historical_band", divisionLevel: 1 },
+} as const satisfies Readonly<Record<RenewalAblationMetric,
+  | { readonly kind: "higher" }
+  | { readonly kind: "historical_band"; readonly divisionLevel: 1 | 2 | 3 }
+>>;
+
+/**
+ * Evaluates only the two leave-one-component-out contrasts that share support.
+ *
+ * The absent off/off corner means standalone main effects and interaction are
+ * unknowable. Keeping those fields explicit prevents a future formatter from
+ * relabelling this result as the superseded factorial.
+ */
+export function evaluateRenewalCommonSupport(input: {
+  readonly current: RenewalAblationArmFacts;
+  readonly withoutMarket: RenewalAblationArmFacts;
+  readonly withoutBlueprint: RenewalAblationArmFacts;
+  readonly marketPath: RenewalCommonSupportLinkedPath;
+  readonly blueprintPath: RenewalCommonSupportLinkedPath;
+}): RenewalCommonSupportDecision {
+  const metrics = RENEWAL_ABLATION_METRICS.map((metric): RenewalCommonSupportMetricDecision => {
+    const marketDeltas = pairedCommonSupportDeltas(input.withoutMarket, input.current, metric);
+    const blueprintDeltas = pairedCommonSupportDeltas(input.withoutBlueprint, input.current, metric);
+    const marketHealthyDeltas = pairedCommonSupportHealthyDeltas(
+      input.withoutMarket,
+      input.current,
+      metric,
+    );
+    const blueprintHealthyDeltas = pairedCommonSupportHealthyDeltas(
+      input.withoutBlueprint,
+      input.current,
+      metric,
+    );
+    const floor = renewalAblationMaterialFloor(metric);
+    return {
+      metric,
+      marketGivenBlueprint: mean(marketDeltas),
+      blueprintGivenMarket: mean(blueprintDeltas),
+      marketHealthyDelta: mean(marketHealthyDeltas),
+      blueprintHealthyDelta: mean(blueprintHealthyDeltas),
+      marketCoherentWorldCount: materialDirectionCount(marketHealthyDeltas, 1, floor),
+      blueprintCoherentWorldCount: materialDirectionCount(blueprintHealthyDeltas, 1, floor),
+      marketAntagonisticWorldCount: materialDirectionCount(marketHealthyDeltas, -1, floor),
+      blueprintAntagonisticWorldCount: materialDirectionCount(
+        blueprintHealthyDeltas,
+        -1,
+        floor,
+      ),
+      marketHalfWidth95: halfWidth95(marketHealthyDeltas),
+      blueprintHalfWidth95: halfWidth95(blueprintHealthyDeltas),
+      materialFloor: floor,
+    };
+  });
+  const marketMaterial = metrics.some((row) =>
+    row.marketHealthyDelta >= row.materialFloor
+    && row.marketCoherentWorldCount >= 5);
+  const blueprintMaterial = metrics.some((row) =>
+    row.blueprintHealthyDelta >= row.materialFloor
+    && row.blueprintCoherentWorldCount >= 5);
+  const marketAntagonistic = metrics.some((row) =>
+    row.marketHealthyDelta <= -row.materialFloor
+    && row.marketAntagonisticWorldCount >= 5);
+  const blueprintAntagonistic = metrics.some((row) =>
+    row.blueprintHealthyDelta <= -row.materialFloor
+    && row.blueprintAntagonisticWorldCount >= 5);
+  const reconciliationFailureCount = input.marketPath.reconciliationFailureCount
+    + input.blueprintPath.reconciliationFailureCount
+    + Number(input.current.worlds.length !== 7)
+    + Number(input.withoutMarket.worlds.length !== 7)
+    + Number(input.withoutBlueprint.worlds.length !== 7);
+  const marketLinked = linkedPathHeld(input.marketPath);
+  const blueprintLinked = linkedPathHeld(input.blueprintPath);
+  let classification: RenewalCommonSupportClassification;
+  if (marketAntagonistic || blueprintAntagonistic) classification = "antagonistic";
+  else if (marketMaterial && blueprintMaterial && marketLinked && blueprintLinked) {
+    classification = "coupled_required";
+  } else if (marketMaterial && !blueprintMaterial && marketLinked) {
+    classification = "market_required";
+  } else if (blueprintMaterial && !marketMaterial && blueprintLinked) {
+    classification = "blueprint_required";
+  } else if (!marketMaterial && !blueprintMaterial) classification = "not_reproduced";
+  else classification = "not_attributed";
+  return {
+    decision: reconciliationFailureCount > 0 || classification === "antagonistic"
+      ? "STOP_RETHINK"
+      : classification === "market_required"
+          || classification === "blueprint_required"
+          || classification === "coupled_required"
+        ? "GO"
+        : "REFINE",
+    classification,
+    mainEffects: "not_identifiable_under_common_support",
+    interaction: "not_identifiable_under_common_support",
+    metrics,
+    armValues: {
+      current: input.current.values,
+      withoutMarket: input.withoutMarket.values,
+      withoutBlueprint: input.withoutBlueprint.values,
+    },
+    marketPath: input.marketPath,
+    blueprintPath: input.blueprintPath,
+    reconciliationFailureCount,
+  };
+}
+
+function linkedPathHeld(path: RenewalCommonSupportLinkedPath): boolean {
+  return path.reconciliationFailureCount === 0
+    && path.changedNeedEpisodeCount > 0
+    && path.changedFulfilledPlayerCount > 0
+    && path.realizedChangedPlayerCount > 0
+    && path.downstreamIntersectionCount > 0;
+}
+
+function pairedCommonSupportDeltas(
+  baseline: RenewalAblationArmFacts,
+  current: RenewalAblationArmFacts,
+  metric: RenewalAblationMetric,
+): readonly number[] {
+  const baselineBySeed = new Map(baseline.worlds.map((world) => [world.worldSeed, world]));
+  return current.worlds.flatMap((world) => {
+    const paired = baselineBySeed.get(world.worldSeed);
+    return paired === undefined ? [] : [world.values[metric] - paired.values[metric]];
+  });
+}
+
+function pairedCommonSupportHealthyDeltas(
+  baseline: RenewalAblationArmFacts,
+  current: RenewalAblationArmFacts,
+  metric: RenewalAblationMetric,
+): readonly number[] {
+  const baselineBySeed = new Map(baseline.worlds.map((world) => [world.worldSeed, world]));
+  return current.worlds.flatMap((world) => {
+    const paired = baselineBySeed.get(world.worldSeed);
+    return paired === undefined
+      ? []
+      : [commonSupportHealthValue(metric, world.values[metric])
+          - commonSupportHealthValue(metric, paired.values[metric])];
+  });
+}
+
+function commonSupportHealthValue(metric: RenewalAblationMetric, value: number): number {
+  const policy = RENEWAL_COMMON_SUPPORT_HEALTH_POLICY[metric];
+  if (policy.kind === "higher") return value;
+  const band = HISTORICAL_DIVISION_TABLE_TARGETS[policy.divisionLevel].championPoints;
+  const distance = value < band.min ? band.min - value : value > band.max ? value - band.max : 0;
+  return -distance;
+}
+
+function materialDirectionCount(
+  values: readonly number[],
+  direction: 1 | -1,
+  floor: number,
+): number {
+  return values.filter((value) => value * direction >= floor).length;
+}
+
+function mean(values: readonly number[]): number {
+  return values.length === 0 ? 0 : values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+function halfWidth95(values: readonly number[]): number {
+  if (values.length < 2) return 0;
+  const average = mean(values);
+  const variance = values.reduce((sum, value) => sum + (value - average) ** 2, 0)
+    / (values.length - 1);
+  return 1.96 * Math.sqrt(variance) / Math.sqrt(values.length);
 }
 
 function observedMean(values: readonly number[]): number | "not_observed" {

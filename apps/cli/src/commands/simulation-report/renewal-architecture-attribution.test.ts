@@ -3,6 +3,7 @@ import { test } from "vitest";
 
 import {
   evaluateRenewalAblation,
+  evaluateRenewalCommonSupport,
   evaluateRenewalNeedFunnel,
   maximumReplacementMatching,
   renewalNeedEpisodesForSeason,
@@ -10,8 +11,17 @@ import {
   type RenewalAblationArmFacts,
   type RenewalAblationArmKey,
   type RenewalAblationMetric,
+  type RenewalCommonSupportLinkedPath,
   type ReplacementMatchingPlayer,
 } from "./renewal-architecture-attribution.ts";
+
+const LINKED_COMMON_SUPPORT_PATH = {
+  changedNeedEpisodeCount: 4,
+  changedFulfilledPlayerCount: 3,
+  realizedChangedPlayerCount: 2,
+  downstreamIntersectionCount: 1,
+  reconciliationFailureCount: 0,
+} as const satisfies RenewalCommonSupportLinkedPath;
 
 test("maximum replacement matching never reuses a player and preserves the maximum cardinality", () => {
   const incumbents = [
@@ -43,6 +53,92 @@ test("local and division matchings answer different replacement questions", () =
     candidates: [elsewhere],
     sameClub: false,
   }).length, 1);
+});
+
+test("common support identifies conditional necessity without inventing factorial effects", () => {
+  const withoutMarket = arm("blueprint", 0.20);
+  const withoutBlueprint = arm("market", 0.20);
+  const current = arm("combined", 0.24);
+  const coupled = evaluateRenewalCommonSupport({
+    current,
+    withoutMarket,
+    withoutBlueprint,
+    marketPath: LINKED_COMMON_SUPPORT_PATH,
+    blueprintPath: LINKED_COMMON_SUPPORT_PATH,
+  });
+
+  assert.equal(coupled.decision, "GO");
+  assert.equal(coupled.classification, "coupled_required");
+  assert.equal(coupled.mainEffects, "not_identifiable_under_common_support");
+  assert.equal(coupled.interaction, "not_identifiable_under_common_support");
+  assert.equal(coupled.metrics[0]?.marketCoherentWorldCount, 7);
+  assert.equal(coupled.metrics[0]?.blueprintCoherentWorldCount, 7);
+
+  const marketOnly = evaluateRenewalCommonSupport({
+    current,
+    withoutMarket,
+    withoutBlueprint: current,
+    marketPath: LINKED_COMMON_SUPPORT_PATH,
+    blueprintPath: LINKED_COMMON_SUPPORT_PATH,
+  });
+  assert.equal(marketOnly.classification, "market_required");
+  assert.equal(marketOnly.decision, "GO");
+
+  const blueprintOnly = evaluateRenewalCommonSupport({
+    current,
+    withoutMarket: current,
+    withoutBlueprint,
+    marketPath: LINKED_COMMON_SUPPORT_PATH,
+    blueprintPath: LINKED_COMMON_SUPPORT_PATH,
+  });
+  assert.equal(blueprintOnly.classification, "blueprint_required");
+  assert.equal(blueprintOnly.decision, "GO");
+});
+
+test("common support fails missing player links and antagonistic contributions closed", () => {
+  const baseline = arm("blueprint", 0.20);
+  const current = arm("combined", 0.24);
+  const missingLink = evaluateRenewalCommonSupport({
+    current,
+    withoutMarket: baseline,
+    withoutBlueprint: current,
+    marketPath: { ...LINKED_COMMON_SUPPORT_PATH, downstreamIntersectionCount: 0 },
+    blueprintPath: LINKED_COMMON_SUPPORT_PATH,
+  });
+  assert.equal(missingLink.classification, "not_attributed");
+  assert.equal(missingLink.decision, "REFINE");
+
+  const antagonistic = evaluateRenewalCommonSupport({
+    current: baseline,
+    withoutMarket: current,
+    withoutBlueprint: baseline,
+    marketPath: LINKED_COMMON_SUPPORT_PATH,
+    blueprintPath: LINKED_COMMON_SUPPORT_PATH,
+  });
+  assert.equal(antagonistic.classification, "antagonistic");
+  assert.equal(antagonistic.decision, "STOP_RETHINK");
+});
+
+test("common support reads champion points as distance to the frozen band", () => {
+  const current = armWithMetric("combined", "championPoints", 72.4);
+  const withoutMarket = armWithMetric("blueprint", "championPoints", 73.3);
+  const withoutBlueprint = armWithMetric("market", "championPoints", 73.5);
+  const result = evaluateRenewalCommonSupport({
+    current,
+    withoutMarket,
+    withoutBlueprint,
+    marketPath: LINKED_COMMON_SUPPORT_PATH,
+    blueprintPath: LINKED_COMMON_SUPPORT_PATH,
+  });
+  const champion = result.metrics.find(({ metric }) => metric === "championPoints");
+
+  assert.equal(champion?.marketGivenBlueprint, 72.4 - 73.3);
+  assert.equal(champion?.blueprintGivenMarket, 72.4 - 73.5);
+  assert.equal(champion?.marketHealthyDelta, 0);
+  assert.equal(champion?.blueprintHealthyDelta, 0);
+  assert.equal(champion?.marketAntagonisticWorldCount, 0);
+  assert.equal(champion?.blueprintAntagonisticWorldCount, 0);
+  assert.equal(result.classification, "not_reproduced");
 });
 
 test("the preregistered architecture rule reaches every owner and fails missing facts closed", () => {
@@ -235,6 +331,20 @@ function arm(
         sha256: `same-${seasonNumber}`,
       })),
     })),
+  };
+}
+
+function armWithMetric(
+  armKey: RenewalAblationArmKey,
+  metric: RenewalAblationMetric,
+  value: number,
+): RenewalAblationArmFacts {
+  const base = arm(armKey, 0.2);
+  const values = { ...base.values, [metric]: value };
+  return {
+    ...base,
+    values,
+    worlds: base.worlds.map((world) => ({ ...world, values })),
   };
 }
 

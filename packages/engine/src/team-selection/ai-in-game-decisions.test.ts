@@ -802,6 +802,7 @@ function matchEngineConfigFixture(): MatchEngineConfig {
       goalProbability: 0.2,
     }],
     homeAdvantageFactor: 1.05,
+    strengthGapMultiplier: 1,
     tacticalDistributionCaps: {
       directness: { minInclusive: 0, maxInclusive: 1 },
       pressing: { minInclusive: 0, maxInclusive: 1 },
