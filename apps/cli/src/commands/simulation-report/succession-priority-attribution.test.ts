@@ -3,10 +3,12 @@ import { test } from "vitest";
 
 import {
   deriveSuccessionDownstreamPlayerOutcome,
+  evaluateLeaderConversionFunnel,
   evaluateSuccessionGrowthFeasibility,
   evaluateSuccessionPriorityComparison,
   evaluateSuccessionTargetAttribution,
   evaluateSuccessionDownstreamFunnel,
+  leaderConversionWorldFacts,
   successionGrowthFeasibilityStage,
   type SuccessionPriorityArmSummary,
 } from "./succession-priority-attribution.ts";
@@ -208,6 +210,95 @@ test("growth feasibility identifies a majority and fails closed on drift", () =>
   }).decision, "STOP_RETHINK");
 });
 
+test("leader conversion compares generated players with leaders of the same role", () => {
+  const leaders = Array.from({ length: 10 }, (_, index) => playerSeason({
+    playerId: `leader-${index}`,
+    currentAbility: 12 + index / 10,
+    minutes: 2_000,
+    goals: 20 - index,
+    assists: 10 - index,
+  }));
+  const generated = [
+    playerSeason({ playerId: "generated-leader", currentAbility: 13, minutes: 2_000, goals: 30 }),
+    playerSeason({ playerId: "generated-low-quality", currentAbility: 11, minutes: 2_000 }),
+    playerSeason({ playerId: "generated-low-minutes", currentAbility: 13, minutes: 899 }),
+    playerSeason({ playerId: "generated-ready", currentAbility: 13, minutes: 900 }),
+    playerSeason({
+      playerId: "generated-goalkeeper",
+      role: "goalkeeper",
+      currentAbility: 20,
+      minutes: 3_060,
+    }),
+  ];
+  const rows = [...leaders, ...generated];
+  const facts = leaderConversionWorldFacts({
+    worldSeed: "world-1",
+    playerSeasons: rows,
+    playerOrigins: rows.map(({ playerId }) => ({
+      playerId,
+      origin: playerId.startsWith("generated-")
+        ? "annual_academy_intake" as const
+        : "opening_senior" as const,
+    })),
+  });
+
+  assert.equal(facts.leaderSlotCount, 20);
+  assert.equal(facts.unrepresentedRolePlayerCount, 1);
+  assert.deepEqual(facts.counts, {
+    season_ten_leader: 1,
+    below_role_leader_quality: 1,
+    quality_ready_below_900_minutes: 1,
+    quality_and_minutes_ready_not_leader: 1,
+  });
+});
+
+test("leader conversion identifies only a reachable majority owner", () => {
+  const worlds = Array.from({ length: 7 }, (_, index) => ({
+    worldSeed: `world-${index + 1}`,
+    competitionCount: 3,
+    leaderSlotCount: 60,
+    generatedPlayerCount: 43,
+    representedRolePlayerCount: 42,
+    unrepresentedRolePlayerCount: 1,
+    counts: {
+      season_ten_leader: 1,
+      below_role_leader_quality: 30,
+      quality_ready_below_900_minutes: 5,
+      quality_and_minutes_ready_not_leader: 6,
+    },
+    reconciliationFailureCount: 0,
+  }));
+  const result = evaluateLeaderConversionFunnel({ worlds, seasonCount: 10 });
+
+  assert.equal(result.decision, "OWNER_IDENTIFIED");
+  assert.equal(result.owner, "leader_quality_supply");
+  assert.equal(result.competitionCount, 21);
+  assert.equal(result.leaderSlotCount, 420);
+  assert.ok(result.dominantShare !== "not_observed" && result.dominantShare > 0.5);
+});
+
+test("leader conversion fails closed when a declared stage is unreachable", () => {
+  const worlds = Array.from({ length: 7 }, (_, index) => ({
+    worldSeed: `world-${index + 1}`,
+    competitionCount: 3,
+    leaderSlotCount: 60,
+    generatedPlayerCount: 30,
+    representedRolePlayerCount: 30,
+    unrepresentedRolePlayerCount: 0,
+    counts: {
+      season_ten_leader: 5,
+      below_role_leader_quality: 20,
+      quality_ready_below_900_minutes: 0,
+      quality_and_minutes_ready_not_leader: 5,
+    },
+    reconciliationFailureCount: 0,
+  }));
+  const result = evaluateLeaderConversionFunnel({ worlds, seasonCount: 10 });
+
+  assert.equal(result.decision, "STOP_RETHINK");
+  assert.deepEqual(result.unreachableStages, ["quality_ready_below_900_minutes"]);
+});
+
 function arm(
   local: number,
   generated: number,
@@ -283,4 +374,32 @@ function downstreamCounts(
     developed_not_leader: 0,
     ...overrides,
   };
+}
+
+function playerSeason(input: {
+  readonly playerId: string;
+  readonly role?: "striker" | "goalkeeper";
+  readonly currentAbility: number;
+  readonly minutes: number;
+  readonly goals?: number;
+  readonly assists?: number;
+}) {
+  return {
+    competitionId: "competition:ita-1",
+    seasonNumber: 10,
+    playerId: input.playerId,
+    clubId: "club:ita-1-01",
+    age: 24,
+    role: input.role ?? "striker",
+    currentAbility: input.currentAbility,
+    potentialRoom: 0,
+    appearances: input.minutes === 0 ? 0 : 1,
+    starts: input.minutes >= 90 ? 1 : 0,
+    minutes: input.minutes,
+    shots: 0,
+    shotsOnTarget: 0,
+    creatorNominations: 0,
+    goals: input.goals ?? 0,
+    assists: input.assists ?? 0,
+  } as const;
 }

@@ -23,10 +23,10 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **L6.14 `STOP / RETHINK`:** public-runway selection improved local
-  replacement but raised transfers `27.40%` and lowered generated leaders
-  `1.90` points. Candidate removed. Next is cached leader-conversion
-  attribution; target selection and global development stay closed.
+- Phase 81A **L6.15 owner identified:** among `1,465` generated non-leaders in
+  represented roles, `1,130` (`77.13%`) are below the role-local leader-quality
+  floor, versus `74` below material minutes and `261` ready but not leaders.
+  Next split: insufficient stored ceiling versus unrealized sufficient ceiling.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;
   conversion `0.7260` and ordinary assisted share `0.7540` remain healthy.
 - Phase 81A **L6.3G `REFINE`:** `8000` yields `1.4692/1.4645` direct-free-kick

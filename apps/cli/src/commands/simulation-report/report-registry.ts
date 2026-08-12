@@ -99,6 +99,7 @@ export const SIMULATION_REPORT_PROFILE_IDS = [
   "phase81a-succession-affordability-l6-9d-7x10",
   "phase81a-succession-downstream-funnel-l6-12b-cached",
   "phase81a-succession-growth-feasibility-l6-13-cached",
+  "phase81a-leader-conversion-l6-15-cached",
   "phase81a-renewal-ablation-l6-1-control-7x10",
   "phase81a-renewal-ablation-l6-1-market-7x10",
   "phase81a-renewal-ablation-l6-1-blueprint-7x10",
@@ -159,6 +160,7 @@ const CAREER_PROFILE_CHECKPOINT_KIND = {
   "phase81a-succession-affordability-l6-9d-7x10": "succession_affordability_l6_9d",
   "phase81a-succession-downstream-funnel-l6-12b-cached": "succession_downstream_funnel_l6_12b",
   "phase81a-succession-growth-feasibility-l6-13-cached": "succession_growth_feasibility_l6_13",
+  "phase81a-leader-conversion-l6-15-cached": "leader_conversion_l6_15",
   "phase81a-renewal-ablation-l6-1-control-7x10": "renewal_ablation_l6_1",
   "phase81a-renewal-ablation-l6-1-market-7x10": "renewal_ablation_l6_1",
   "phase81a-renewal-ablation-l6-1-blueprint-7x10": "renewal_ablation_l6_1",
@@ -214,6 +216,7 @@ const CAREER_PROFILE_CACHE_SUFFIX = {
   "phase81a-succession-affordability-l6-9d-7x10": "-facts-v1",
   "phase81a-succession-downstream-funnel-l6-12b-cached": "-facts-v1",
   "phase81a-succession-growth-feasibility-l6-13-cached": "-facts-v1",
+  "phase81a-leader-conversion-l6-15-cached": "-facts-v1",
   "phase81a-renewal-ablation-l6-1-control-7x10": "-facts-v2",
   "phase81a-renewal-ablation-l6-1-market-7x10": "-facts-v2",
   "phase81a-renewal-ablation-l6-1-blueprint-7x10": "-facts-v2",
@@ -677,6 +680,21 @@ export const SIMULATION_REPORT_PROFILES = {
       includedSectionIds: CAREER_SECTION_IDS,
       detail: "diagnostic",
       seedPrefix: "phase81a-succession-affordability-l6-9d-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-leader-conversion-l6-15-cached": {
+    id: "phase81a-leader-conversion-l6-15-cached",
+    titleKey: "simulationReport.profile.phase81aLeaderConversionL6_15.title",
+    descriptionKey: "simulationReport.profile.phase81aLeaderConversionL6_15.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-leader-conversion-l6-15-cached",
+      worldCount: 7,
+      seasonCount: 10,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-renewal-baseline-l6-4-v1",
       workerCount: 7,
     },
   },
@@ -1437,6 +1455,29 @@ function lockedProfileIdFor(value: string | null): LockedMigrationProfileId | un
     : undefined;
 }
 
+const READ_ONLY_CAREER_PROFILE_CACHES: Readonly<Partial<Record<
+  keyof typeof CAREER_PROFILE_CHECKPOINT_KIND,
+  {
+    readonly profileId: string;
+    readonly directory: string;
+  }
+>>> = {
+  "phase81a-succession-downstream-funnel-l6-12b-cached": {
+    profileId: "phase81a-succession-wage-buffer-l6-10-7x10:qualified_succession_selection",
+    directory:
+      "saves/long-run-checkpoints/phase81a-succession-wage-buffer-l6-10-7x10-facts-v2/qualified_succession_selection",
+  },
+  "phase81a-succession-growth-feasibility-l6-13-cached": {
+    profileId: "phase81a-succession-wage-buffer-l6-10-7x10:qualified_succession_selection",
+    directory:
+      "saves/long-run-checkpoints/phase81a-succession-wage-buffer-l6-10-7x10-facts-v2/qualified_succession_selection",
+  },
+  "phase81a-leader-conversion-l6-15-cached": {
+    profileId: "phase81a-renewal-baseline-l6-4-7x10",
+    directory: "saves/long-run-checkpoints/phase81a-renewal-baseline-l6-4-7x10-facts-v1",
+  },
+};
+
 async function leagueDiversityExecution(
   profileId: string | null,
 ): Promise<{
@@ -1455,17 +1496,12 @@ async function leagueDiversityExecution(
 }> {
   if (profileId === null || !Object.hasOwn(CAREER_PROFILE_CHECKPOINT_KIND, profileId)) return {};
   const careerProfileId = profileId as keyof typeof CAREER_PROFILE_CHECKPOINT_KIND;
+  const readOnlyCache = READ_ONLY_CAREER_PROFILE_CACHES[careerProfileId];
   const cacheIdentityProfileId = careerProfileId === "phase81a-integrated-l5-4h-reeval-7x10"
     ? "phase81a-integrated-l5-4-7x10"
-    : careerProfileId === "phase81a-succession-downstream-funnel-l6-12b-cached"
-      || careerProfileId === "phase81a-succession-growth-feasibility-l6-13-cached"
-      ? "phase81a-succession-wage-buffer-l6-10-7x10:qualified_succession_selection"
-    : careerProfileId;
-  const checkpointDirectory = careerProfileId ===
-    "phase81a-succession-downstream-funnel-l6-12b-cached"
-    || careerProfileId === "phase81a-succession-growth-feasibility-l6-13-cached"
-    ? "saves/long-run-checkpoints/phase81a-succession-wage-buffer-l6-10-7x10-facts-v2/qualified_succession_selection"
-    : `saves/long-run-checkpoints/${careerProfileId}${CAREER_PROFILE_CACHE_SUFFIX[careerProfileId]}`;
+    : readOnlyCache?.profileId ?? careerProfileId;
+  const checkpointDirectory = readOnlyCache?.directory
+    ?? `saves/long-run-checkpoints/${careerProfileId}${CAREER_PROFILE_CACHE_SUFFIX[careerProfileId]}`;
   const renewalAblationArm = renewalAblationArmForProfile(careerProfileId);
   const renewalRefinementMode = careerProfileId === "phase81a-renewal-refinement-l6-1a-canary-7x1"
     ? "canary" as const
@@ -1504,8 +1540,7 @@ async function leagueDiversityExecution(
         checkpointDirectory,
       ),
       readOnly: careerProfileId === "phase81a-integrated-l5-4h-reeval-7x10"
-        || careerProfileId === "phase81a-succession-downstream-funnel-l6-12b-cached"
-        || careerProfileId === "phase81a-succession-growth-feasibility-l6-13-cached",
+        || readOnlyCache !== undefined,
       ...(renewalAblationArm === undefined ? {} : { renewalAblationArm }),
       ...(renewalRefinementMode === undefined ? {} : { renewalRefinementMode }),
       ...(independentOwnersMode === undefined ? {} : { independentOwnersMode }),

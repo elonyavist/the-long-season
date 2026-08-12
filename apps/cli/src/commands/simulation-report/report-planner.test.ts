@@ -776,6 +776,25 @@ describe("simulation-report planner", () => {
       .toThrow(/refuses measurement overrides/);
   });
 
+  it("freezes L6.15 to the read-only current-product population", () => {
+    const profileId = "phase81a-leader-conversion-l6-15-cached";
+    const plan = createSimulationReportPlan({ profileId, workerCount: 7 });
+
+    expect(plan.measurementRequest).toMatchObject({
+      profileId,
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-renewal-baseline-l6-4-v1",
+      includedSectionIds: [
+        "season", "standings", "players", "transfers",
+        "formations", "economy", "development", "anomalies",
+      ],
+    });
+    expect(() => createSimulationReportPlan({ profileId, workerCount: 6 }))
+      .toThrow(/refuses measurement overrides/);
+  });
+
 
   it("plans no audit work when a custom request lacks the locked shape population", () => {
     const plan = createSimulationReportPlan({

@@ -1,3 +1,12 @@
+import {
+  isCareerGeneratedOrigin,
+  type GenerationalOrigin,
+} from "./generational-succession.ts";
+import {
+  topTenPlayerSeasonFacts,
+  type OwnerAttributionPlayerSeasonFact,
+} from "./owner-attribution.ts";
+
 /** Frozen metrics needed by the bounded succession comparison. */
 export interface SuccessionPriorityMetricValues {
   readonly localReplacementCapacity: number;
@@ -278,6 +287,192 @@ export function evaluateSuccessionGrowthFeasibility(input: {
     observationCount,
     dominantStage,
     dominantShare,
+  };
+}
+
+export const LEADER_CONVERSION_STAGES = [
+  "season_ten_leader",
+  "below_role_leader_quality",
+  "quality_ready_below_900_minutes",
+  "quality_and_minutes_ready_not_leader",
+] as const;
+export type LeaderConversionStage = typeof LEADER_CONVERSION_STAGES[number];
+
+export interface LeaderConversionWorldFacts {
+  readonly worldSeed: string;
+  readonly competitionCount: number;
+  readonly leaderSlotCount: number;
+  readonly generatedPlayerCount: number;
+  readonly representedRolePlayerCount: number;
+  readonly unrepresentedRolePlayerCount: number;
+  readonly counts: Readonly<Record<LeaderConversionStage, number>>;
+  readonly reconciliationFailureCount: number;
+}
+
+/**
+ * Joins one cached season-ten population to its canonical leader lanes.
+ *
+ * The role-local minimum is intentionally conservative: a generated player is
+ * called quality-ready when it reaches any real leader of the same role, not
+ * an invented global rating threshold that would punish defensive roles.
+ */
+export function leaderConversionWorldFacts(input: {
+  readonly worldSeed: string;
+  readonly playerSeasons: readonly OwnerAttributionPlayerSeasonFact[];
+  readonly playerOrigins: readonly {
+    readonly playerId: string;
+    readonly origin: GenerationalOrigin;
+  }[];
+}): LeaderConversionWorldFacts {
+  const seasonTen = input.playerSeasons.filter(({ seasonNumber }) => seasonNumber === 10);
+  const competitionIds = [...new Set(seasonTen.map(({ competitionId }) => competitionId))].sort();
+  const originByPlayerId = new Map<string, GenerationalOrigin>();
+  let reconciliationFailureCount = 0;
+  for (const fact of input.playerOrigins) {
+    if (originByPlayerId.has(fact.playerId)) reconciliationFailureCount += 1;
+    originByPlayerId.set(fact.playerId, fact.origin);
+  }
+  const counts = Object.fromEntries(
+    LEADER_CONVERSION_STAGES.map((stage) => [stage, 0]),
+  ) as Record<LeaderConversionStage, number>;
+  let leaderSlotCount = 0;
+  let generatedPlayerCount = 0;
+  let representedRolePlayerCount = 0;
+  let unrepresentedRolePlayerCount = 0;
+  const observedPlayerKeys = new Set<string>();
+
+  for (const competitionId of competitionIds) {
+    const rows = seasonTen.filter((row) => row.competitionId === competitionId);
+    const leaders = [
+      ...topTenPlayerSeasonFacts(rows, "goals"),
+      ...topTenPlayerSeasonFacts(rows, "assists"),
+    ];
+    leaderSlotCount += leaders.length;
+    const leaderPlayerIds = new Set(leaders.map(({ playerId }) => playerId));
+    const qualityFloorByRole = new Map<
+      OwnerAttributionPlayerSeasonFact["role"],
+      number
+    >();
+    for (const leader of leaders) {
+      const current = qualityFloorByRole.get(leader.role);
+      if (current === undefined || leader.currentAbility < current) {
+        qualityFloorByRole.set(leader.role, leader.currentAbility);
+      }
+    }
+
+    for (const player of rows) {
+      const playerKey = `${competitionId}|${player.playerId}`;
+      if (observedPlayerKeys.has(playerKey)) reconciliationFailureCount += 1;
+      observedPlayerKeys.add(playerKey);
+      const origin = originByPlayerId.get(player.playerId);
+      if (origin === undefined) {
+        reconciliationFailureCount += 1;
+        continue;
+      }
+      if (!isCareerGeneratedOrigin(origin)) continue;
+      generatedPlayerCount += 1;
+      const qualityFloor = qualityFloorByRole.get(player.role);
+      if (qualityFloor === undefined) {
+        unrepresentedRolePlayerCount += 1;
+        continue;
+      }
+      representedRolePlayerCount += 1;
+      const stage: LeaderConversionStage = leaderPlayerIds.has(player.playerId)
+        ? "season_ten_leader"
+        : player.currentAbility < qualityFloor
+          ? "below_role_leader_quality"
+          : player.minutes < 900
+            ? "quality_ready_below_900_minutes"
+            : "quality_and_minutes_ready_not_leader";
+      counts[stage] += 1;
+    }
+  }
+
+  reconciliationFailureCount += Number(
+    representedRolePlayerCount + unrepresentedRolePlayerCount !== generatedPlayerCount,
+  );
+  return {
+    worldSeed: input.worldSeed,
+    competitionCount: competitionIds.length,
+    leaderSlotCount,
+    generatedPlayerCount,
+    representedRolePlayerCount,
+    unrepresentedRolePlayerCount,
+    counts,
+    reconciliationFailureCount,
+  };
+}
+
+/** Applies the preregistered L6.15 majority owner to real cached players. */
+export function evaluateLeaderConversionFunnel(input: {
+  readonly worlds: readonly LeaderConversionWorldFacts[];
+  readonly seasonCount: number;
+}) {
+  const counts = Object.fromEntries(
+    LEADER_CONVERSION_STAGES.map((stage) => [
+      stage,
+      input.worlds.reduce((total, world) => total + world.counts[stage], 0),
+    ]),
+  ) as Record<LeaderConversionStage, number>;
+  const competitionCount = input.worlds.reduce(
+    (total, world) => total + world.competitionCount,
+    0,
+  );
+  const leaderSlotCount = input.worlds.reduce(
+    (total, world) => total + world.leaderSlotCount,
+    0,
+  );
+  const reconciliationFailureCount = input.worlds.reduce(
+    (total, world) => total + world.reconciliationFailureCount,
+    0,
+  );
+  const representedRolePlayerCount = LEADER_CONVERSION_STAGES.reduce(
+    (total, stage) => total + counts[stage],
+    0,
+  );
+  const unreachableStages = LEADER_CONVERSION_STAGES.filter((stage) => counts[stage] === 0);
+  const structuralFailure = input.worlds.length !== 7
+    || input.seasonCount !== 10
+    || competitionCount !== 21
+    || leaderSlotCount !== 420
+    || reconciliationFailureCount > 0
+    || representedRolePlayerCount < 100
+    || unreachableStages.length > 0;
+  const failureStages = LEADER_CONVERSION_STAGES.filter(
+    (stage): stage is Exclude<LeaderConversionStage, "season_ten_leader"> =>
+      stage !== "season_ten_leader",
+  );
+  const failureCount = failureStages.reduce((total, stage) => total + counts[stage], 0);
+  const dominantStage = failureCount === 0
+    ? "not_observed" as const
+    : failureStages.reduce((best, stage) => counts[stage] > counts[best] ? stage : best);
+  const dominantShare = dominantStage === "not_observed"
+    ? "not_observed" as const
+    : counts[dominantStage] / failureCount;
+  const owner = dominantStage === "not_observed"
+    ? "structural_reconciliation" as const
+    : dominantStage === "below_role_leader_quality"
+      ? "leader_quality_supply" as const
+      : dominantStage === "quality_ready_below_900_minutes"
+        ? "material_selection_opportunity" as const
+        : "leader_output_conversion" as const;
+  return {
+    decision: structuralFailure
+      ? "STOP_RETHINK" as const
+      : dominantShare !== "not_observed" && dominantShare >= 0.50
+        ? "OWNER_IDENTIFIED" as const
+        : "MIXED" as const,
+    owner: structuralFailure ? "structural_reconciliation" as const : owner,
+    counts,
+    representedRolePlayerCount,
+    failureCount,
+    competitionCount,
+    leaderSlotCount,
+    dominantStage,
+    dominantShare,
+    unreachableStages,
+    reconciliationFailureCount,
+    worlds: input.worlds,
   };
 }
 

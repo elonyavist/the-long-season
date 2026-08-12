@@ -294,6 +294,7 @@ contexts; it never owns the analytic diversity gate.
 | 06B29H | [Checkpoint L6.12B corrected funnel](06b29h-checkpoint-l6-12b-season-boundary-succession-funnel.md) | no | Done: growth owner |
 | 06B29I | [Checkpoint L6.13 growth feasibility](06b29i-checkpoint-l6-13-cached-growth-feasibility.md) | no | Done: stored runway owner |
 | 06B29J | [public-runway successor selection](06b29j-public-runway-successor-selection.md) | yes | Done: `STOP / RETHINK`; candidate removed |
+| 06B29K | [Checkpoint L6.15 leader conversion](06b29k-checkpoint-l6-15-cached-leader-conversion.md) | no | Done: leader-quality supply owner |
 | 06C | [Checkpoint B2 conditioned tactical ceiling](06c-checkpoint-b2-conditioned-tactical-ceiling.md) | no | GO authorizes 07 |
 | 07 | [player task execution](07-player-task-execution.md) | yes | Step 08 |
 | 08 | [squad identity and lateral execution](08-squad-identity-and-lateral-execution.md) | yes | Step 09 |
