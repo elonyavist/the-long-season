@@ -111,6 +111,7 @@ import {
   evaluateAcademyProspectClassConversion,
   evaluateGeneratedLeaderLaneConversion,
   evaluateGeneratedPlayerLifecycleAttribution,
+  evaluateRenewalLadder,
   evaluateLeaderConversionFunnel,
   evaluateLeaderCeilingDistance,
   evaluateLeaderQualityFeasibility,
@@ -122,6 +123,7 @@ import {
   SUCCESSION_GROWTH_FEASIBILITY_STAGES,
   leaderConversionWorldFacts,
   leaderConversionPlayerFacts,
+  renewalLadderWorldFacts,
   generatedLeaderLaneWorldFacts,
   leaderCeilingDistanceWorldFacts,
   leaderQualityFeasibilityWorldFacts,
@@ -183,7 +185,8 @@ export type CareerCheckpointKind =
   | "leader_ceiling_distance_l6_18"
   | "academy_prospect_class_l6_20"
   | "generated_player_lifecycle_l6_23"
-  | "generated_leader_lane_l6_24";
+  | "generated_leader_lane_l6_24"
+  | "renewal_ladder_l6_26";
 
 /** Versioned readers sharing the one product-versus-legacy contest producer. */
 export type StrengthContestMode = "canary" | "full" | "retry_canary" | "retry_full";
@@ -235,6 +238,7 @@ const CHECKPOINT_OBSERVES_GENERATIONAL_SUCCESSION = {
   academy_prospect_class_l6_20: true,
   generated_player_lifecycle_l6_23: true,
   generated_leader_lane_l6_24: true,
+  renewal_ladder_l6_26: true,
 } as const satisfies Readonly<Record<CareerCheckpointKind, boolean>>;
 
 /** Keeps observer and checkpoint-section routing on one exhaustive policy. */
@@ -1250,7 +1254,8 @@ export async function createCareerSectionsFacts(input: {
             || input.leagueDiversityProfile?.checkpointKind === "succession_affordability_l6_9d"
             || input.leagueDiversityProfile?.checkpointKind === "academy_prospect_class_l6_20"
             || input.leagueDiversityProfile?.checkpointKind === "generated_player_lifecycle_l6_23"
-            || input.leagueDiversityProfile?.checkpointKind === "generated_leader_lane_l6_24",
+            || input.leagueDiversityProfile?.checkpointKind === "generated_leader_lane_l6_24"
+            || input.leagueDiversityProfile?.checkpointKind === "renewal_ladder_l6_26",
           collectAcademyProspectClasses:
             input.leagueDiversityProfile?.checkpointKind === "academy_prospect_class_l6_20"
             || input.leagueDiversityProfile?.checkpointKind === "generated_player_lifecycle_l6_23",
@@ -1272,7 +1277,8 @@ export async function createCareerSectionsFacts(input: {
             || input.leagueDiversityProfile?.checkpointKind === "succession_affordability_l6_9d"
             || input.leagueDiversityProfile?.checkpointKind === "academy_prospect_class_l6_20"
             || input.leagueDiversityProfile?.checkpointKind === "generated_player_lifecycle_l6_23"
-            || input.leagueDiversityProfile?.checkpointKind === "generated_leader_lane_l6_24",
+            || input.leagueDiversityProfile?.checkpointKind === "generated_leader_lane_l6_24"
+            || input.leagueDiversityProfile?.checkpointKind === "renewal_ladder_l6_26",
           standingsHierarchy:
             input.leagueDiversityProfile?.checkpointKind === "standings_hierarchy_l5_2"
             || input.leagueDiversityProfile?.checkpointKind === "integrated_player_world_l5_4"
@@ -1454,6 +1460,8 @@ export async function createCareerSectionsFacts(input: {
         )
     : input.leagueDiversityProfile.checkpointKind === "generated_leader_lane_l6_24"
       ? evaluateGeneratedLeaderLaneCheckpoint(worlds, input.seasonCount)
+    : input.leagueDiversityProfile.checkpointKind === "renewal_ladder_l6_26"
+      ? evaluateRenewalLadderCheckpoint(worlds, input.seasonCount)
     : input.leagueDiversityProfile.checkpointKind === "strength_contest_l6_1d"
       ? evaluateStrengthContestCheckpoint(
           worlds.map(requiredOwnerAttributionFacts),
@@ -3611,6 +3619,25 @@ function evaluateGeneratedLeaderLaneCheckpoint(
       const owner = requiredOwnerAttributionFacts(world);
       const architecture = requiredRenewalArchitectureFacts(world);
       return generatedLeaderLaneWorldFacts({
+        worldSeed: world.seed,
+        playerSeasons: owner.playerSeasons,
+        playerOrigins: architecture.playerOrigins,
+        cohort: "mature_by_season_six",
+      });
+    }),
+    seasonCount,
+  });
+}
+
+function evaluateRenewalLadderCheckpoint(
+  worlds: readonly CareerWorldProjection[],
+  seasonCount: number,
+) {
+  return evaluateRenewalLadder({
+    worlds: worlds.map((world) => {
+      const owner = requiredOwnerAttributionFacts(world);
+      const architecture = requiredRenewalArchitectureFacts(world);
+      return renewalLadderWorldFacts({
         worldSeed: world.seed,
         playerSeasons: owner.playerSeasons,
         playerOrigins: architecture.playerOrigins,

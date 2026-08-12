@@ -890,6 +890,248 @@ export function evaluateGeneratedPlayerLifecycleAttribution(input: {
   };
 }
 
+export const RENEWAL_LADDER_LANES = ["scorer", "creator"] as const;
+export type RenewalLadderLane = typeof RENEWAL_LADDER_LANES[number];
+export const RENEWAL_LADDER_RUNGS = [
+  "quality",
+  "opportunity_rate",
+  "raw_opportunity",
+  "club_expected_output",
+  "actual_output",
+] as const;
+export type RenewalLadderRung = typeof RENEWAL_LADDER_RUNGS[number];
+
+interface RenewalLadderOriginCounts {
+  readonly generated: number;
+  readonly opening: number;
+}
+
+export interface RenewalLadderWorldFacts {
+  readonly worldSeed: string;
+  readonly competitionCount: number;
+  readonly laneRungs: readonly {
+    readonly lane: RenewalLadderLane;
+    readonly counts: Readonly<Record<RenewalLadderRung, RenewalLadderOriginCounts>>;
+  }[];
+  readonly reconciliationFailureCount: number;
+  readonly unknownOriginCount: number;
+}
+
+/** Builds outcome-unconditioned season-ten ranks for the mature renewal cohort. */
+export function renewalLadderWorldFacts(input: LeaderConversionWorldInput): RenewalLadderWorldFacts {
+  const seasonTen = input.playerSeasons.filter(({ seasonNumber }) => seasonNumber === 10);
+  const originByPlayerId = new Map<string, (typeof input.playerOrigins)[number]>();
+  let reconciliationFailureCount = 0;
+  for (const origin of input.playerOrigins) {
+    if (originByPlayerId.has(origin.playerId)) reconciliationFailureCount += 1;
+    originByPlayerId.set(origin.playerId, origin);
+  }
+  const seenPlayerKeys = new Set<string>();
+  for (const player of seasonTen) {
+    const key = `${player.competitionId}|${player.playerId}`;
+    if (seenPlayerKeys.has(key)) reconciliationFailureCount += 1;
+    seenPlayerKeys.add(key);
+  }
+  let unknownOriginCount = 0;
+  const competitionIds = [...new Set(seasonTen.map(({ competitionId }) => competitionId))].sort();
+  const laneRungs = RENEWAL_LADDER_LANES.map((lane) => {
+    const counts = emptyRenewalLadderCounts();
+    for (const competitionId of competitionIds) {
+      const allRows = seasonTen.filter((row) => row.competitionId === competitionId);
+      const cohort = allRows.filter((player) => {
+        const origin = originByPlayerId.get(player.playerId);
+        if (origin === undefined || origin.origin === "unknown") {
+          unknownOriginCount += 1;
+          return false;
+        }
+        return isOpeningOrigin(origin.origin)
+          || (isCareerGeneratedOrigin(origin.origin)
+            && (input.cohort !== "mature_by_season_six" || origin.generatedSeasonNumber <= 6));
+      });
+      const opportunities = (player: OwnerAttributionPlayerSeasonFact) =>
+        lane === "scorer" ? player.shots : player.creatorNominations;
+      const outputs = (player: OwnerAttributionPlayerSeasonFact) =>
+        lane === "scorer" ? player.goals : player.assists;
+      const eligibleRoles = new Set(allRows.filter((player) => opportunities(player) > 0)
+        .map(({ role }) => role));
+      const eligible = cohort.filter(({ role }) => eligibleRoles.has(role));
+      const clubTotals = new Map<string, { opportunities: number; outputs: number }>();
+      for (const player of allRows) {
+        const current = clubTotals.get(player.clubId) ?? { opportunities: 0, outputs: 0 };
+        clubTotals.set(player.clubId, {
+          opportunities: current.opportunities + opportunities(player),
+          outputs: current.outputs + outputs(player),
+        });
+      }
+      const expectedRows = eligible.flatMap((player) => {
+        const club = clubTotals.get(player.clubId);
+        if (club === undefined) return [];
+        const otherOpportunities = club.opportunities - opportunities(player);
+        if (otherOpportunities <= 0) return [];
+        const otherOutputs = club.outputs - outputs(player);
+        return [{
+          player,
+          score: opportunities(player) * otherOutputs / otherOpportunities,
+        }];
+      }).sort((left, right) => right.score - left.score
+        || left.player.playerId.localeCompare(right.player.playerId))
+        .slice(0, 10).map(({ player }) => player);
+      const ranks: Readonly<Record<RenewalLadderRung, readonly OwnerAttributionPlayerSeasonFact[]>> = {
+        quality: rankTopTenPlayers(eligible, ({ currentAbility }) => currentAbility),
+        opportunity_rate: rankTopTenPlayers(
+          eligible.filter(({ minutes }) => minutes >= 900),
+          (player) => opportunities(player) * 900 / player.minutes,
+        ),
+        raw_opportunity: rankTopTenPlayers(eligible, opportunities),
+        club_expected_output: expectedRows,
+        actual_output: rankTopTenPlayers(eligible, outputs),
+      };
+      for (const rung of RENEWAL_LADDER_RUNGS) {
+        if (ranks[rung].length !== 10) {
+          reconciliationFailureCount += 1;
+          continue;
+        }
+        for (const player of ranks[rung]) {
+          const origin = originByPlayerId.get(player.playerId);
+          if (origin === undefined || origin.origin === "unknown") {
+            unknownOriginCount += 1;
+          } else if (isCareerGeneratedOrigin(origin.origin)) {
+            counts[rung].generated += 1;
+          } else if (isOpeningOrigin(origin.origin)) {
+            counts[rung].opening += 1;
+          }
+        }
+      }
+    }
+    return { lane, counts };
+  });
+  return {
+    worldSeed: input.worldSeed,
+    competitionCount: competitionIds.length,
+    laneRungs,
+    reconciliationFailureCount,
+    unknownOriginCount,
+  };
+}
+
+/** Applies the frozen L6.26 ladder truth table independently per lane. */
+export function evaluateRenewalLadder(input: {
+  readonly worlds: readonly RenewalLadderWorldFacts[];
+  readonly seasonCount: number;
+}) {
+  const laneDecisions = RENEWAL_LADDER_LANES.map((lane) => {
+    const worldRows = input.worlds.map((world) => world.laneRungs.find((row) => row.lane === lane)!);
+    const counts = Object.fromEntries(RENEWAL_LADDER_RUNGS.map((rung) => [rung, {
+      generated: worldRows.reduce((total, row) => total + row.counts[rung].generated, 0),
+      opening: worldRows.reduce((total, row) => total + row.counts[rung].opening, 0),
+    }])) as Record<RenewalLadderRung, RenewalLadderOriginCounts>;
+    const shares = renewalLadderShares(counts);
+    const owner = renewalLadderOwner(shares);
+    const coherenceCount = input.worlds.filter((world) => {
+      const row = world.laneRungs.find((candidate) => candidate.lane === lane)!;
+      return renewalLadderOwner(renewalLadderShares(row.counts)) === owner;
+    }).length;
+    const identified = owner !== "mixed" && coherenceCount >= 5;
+    return {
+      lane,
+      decision: identified ? "OWNER_IDENTIFIED" as const : "MIXED" as const,
+      owner: identified ? owner : "mixed" as const,
+      counts,
+      shares,
+      coherenceCount,
+    };
+  });
+  const competitionCount = input.worlds.reduce((total, world) => total + world.competitionCount, 0);
+  const reconciliationFailureCount = input.worlds.reduce(
+    (total, world) => total + world.reconciliationFailureCount,
+    0,
+  );
+  const unknownOriginCount = input.worlds.reduce(
+    (total, world) => total + world.unknownOriginCount,
+    0,
+  );
+  const rungSlotCounts = Object.fromEntries(RENEWAL_LADDER_RUNGS.map((rung) => [
+    rung,
+    laneDecisions.reduce((total, lane) =>
+      total + lane.counts[rung].generated + lane.counts[rung].opening, 0),
+  ])) as Record<RenewalLadderRung, number>;
+  const structuralFailure = input.worlds.length !== 7
+    || new Set(input.worlds.map(({ worldSeed }) => worldSeed)).size !== 7
+    || input.seasonCount !== 10
+    || competitionCount !== 21
+    || reconciliationFailureCount > 0
+    || unknownOriginCount > 0
+    || RENEWAL_LADDER_RUNGS.some((rung) => rungSlotCounts[rung] !== 420);
+  const identifiedCount = laneDecisions.filter(({ decision }) => decision === "OWNER_IDENTIFIED").length;
+  return {
+    decision: structuralFailure
+      ? "STOP_RETHINK" as const
+      : identifiedCount === 2
+        ? "OWNER_IDENTIFIED" as const
+        : identifiedCount === 1
+          ? "PARTIAL_OWNER" as const
+          : "MIXED" as const,
+    laneDecisions,
+    competitionCount,
+    rungSlotCounts,
+    reconciliationFailureCount,
+    unknownOriginCount,
+    worlds: input.worlds,
+  };
+}
+
+function renewalLadderShares(
+  counts: Readonly<Record<RenewalLadderRung, RenewalLadderOriginCounts>>,
+): Record<RenewalLadderRung, number | "not_observed"> {
+  return Object.fromEntries(RENEWAL_LADDER_RUNGS.map((rung) => [
+    rung,
+    observedShare(counts[rung].generated, counts[rung].generated + counts[rung].opening),
+  ])) as Record<RenewalLadderRung, number | "not_observed">;
+}
+
+function renewalLadderOwner(
+  shares: Readonly<Record<RenewalLadderRung, number | "not_observed">>,
+): "individual_output_variance" | "team_conversion_environment" | "selection_volume"
+  | "actor_allocation" | "quality_supply" | "mixed" {
+  const { quality, opportunity_rate, raw_opportunity, club_expected_output, actual_output } = shares;
+  if (
+    quality === "not_observed"
+    || opportunity_rate === "not_observed"
+    || raw_opportunity === "not_observed"
+    || club_expected_output === "not_observed"
+    || actual_output === "not_observed"
+  ) return "mixed";
+  if (club_expected_output >= 0.50 && club_expected_output - actual_output >= 0.05) {
+    return "individual_output_variance";
+  }
+  if (raw_opportunity >= 0.50) return "team_conversion_environment";
+  if (opportunity_rate >= 0.50 && raw_opportunity < 0.50) return "selection_volume";
+  if (quality >= 0.50 && opportunity_rate < 0.50) return "actor_allocation";
+  return quality < 0.50 ? "quality_supply" : "mixed";
+}
+
+function emptyRenewalLadderCounts(): Record<
+  RenewalLadderRung,
+  { generated: number; opening: number }
+> {
+  return Object.fromEntries(RENEWAL_LADDER_RUNGS.map((rung) => [
+    rung,
+    { generated: 0, opening: 0 },
+  ])) as Record<RenewalLadderRung, { generated: number; opening: number }>;
+}
+
+function rankTopTenPlayers(
+  rows: readonly OwnerAttributionPlayerSeasonFact[],
+  score: (row: OwnerAttributionPlayerSeasonFact) => number,
+): readonly OwnerAttributionPlayerSeasonFact[] {
+  return [...rows].sort((left, right) => score(right) - score(left)
+    || left.playerId.localeCompare(right.playerId)).slice(0, 10);
+}
+
+function isOpeningOrigin(origin: GenerationalOrigin): boolean {
+  return origin === "opening_senior" || origin === "opening_academy";
+}
+
 function lifecycleDivergenceReason(
   source: GeneratedPlayerLifecycleFact,
   target: GeneratedPlayerLifecycleFact | undefined,

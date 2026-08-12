@@ -2,7 +2,8 @@
 
 ## Status
 
-Planned and active. Cached observation only; no gameplay correction.
+Done: `OWNER_IDENTIFIED`; `quality_supply` owns both lanes with `7/7`
+world coherence. Cached observation only; no gameplay correction.
 
 ## User-Facing Reason
 
@@ -79,6 +80,29 @@ the renewal checkpoints. Neither is derived from L6.25 output.
 
 No engine, content, domain, persistence, web, HTML, coefficient, save change or
 new report entrypoint.
+
+## Outcome
+
+Both byte-identical reads completed with zero unknown-origin or reconciliation
+failures and SHA-256
+`17e60af0a3b1bd96c6a04a021d95d382fc9f17742721b1b33ea7d5b410ac183f`.
+Each rung contains the frozen `420` slots.
+
+| Lane | Quality | Rate | Raw opportunity | Club expected | Actual | Owner |
+| --- | ---: | ---: | ---: | ---: | ---: | --- |
+| scorer | `0.1429` | `0.2095` | `0.2619` | `0.2238` | `0.1571` | `quality_supply` |
+| creator | `0.1429` | `0.2286` | `0.2667` | `0.1857` | `0.2476` | `quality_supply` |
+
+The generated cohort gains representation after quality in both lanes. AI
+selection, minutes and opportunity allocation therefore do not suppress an
+otherwise stationary-quality population. The correction owner is the
+age-conditioned player-quality supply; no origin preference, protected minute
+share or output bonus is authorized.
+
+L6.27 compares like-aged opening and career-generated population without using
+goals, assists or leaderboard membership. It must locate whether the stationary
+gap is already present in stored ceilings or appears during development before
+any generator value changes.
 
 ## Required Checks
 

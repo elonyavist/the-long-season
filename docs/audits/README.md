@@ -16,6 +16,10 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_L6_26_OUTCOME_UNCONDITIONED_RENEWAL_LADDER.md` —
+  **`OWNER_IDENTIFIED`: `quality_supply` in both lanes.** Generated share rises
+  after the quality rung, closing AI selection and opportunity suppression.
+
 - `PHASE_81A_CHECKPOINT_L6_25_OUTCOME_CONDITIONING_STOP.md` — **`STOP /
   RETHINK`.** Top-ten conversion was used to explain top-ten membership; the
   circular comparator and its report code were removed.

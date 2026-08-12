@@ -23,10 +23,10 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **L6.26 active:** L6.25 stopped because selecting leaders by output
-  and then comparing output conversion is circular; its code was removed.
-  L6.26 ranks quality, opportunity rate/volume, leave-one-out club expected
-  output and actual output before assigning renewal owners per lane.
+- Phase 81A **L6.26 `OWNER_IDENTIFIED`:** generated quality share is `0.1429`
+  in both lanes and rises after quality; `quality_supply` owns scorer and creator
+  with `7/7` coherence. L6.27 separates stationary ceiling supply from realized
+  development without goals, assists, leader ranks or origin-aware selection.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;
   conversion `0.7260` and ordinary assisted share `0.7540` remain healthy.
 - Phase 81A **L6.3G `REFINE`:** `8000` yields `1.4692/1.4645` direct-free-kick

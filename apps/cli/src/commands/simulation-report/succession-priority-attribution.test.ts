@@ -7,6 +7,7 @@ import {
   evaluateAcademyProspectClassConversion,
   evaluateGeneratedLeaderLaneConversion,
   evaluateGeneratedPlayerLifecycleAttribution,
+  evaluateRenewalLadder,
   evaluateLeaderConversionFunnel,
   evaluateLeaderCeilingDistance,
   evaluateLeaderQualityFeasibility,
@@ -21,6 +22,7 @@ import {
   type SuccessionPriorityArmSummary,
   type GeneratedPlayerLifecycleFact,
   type GeneratedLeaderLaneWorldFacts,
+  type RenewalLadderWorldFacts,
 } from "./succession-priority-attribution.ts";
 
 test("bounded succession passes only with paired renewal and guardrails", () => {
@@ -660,6 +662,45 @@ test("generated leader-lane conversion stops on an unreachable real branch", () 
   assert.deepEqual(result.unreachableStages, ["rank_cutoff"]);
 });
 
+test("outcome-unconditioned renewal ladder identifies lane-local owners", () => {
+  const worlds = Array.from({ length: 7 }, (_, index) => renewalLadderWorld(
+    `renewal-ladder-world-${index + 1}`,
+  ));
+  const result = evaluateRenewalLadder({ worlds, seasonCount: 10 });
+
+  assert.equal(result.decision, "OWNER_IDENTIFIED");
+  assert.deepEqual(result.laneDecisions.map(({ owner }) => owner), [
+    "quality_supply",
+    "actor_allocation",
+  ]);
+  assert.deepEqual(result.rungSlotCounts, {
+    quality: 420,
+    opportunity_rate: 420,
+    raw_opportunity: 420,
+    club_expected_output: 420,
+    actual_output: 420,
+  });
+});
+
+test("outcome-unconditioned renewal ladder fails closed on a missing rank", () => {
+  const worlds = Array.from({ length: 7 }, (_, index) => renewalLadderWorld(
+    `renewal-ladder-world-${index + 1}`,
+  ));
+  const first = worlds[0]!;
+  const scorer = first.laneRungs[0]!;
+  const broken: RenewalLadderWorldFacts = {
+    ...first,
+    laneRungs: [{
+      ...scorer,
+      counts: { ...scorer.counts, quality: { generated: 9, opening: 20 } },
+    }, first.laneRungs[1]!],
+  };
+  const result = evaluateRenewalLadder({ worlds: [broken, ...worlds.slice(1)], seasonCount: 10 });
+
+  assert.equal(result.decision, "STOP_RETHINK");
+  assert.equal(result.rungSlotCounts.quality, 419);
+});
+
 function arm(
   local: number,
   generated: number,
@@ -723,6 +764,38 @@ function leaderLaneWorld(input: {
     }],
     reconciliationFailureCount: 0,
     unclassifiableCount: 0,
+  };
+}
+
+function renewalLadderWorld(worldSeed: string): RenewalLadderWorldFacts {
+  const counts = (generated: number) => ({ generated, opening: 30 - generated });
+  return {
+    worldSeed,
+    competitionCount: 3,
+    laneRungs: [
+      {
+        lane: "scorer",
+        counts: {
+          quality: counts(10),
+          opportunity_rate: counts(9),
+          raw_opportunity: counts(8),
+          club_expected_output: counts(8),
+          actual_output: counts(7),
+        },
+      },
+      {
+        lane: "creator",
+        counts: {
+          quality: counts(20),
+          opportunity_rate: counts(10),
+          raw_opportunity: counts(9),
+          club_expected_output: counts(9),
+          actual_output: counts(8),
+        },
+      },
+    ],
+    reconciliationFailureCount: 0,
+    unknownOriginCount: 0,
   };
 }
 
