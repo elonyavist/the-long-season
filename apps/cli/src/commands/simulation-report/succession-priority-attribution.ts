@@ -305,6 +305,7 @@ export interface LeaderConversionWorldFacts {
   readonly generatedPlayerCount: number;
   readonly representedRolePlayerCount: number;
   readonly unrepresentedRolePlayerCount: number;
+  readonly recentGeneratedExcludedCount: number;
   readonly counts: Readonly<Record<LeaderConversionStage, number>>;
   readonly reconciliationFailureCount: number;
 }
@@ -322,15 +323,17 @@ export function leaderConversionWorldFacts(input: {
   readonly playerOrigins: readonly {
     readonly playerId: string;
     readonly origin: GenerationalOrigin;
+    readonly generatedSeasonNumber: number;
   }[];
+  readonly cohort: "all_generated" | "mature_by_season_six";
 }): LeaderConversionWorldFacts {
   const seasonTen = input.playerSeasons.filter(({ seasonNumber }) => seasonNumber === 10);
   const competitionIds = [...new Set(seasonTen.map(({ competitionId }) => competitionId))].sort();
-  const originByPlayerId = new Map<string, GenerationalOrigin>();
+  const originByPlayerId = new Map<string, (typeof input.playerOrigins)[number]>();
   let reconciliationFailureCount = 0;
   for (const fact of input.playerOrigins) {
     if (originByPlayerId.has(fact.playerId)) reconciliationFailureCount += 1;
-    originByPlayerId.set(fact.playerId, fact.origin);
+    originByPlayerId.set(fact.playerId, fact);
   }
   const counts = Object.fromEntries(
     LEADER_CONVERSION_STAGES.map((stage) => [stage, 0]),
@@ -339,6 +342,7 @@ export function leaderConversionWorldFacts(input: {
   let generatedPlayerCount = 0;
   let representedRolePlayerCount = 0;
   let unrepresentedRolePlayerCount = 0;
+  let recentGeneratedExcludedCount = 0;
   const observedPlayerKeys = new Set<string>();
 
   for (const competitionId of competitionIds) {
@@ -364,12 +368,19 @@ export function leaderConversionWorldFacts(input: {
       const playerKey = `${competitionId}|${player.playerId}`;
       if (observedPlayerKeys.has(playerKey)) reconciliationFailureCount += 1;
       observedPlayerKeys.add(playerKey);
-      const origin = originByPlayerId.get(player.playerId);
-      if (origin === undefined) {
+      const originFact = originByPlayerId.get(player.playerId);
+      if (originFact === undefined) {
         reconciliationFailureCount += 1;
         continue;
       }
-      if (!isCareerGeneratedOrigin(origin)) continue;
+      if (!isCareerGeneratedOrigin(originFact.origin)) continue;
+      if (
+        input.cohort === "mature_by_season_six"
+        && originFact.generatedSeasonNumber > 6
+      ) {
+        recentGeneratedExcludedCount += 1;
+        continue;
+      }
       generatedPlayerCount += 1;
       const qualityFloor = qualityFloorByRole.get(player.role);
       if (qualityFloor === undefined) {
@@ -398,6 +409,7 @@ export function leaderConversionWorldFacts(input: {
     generatedPlayerCount,
     representedRolePlayerCount,
     unrepresentedRolePlayerCount,
+    recentGeneratedExcludedCount,
     counts,
     reconciliationFailureCount,
   };
@@ -407,6 +419,7 @@ export function leaderConversionWorldFacts(input: {
 export function evaluateLeaderConversionFunnel(input: {
   readonly worlds: readonly LeaderConversionWorldFacts[];
   readonly seasonCount: number;
+  readonly minimumCohortSize: number;
 }) {
   const counts = Object.fromEntries(
     LEADER_CONVERSION_STAGES.map((stage) => [
@@ -436,7 +449,7 @@ export function evaluateLeaderConversionFunnel(input: {
     || competitionCount !== 21
     || leaderSlotCount !== 420
     || reconciliationFailureCount > 0
-    || representedRolePlayerCount < 100
+    || representedRolePlayerCount < input.minimumCohortSize
     || unreachableStages.length > 0;
   const failureStages = LEADER_CONVERSION_STAGES.filter(
     (stage): stage is Exclude<LeaderConversionStage, "season_ten_leader"> =>

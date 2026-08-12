@@ -2,7 +2,8 @@
 
 ## Status
 
-Done - `OWNER_IDENTIFIED: leader_quality_supply` on 2026-08-12.
+Done - broad-population owner recorded on 2026-08-12; gameplay authorization
+superseded by L6.15B's mature denominator.
 
 ## User-Facing Reason
 
@@ -123,5 +124,8 @@ is the largest stage in every world. The result identifies
 `leader_quality_supply`; material selection and downstream output remain real
 but secondary.
 
-The next checkpoint must separate insufficient stored ceiling from sufficient
-ceiling that was not realized. No gameplay owner opens before that split.
+This population also includes players generated in seasons seven through ten.
+They have not had a mature career window, so the `77.13%` broad-population owner
+cannot authorize gameplay. L6.15B repeats the unchanged classifier using the
+existing `generatedSeasonNumber <= 6` mature-intake boundary before any ceiling
+or development split.

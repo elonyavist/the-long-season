@@ -239,7 +239,9 @@ test("leader conversion compares generated players with leaders of the same role
       origin: playerId.startsWith("generated-")
         ? "annual_academy_intake" as const
         : "opening_senior" as const,
+      generatedSeasonNumber: playerId.startsWith("generated-") ? 1 : 0,
     })),
+    cohort: "all_generated",
   });
 
   assert.equal(facts.leaderSlotCount, 20);
@@ -260,6 +262,7 @@ test("leader conversion identifies only a reachable majority owner", () => {
     generatedPlayerCount: 43,
     representedRolePlayerCount: 42,
     unrepresentedRolePlayerCount: 1,
+    recentGeneratedExcludedCount: 0,
     counts: {
       season_ten_leader: 1,
       below_role_leader_quality: 30,
@@ -268,7 +271,11 @@ test("leader conversion identifies only a reachable majority owner", () => {
     },
     reconciliationFailureCount: 0,
   }));
-  const result = evaluateLeaderConversionFunnel({ worlds, seasonCount: 10 });
+  const result = evaluateLeaderConversionFunnel({
+    worlds,
+    seasonCount: 10,
+    minimumCohortSize: 100,
+  });
 
   assert.equal(result.decision, "OWNER_IDENTIFIED");
   assert.equal(result.owner, "leader_quality_supply");
@@ -285,6 +292,7 @@ test("leader conversion fails closed when a declared stage is unreachable", () =
     generatedPlayerCount: 30,
     representedRolePlayerCount: 30,
     unrepresentedRolePlayerCount: 0,
+    recentGeneratedExcludedCount: 0,
     counts: {
       season_ten_leader: 5,
       below_role_leader_quality: 20,
@@ -293,10 +301,47 @@ test("leader conversion fails closed when a declared stage is unreachable", () =
     },
     reconciliationFailureCount: 0,
   }));
-  const result = evaluateLeaderConversionFunnel({ worlds, seasonCount: 10 });
+  const result = evaluateLeaderConversionFunnel({
+    worlds,
+    seasonCount: 10,
+    minimumCohortSize: 100,
+  });
 
   assert.equal(result.decision, "STOP_RETHINK");
   assert.deepEqual(result.unreachableStages, ["quality_ready_below_900_minutes"]);
+});
+
+test("mature leader conversion excludes only players generated after season six", () => {
+  const opening = Array.from({ length: 10 }, (_, index) => playerSeason({
+    playerId: `opening-${index}`,
+    currentAbility: 12,
+    minutes: 2_000,
+    goals: 20 - index,
+    assists: 10 - index,
+  }));
+  const rows = [
+    ...opening,
+    playerSeason({ playerId: "mature", currentAbility: 11, minutes: 2_000 }),
+    playerSeason({ playerId: "recent", currentAbility: 11, minutes: 2_000 }),
+  ];
+  const facts = leaderConversionWorldFacts({
+    worldSeed: "world-1",
+    playerSeasons: rows,
+    playerOrigins: [
+      ...opening.map(({ playerId }) => ({
+        playerId,
+        origin: "opening_senior" as const,
+        generatedSeasonNumber: 0,
+      })),
+      { playerId: "mature", origin: "annual_academy_intake", generatedSeasonNumber: 6 },
+      { playerId: "recent", origin: "annual_senior_intake", generatedSeasonNumber: 7 },
+    ],
+    cohort: "mature_by_season_six",
+  });
+
+  assert.equal(facts.generatedPlayerCount, 1);
+  assert.equal(facts.recentGeneratedExcludedCount, 1);
+  assert.equal(facts.counts.below_role_leader_quality, 1);
 });
 
 function arm(

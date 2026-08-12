@@ -16,10 +16,15 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_L6_15B_MATURE_LEADER_CONVERSION.md` -
+  **OWNER_IDENTIFIED: leader_quality_supply.** The canonical mature cohort
+  confirms `1,116/1,445` non-leaders below role-local leader quality.
+
 - `PHASE_81A_CHECKPOINT_L6_15_LEADER_CONVERSION.md` - **OWNER_IDENTIFIED:
   leader_quality_supply.** `1,130/1,465` generated non-leaders in represented
   roles are below the role-local leader-quality floor; ceiling feasibility is
-  the next split.
+  the next split. Its broad denominator is superseded for gameplay
+  authorization by L6.15B.
 
 - `PHASE_81A_CHECKPOINT_L6_14_PUBLIC_RUNWAY_SUCCESSION.md` - **STOP /
   RETHINK.** Immediate growth improved, but transfers rose 27.40% and generated
