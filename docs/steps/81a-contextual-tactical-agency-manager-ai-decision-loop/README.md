@@ -307,7 +307,8 @@ contexts; it never owns the analytic diversity gate.
 | 06B29U | [generated leader-lane conversion](06b29u-checkpoint-l6-24-generated-leader-lane-conversion.md) | no | Done: `MIXED` |
 | 06B29V | [overlapping leader-lane deficits](06b29v-checkpoint-l6-25-overlapping-leader-lane-deficits.md) | no | Done: invalid comparator removed |
 | 06B29W | [outcome-unconditioned renewal ladder](06b29w-checkpoint-l6-26-outcome-unconditioned-renewal-ladder.md) | no | Done: quality supply owns both lanes |
-| 06B29X | [age-conditioned population stationarity](06b29x-checkpoint-l6-27-age-conditioned-population-stationarity.md) | no | Active: cached attribution |
+| 06B29X | [age-conditioned population stationarity](06b29x-checkpoint-l6-27-age-conditioned-population-stationarity.md) | no | Done: ceiling supply owns `7/7` |
+| 06B29Y | [exit-linked stationary ceiling regeneration](06b29y-exit-linked-stationary-ceiling-regeneration.md) | yes | Active: paired product candidate |
 | 06C | [Checkpoint B2 conditioned tactical ceiling](06c-checkpoint-b2-conditioned-tactical-ceiling.md) | no | GO authorizes 07 |
 | 07 | [player task execution](07-player-task-execution.md) | yes | Step 08 |
 | 08 | [squad identity and lateral execution](08-squad-identity-and-lateral-execution.md) | yes | Step 09 |

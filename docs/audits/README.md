@@ -16,6 +16,10 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_L6_27_AGE_CONDITIONED_POPULATION_STATIONARITY.md` —
+  **`OWNER_IDENTIFIED: ceiling_supply`.** `853/924` non-ready like-aged
+  generated players have an insufficient stored ceiling, coherent in `7/7`.
+
 - `PHASE_81A_CHECKPOINT_L6_26_OUTCOME_UNCONDITIONED_RENEWAL_LADDER.md` —
   **`OWNER_IDENTIFIED`: `quality_supply` in both lanes.** Generated share rises
   after the quality rung, closing AI selection and opportunity suppression.

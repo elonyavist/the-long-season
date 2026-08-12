@@ -900,6 +900,21 @@ describe("simulation-report planner", () => {
       .toThrow(/refuses measurement overrides/);
   });
 
+  it("freezes L6.27 to the age-conditioned current cache", () => {
+    const profileId = "phase81a-population-stationarity-l6-27-cached";
+    const plan = createSimulationReportPlan({ profileId, workerCount: 7 });
+
+    expect(plan.measurementRequest).toMatchObject({
+      profileId,
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-academy-prospect-class-l6-20-v1",
+    });
+    expect(() => createSimulationReportPlan({ profileId, seasonCount: 9 }))
+      .toThrow(/refuses measurement overrides/);
+  });
+
 
   it("plans no audit work when a custom request lacks the locked shape population", () => {
     const plan = createSimulationReportPlan({

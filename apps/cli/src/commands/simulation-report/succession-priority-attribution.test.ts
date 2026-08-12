@@ -8,6 +8,7 @@ import {
   evaluateGeneratedLeaderLaneConversion,
   evaluateGeneratedPlayerLifecycleAttribution,
   evaluateRenewalLadder,
+  evaluatePopulationStationarity,
   evaluateLeaderConversionFunnel,
   evaluateLeaderCeilingDistance,
   evaluateLeaderQualityFeasibility,
@@ -18,11 +19,13 @@ import {
   leaderConversionWorldFacts,
   leaderCeilingDistanceWorldFacts,
   leaderQualityFeasibilityWorldFacts,
+  populationStationarityWorldFacts,
   successionGrowthFeasibilityStage,
   type SuccessionPriorityArmSummary,
   type GeneratedPlayerLifecycleFact,
   type GeneratedLeaderLaneWorldFacts,
   type RenewalLadderWorldFacts,
+  type PopulationStationarityWorldFacts,
 } from "./succession-priority-attribution.ts";
 
 test("bounded succession passes only with paired renewal and guardrails", () => {
@@ -701,6 +704,69 @@ test("outcome-unconditioned renewal ladder fails closed on a missing rank", () =
   assert.equal(result.rungSlotCounts.quality, 419);
 });
 
+test("age-conditioned stationarity separates ceiling from development", () => {
+  const world = populationStationarityWorldFacts({
+    worldSeed: "stationarity-world-1",
+    cohort: "mature_by_season_six",
+    playerOrigins: [
+      ...Array.from({ length: 3 }, (_, index) => ({
+        playerId: `opening-${index}`,
+        origin: "opening_senior" as const,
+        generatedSeasonNumber: 0,
+      })),
+      { playerId: "ready", origin: "annual_academy_intake", generatedSeasonNumber: 2 },
+      { playerId: "development", origin: "annual_academy_intake", generatedSeasonNumber: 2 },
+      { playerId: "ceiling", origin: "annual_academy_intake", generatedSeasonNumber: 2 },
+    ],
+    playerSeasons: [
+      stationarityPlayerSeason("opening-0", 1, 25, 10, 0),
+      stationarityPlayerSeason("opening-1", 1, 25, 12, 0),
+      stationarityPlayerSeason("opening-2", 1, 25, 14, 0),
+      stationarityPlayerSeason("ready", 10, 25, 12, 0),
+      stationarityPlayerSeason("development", 10, 25, 10, 3),
+      stationarityPlayerSeason("ceiling", 10, 25, 10, 1),
+    ],
+  });
+
+  assert.deepEqual(world.counts, {
+    stationary_ready: 1,
+    development_realization_gap: 1,
+    ceiling_supply_gap: 1,
+    reference_not_observed: 0,
+  });
+  assert.equal(world.cells[0]?.referenceCurrentP50, 12);
+  assert.equal(world.cells[0]?.referenceCurrentP90, 14);
+});
+
+test("population stationarity identifies a coherent ceiling owner", () => {
+  const worlds = Array.from({ length: 7 }, (_, index) => stationarityWorld(
+    `stationarity-${index + 1}`,
+    { stationary_ready: 5, development_realization_gap: 2, ceiling_supply_gap: 8,
+      reference_not_observed: 0 },
+  ));
+  const result = evaluatePopulationStationarity({ worlds, seasonCount: 10 });
+
+  assert.equal(result.decision, "OWNER_IDENTIFIED");
+  assert.equal(result.owner, "ceiling_supply");
+  assert.equal(result.coherenceCount, 7);
+  assert.equal(result.ceilingShare, 0.8);
+});
+
+test("population stationarity fails closed on a sparse comparator", () => {
+  const worlds = Array.from({ length: 7 }, (_, index) => stationarityWorld(
+    `stationarity-${index + 1}`,
+    { stationary_ready: 5, development_realization_gap: 2, ceiling_supply_gap: 2,
+      reference_not_observed: 2 },
+  ));
+  const result = evaluatePopulationStationarity({ worlds, seasonCount: 10 });
+
+  assert.equal(result.decision, "STOP_RETHINK");
+  assert.notEqual(result.referenceNotObservedShare, "not_observed");
+  if (result.referenceNotObservedShare !== "not_observed") {
+    assert.equal(result.referenceNotObservedShare > 0.1, true);
+  }
+});
+
 function arm(
   local: number,
   generated: number,
@@ -796,6 +862,49 @@ function renewalLadderWorld(worldSeed: string): RenewalLadderWorldFacts {
     ],
     reconciliationFailureCount: 0,
     unknownOriginCount: 0,
+  };
+}
+
+function stationarityWorld(
+  worldSeed: string,
+  counts: PopulationStationarityWorldFacts["counts"],
+): PopulationStationarityWorldFacts {
+  return {
+    worldSeed,
+    competitionCount: 3,
+    referencePlayerCount: 30,
+    replacementPlayerCount: Object.values(counts).reduce((total, count) => total + count, 0),
+    counts,
+    cells: [],
+    reconciliationFailureCount: 0,
+    unknownOriginCount: 0,
+  };
+}
+
+function stationarityPlayerSeason(
+  playerId: string,
+  seasonNumber: number,
+  age: number,
+  currentAbility: number,
+  potentialRoom: number,
+) {
+  return {
+    competitionId: "competition:ita-1",
+    seasonNumber,
+    playerId,
+    clubId: "club:ita-1-01",
+    age,
+    role: "striker" as const,
+    currentAbility,
+    potentialRoom,
+    appearances: 0,
+    starts: 0,
+    minutes: 0,
+    shots: 0,
+    shotsOnTarget: 0,
+    creatorNominations: 0,
+    goals: 0,
+    assists: 0,
   };
 }
 

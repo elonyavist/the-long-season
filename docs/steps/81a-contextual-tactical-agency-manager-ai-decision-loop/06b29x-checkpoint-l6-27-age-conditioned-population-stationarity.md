@@ -2,7 +2,8 @@
 
 ## Status
 
-Planned and active. Cached observation only; no gameplay correction.
+Done: `OWNER_IDENTIFIED: ceiling_supply`, coherent in `7/7` worlds. Cached
+observation only; no gameplay correction.
 
 ## User-Facing Reason
 
@@ -72,6 +73,30 @@ role policy. No target is fitted to this checkpoint's output.
 
 No engine, content, domain, persistence, web, HTML, coefficient, save change or
 new report entrypoint.
+
+## Outcome
+
+The two reads were byte-identical with SHA-256
+`82121bdc8a01080a2e502f969ff330f2dd11e5a7cab67b4a89a70d7bf85324fc`.
+All `21` competition observations reconciled; every replacement row found a
+populated role comparator and no origin was unknown.
+
+| State | Players | Share of all replacements |
+| --- | ---: | ---: |
+| stationary ready | `259` | `0.2189` |
+| development realization gap | `71` | `0.0600` |
+| ceiling supply gap | `853` | `0.7210` |
+| reference not observed | `0` | `0.0000` |
+
+Among the `924` non-ready players, `853/924 = 0.9232` fail before development:
+their stored ceiling is already below the like-aged role/division reference.
+The same owner holds in every world. L6.26's quality-supply result is therefore
+located at the annual population ceiling, not lineup preference, match output,
+minutes, aging or the development curve.
+
+Previous scalar frequency and ceiling-tail experiments remain rejected. L6.28
+uses a different structural contract: outgoing senior talent supplies bounded,
+role-local replacement ceilings to the same rollover's routine academy intake.
 
 ## Required Checks
 

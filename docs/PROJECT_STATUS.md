@@ -23,10 +23,10 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **L6.26 `OWNER_IDENTIFIED`:** generated quality share is `0.1429`
-  in both lanes and rises after quality; `quality_supply` owns scorer and creator
-  with `7/7` coherence. L6.27 separates stationary ceiling supply from realized
-  development without goals, assists, leader ranks or origin-aware selection.
+- Phase 81A **L6.27 `OWNER_IDENTIFIED`:** `853/924 = 0.9232` non-ready,
+  like-aged generated players have insufficient stored ceiling; only `71` have
+  enough ceiling but unrealized growth. L6.28 tests structural exit-linked,
+  role-local regeneration; scalar frequency/tail changes remain rejected.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;
   conversion `0.7260` and ordinary assisted share `0.7540` remain healthy.
 - Phase 81A **L6.3G `REFINE`:** `8000` yields `1.4692/1.4645` direct-free-kick

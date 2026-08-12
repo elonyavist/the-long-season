@@ -112,6 +112,7 @@ import {
   evaluateGeneratedLeaderLaneConversion,
   evaluateGeneratedPlayerLifecycleAttribution,
   evaluateRenewalLadder,
+  evaluatePopulationStationarity,
   evaluateLeaderConversionFunnel,
   evaluateLeaderCeilingDistance,
   evaluateLeaderQualityFeasibility,
@@ -124,6 +125,7 @@ import {
   leaderConversionWorldFacts,
   leaderConversionPlayerFacts,
   renewalLadderWorldFacts,
+  populationStationarityWorldFacts,
   generatedLeaderLaneWorldFacts,
   leaderCeilingDistanceWorldFacts,
   leaderQualityFeasibilityWorldFacts,
@@ -186,7 +188,8 @@ export type CareerCheckpointKind =
   | "academy_prospect_class_l6_20"
   | "generated_player_lifecycle_l6_23"
   | "generated_leader_lane_l6_24"
-  | "renewal_ladder_l6_26";
+  | "renewal_ladder_l6_26"
+  | "population_stationarity_l6_27";
 
 /** Versioned readers sharing the one product-versus-legacy contest producer. */
 export type StrengthContestMode = "canary" | "full" | "retry_canary" | "retry_full";
@@ -239,6 +242,7 @@ const CHECKPOINT_OBSERVES_GENERATIONAL_SUCCESSION = {
   generated_player_lifecycle_l6_23: true,
   generated_leader_lane_l6_24: true,
   renewal_ladder_l6_26: true,
+  population_stationarity_l6_27: true,
 } as const satisfies Readonly<Record<CareerCheckpointKind, boolean>>;
 
 /** Keeps observer and checkpoint-section routing on one exhaustive policy. */
@@ -1462,6 +1466,8 @@ export async function createCareerSectionsFacts(input: {
       ? evaluateGeneratedLeaderLaneCheckpoint(worlds, input.seasonCount)
     : input.leagueDiversityProfile.checkpointKind === "renewal_ladder_l6_26"
       ? evaluateRenewalLadderCheckpoint(worlds, input.seasonCount)
+    : input.leagueDiversityProfile.checkpointKind === "population_stationarity_l6_27"
+      ? evaluatePopulationStationarityCheckpoint(worlds, input.seasonCount)
     : input.leagueDiversityProfile.checkpointKind === "strength_contest_l6_1d"
       ? evaluateStrengthContestCheckpoint(
           worlds.map(requiredOwnerAttributionFacts),
@@ -3638,6 +3644,25 @@ function evaluateRenewalLadderCheckpoint(
       const owner = requiredOwnerAttributionFacts(world);
       const architecture = requiredRenewalArchitectureFacts(world);
       return renewalLadderWorldFacts({
+        worldSeed: world.seed,
+        playerSeasons: owner.playerSeasons,
+        playerOrigins: architecture.playerOrigins,
+        cohort: "mature_by_season_six",
+      });
+    }),
+    seasonCount,
+  });
+}
+
+function evaluatePopulationStationarityCheckpoint(
+  worlds: readonly CareerWorldProjection[],
+  seasonCount: number,
+) {
+  return evaluatePopulationStationarity({
+    worlds: worlds.map((world) => {
+      const owner = requiredOwnerAttributionFacts(world);
+      const architecture = requiredRenewalArchitectureFacts(world);
+      return populationStationarityWorldFacts({
         worldSeed: world.seed,
         playerSeasons: owner.playerSeasons,
         playerOrigins: architecture.playerOrigins,
