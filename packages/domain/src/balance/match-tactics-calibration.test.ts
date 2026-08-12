@@ -468,6 +468,7 @@ function validSemantics(): TacticalSemanticsCalibrationConfig {
     },
     scoreStateCommitmentBasisPoints: 600,
     shapeControlShareBasisPoints: 5_000,
+    routeCapacitySeparationBasisPoints: 16_000,
     routeQualityBiasBasisPoints: 2_500,
     routeSelectionSharpness: 3,
   };
@@ -481,6 +482,18 @@ test("lateral focus affinity is required, positive and bounded", () => {
   assert.throws(
     () => validateMatchTacticsCalibration(withSemantics({ lateralFocusAffinityBasisPoints: 10_001 })),
     /Lateral focus affinity must be a positive basis-point share/,
+  );
+});
+
+test("route-capacity separation is a bounded multiplier, not a share", () => {
+  validateMatchTacticsCalibration(withSemantics({ routeCapacitySeparationBasisPoints: 16_000 }));
+  assert.throws(
+    () => validateMatchTacticsCalibration(withSemantics({ routeCapacitySeparationBasisPoints: 0 })),
+    /Route-capacity separation must be a positive fixed-point multiplier/,
+  );
+  assert.throws(
+    () => validateMatchTacticsCalibration(withSemantics({ routeCapacitySeparationBasisPoints: 40_001 })),
+    /Route-capacity separation must be a positive fixed-point multiplier/,
   );
 });
 

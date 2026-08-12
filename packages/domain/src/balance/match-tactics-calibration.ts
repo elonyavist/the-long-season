@@ -437,6 +437,12 @@ export interface TacticalSemanticsCalibrationConfig {
    */
   readonly shapeControlShareBasisPoints: number;
   /**
+   * Fixed-point multiplier turning relative route saturation into opportunity
+   * frequency. `10000` means one route-advantage unit maps one-for-one; values
+   * above it are valid multipliers rather than invalid shares.
+   */
+  readonly routeCapacitySeparationBasisPoints: number;
+  /**
    * How far the route actually taken moves the quality of the chance it made,
    * in basis points, measured from an even contest.
    *
@@ -649,6 +655,7 @@ export type MatchTacticsCalibrationErrorCode =
   | "invalid_commitment_ladder"
   | "invalid_score_state_commitment"
   | "invalid_shape_control_share"
+  | "invalid_route_capacity_separation"
   | "invalid_route_quality_bias"
   | "invalid_route_selection_sharpness"
   | "incomplete_coordination_multipliers"
@@ -888,6 +895,18 @@ export function validateTacticalSemanticsCalibration(config: TacticalSemanticsCa
     );
   }
 
+  const routeCapacitySeparation = config.routeCapacitySeparationBasisPoints;
+  if (
+    !Number.isSafeInteger(routeCapacitySeparation)
+    || routeCapacitySeparation <= 0
+    || routeCapacitySeparation > MAXIMUM_ROUTE_CAPACITY_SEPARATION_BASIS_POINTS
+  ) {
+    throw new MatchTacticsCalibrationError(
+      "invalid_route_capacity_separation",
+      `Route-capacity separation must be a positive fixed-point multiplier no greater than ${MAXIMUM_ROUTE_CAPACITY_SEPARATION_BASIS_POINTS}: ${routeCapacitySeparation}`,
+    );
+  }
+
   const sharpness = config.routeSelectionSharpness;
   if (
     !Number.isSafeInteger(sharpness)
@@ -903,6 +922,9 @@ export function validateTacticalSemanticsCalibration(config: TacticalSemanticsCa
 
 /** Proportional selection: a side spreads itself exactly by capacity. */
 const MINIMUM_ROUTE_SELECTION_SHARPNESS = 1;
+
+/** Prevents route-volume conversion from exceeding the preregistered domain. */
+const MAXIMUM_ROUTE_CAPACITY_SEPARATION_BASIS_POINTS = 40_000;
 
 /**
  * Hardest a side may commit to its best ways through.
@@ -995,7 +1017,7 @@ export function lateralChannelShares(
 }
 
 /** Schema version of the match-tactics calibration asset. */
-export const MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION = 4;
+export const MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION = 5;
 
 /**
  * Derives the exact budget allocated by one role row.

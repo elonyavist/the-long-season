@@ -2,8 +2,8 @@
 
 ## Status
 
-Active. Step 06C5 identified `minute_effect_materiality`; response selection,
-squad identity and the frozen B2 targets remain closed to change.
+Done: `STOP / RETHINK`. All three declared candidates fail; `2500` is restored.
+Response selection, squad identity and the frozen B2 targets remain unchanged.
 
 ## Goal
 
@@ -97,3 +97,21 @@ The first passing declared candidate is adopted or all three are rejected and
 `2500` is restored; complete response materiality and every guardrail are
 reported twice, no selector is changed, and the independent B2 replay assigns
 the next owner without moving a target.
+
+## Result
+
+| candidate | in ceiling / exposure | out ceiling / exposure | decision |
+|---:|---:|---:|---|
+| `4000` | `+0.02314 / -0.02300` | `+0.02688 / -0.02267` | `REFINE` |
+| `5000` | `+0.02331 / -0.02644` | `+0.02674 / -0.02375` | `REFINE` |
+| `6000` | `+0.02427 / -0.02765` | `+0.02943 / -0.02547` | `REFINE` |
+
+Phase 1 and `21/21` population rows pass throughout, but no candidate reaches
+either complete two-set target. The route-quality hypothesis is falsified and
+the product value is restored to `2500`. Step 06C7 may inspect only the other
+contextual minute channel: route advantage translated into opportunity volume.
+
+The candidate-only profile used for these runs was removed at closeout. Its
+artifacts retain the evidence; leaving a command that rejects the final
+calibration would be dead tooling. Step 06C9 instead owns one durable
+current-calibration materiality profile.

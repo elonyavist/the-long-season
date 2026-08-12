@@ -16,6 +16,18 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_ROUTE_QUALITY_VOLUME_INTERACTION.md` — **`STOP / RETHINK`.** The
+  combined endpoint reaches at most `+0.0391/-0.0345`; both candidates are
+  removed and structural minute-path attribution is required.
+
+- `PHASE_81A_CONTEXTUAL_ROUTE_VOLUME_MATERIALITY.md` — **candidate `STOP /
+  RETHINK`, ownership migration accepted.** `16000` reproduces the old `1.6`
+  exactly; `22000/28000/34000` all miss materiality. Endpoint interaction next.
+
+- `PHASE_81A_CONTEXTUAL_ROUTE_QUALITY_MATERIALITY.md` — **`STOP / RETHINK`.**
+  `4000/5000/6000` all miss complete-row materiality; `2500` is restored and
+  contextual route-volume translation is the remaining minute channel.
+
 - `PHASE_81A_CHECKPOINT_B2_REPLAY_MATERIALITY_ATTRIBUTION.md` —
   **`OWNER_IDENTIFIED: minute_effect_materiality`.** Complete nine-response
   rows reconcile 06C4 exactly but optimistic effects reach only about

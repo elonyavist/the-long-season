@@ -512,7 +512,10 @@ function deriveOpportunityRate(
 ): number {
   const rates = simulation.context.engineConfig.rates;
   const routeAdvantage = expectedRouteSaturation(plan) - expectedRouteSaturation(opponentPlan);
-  const routePressure = 1 + routeAdvantage * ROUTE_CAPACITY_SEPARATION;
+  const routeCapacitySeparation =
+    simulation.context.matchTacticsCalibration.tacticalSemantics
+      .routeCapacitySeparationBasisPoints / 10_000;
+  const routePressure = 1 + routeAdvantage * routeCapacitySeparation;
   const rate = rates.baseOpportunityRatePerMinute * routePressure * plan.volumeMultiplier * controlMultiplier;
 
   return clamp(rate, 0, rates.maxOpportunityRatePerMinute);
@@ -548,16 +551,6 @@ function applyOccasionToTelemetry(
         : { home: nextDefendingStats, away: nextAttackingStats },
   };
 }
-
-/**
- * How hard route capacity moves chance volume.
- *
- * Owned here rather than in content because it is the unit conversion between
- * a bounded share and a per-minute rate, not a football judgement. What the
- * shapes do to each other is content's; how a share becomes a rate is the
- * engine's.
- */
-const ROUTE_CAPACITY_SEPARATION = 1.6;
 
 /** Stable RNG stream for choosing which route a side takes this minute. */
 const OPPORTUNITY_ROUTE_STREAM = "opportunity-route";

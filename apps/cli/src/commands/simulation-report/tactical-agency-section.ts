@@ -294,6 +294,21 @@ export interface TacticalAgencyB2MaterialityProfileFacts {
   readonly worldSeeds: readonly string[];
 }
 
+interface TacticalAgencyB2MaterialityMeasurement {
+  readonly sets: readonly {
+    readonly setName: string;
+    readonly worldSeeds: readonly string[];
+    readonly phaseOneDecision: "PASS_PHASE_1" | "REFINE" | "STOP_RETHINK";
+    readonly populationHeld: boolean;
+    readonly attribution: TacticalAgencyConditionedMaterialitySummary | null;
+  }[];
+  readonly owner: TacticalAgencyConditionedMaterialityOwner | "mixed" | "not_evaluated";
+  readonly workerCount: number;
+  readonly elapsedMilliseconds: number;
+  readonly calibrationVersions: Readonly<Record<string, string>>;
+  readonly worldSeeds: readonly string[];
+}
+
 /** B2.1's observational owner decision over the exact B2 population. */
 export interface TacticalAgencyB21ProfileFacts {
   readonly sets: readonly {
@@ -514,8 +529,31 @@ export async function createTacticalAgencyB2ProfileFacts(input: {
 export async function createTacticalAgencyB2MaterialityProfileFacts(input: {
   readonly workerCount: number;
 }): Promise<TacticalAgencyB2MaterialityProfileFacts> {
+  const measured = await measureTacticalAgencyB2Materiality(input.workerCount);
+  const sets = measured.sets.map((set, setIndex) => ({
+    ...set,
+    replayReconciliationHeld: set.attribution !== null
+      && reproducesAcceptedB2Replay(setIndex, set.attribution),
+  }));
+  const reconciliationHeld = sets.every(({ replayReconciliationHeld }) =>
+    replayReconciliationHeld);
+  return {
+    ...measured,
+    sets,
+    decision: !reconciliationHeld
+      ? "STOP_RETHINK"
+      : measured.owner === "mixed"
+        ? "MIXED"
+        : "OWNER_IDENTIFIED",
+  };
+}
+
+/** One complete-row producer for accepted materiality attribution. */
+async function measureTacticalAgencyB2Materiality(
+  workerCount: number,
+): Promise<TacticalAgencyB2MaterialityMeasurement> {
   const startedAt = performance.now();
-  const measured = await measureTacticalAgencyConditionedPopulation(input.workerCount);
+  const measured = await measureTacticalAgencyConditionedPopulation(workerCount);
   if (measured.decision !== "PASS_PHASE_1") {
     return {
       sets: measured.sets.map((set) => ({
@@ -524,28 +562,26 @@ export async function createTacticalAgencyB2MaterialityProfileFacts(input: {
         phaseOneDecision: set.decision,
         populationHeld: set.populationHeld,
         attribution: null,
-        replayReconciliationHeld: false,
       })),
       owner: "not_evaluated",
-      decision: "STOP_RETHINK",
-      workerCount: input.workerCount,
+      workerCount,
       elapsedMilliseconds: performance.now() - startedAt,
       calibrationVersions: measured.calibrationVersions,
       worldSeeds: measured.worldSeeds,
     };
   }
 
-  const sets: TacticalAgencyB2MaterialityProfileFacts["sets"][number][] = [];
+  const sets: TacticalAgencyB2MaterialityMeasurement["sets"][number][] = [];
   for (const [setIndex, set] of measured.sets.entries()) {
     const selected = selectTacticalAgencyConditionedReplayContexts({
       responses: set.responses,
       contexts: set.contexts,
       matchups: set.matchups,
     });
-    const partitions = Array.from({ length: input.workerCount }, () =>
+    const partitions = Array.from({ length: workerCount }, () =>
       [] as typeof selected[number][]);
     for (const [contextIndex, context] of selected.entries()) {
-      (partitions[contextIndex % input.workerCount] as typeof selected[number][]).push(context);
+      (partitions[contextIndex % workerCount] as typeof selected[number][]).push(context);
     }
     const completed = await Promise.all(partitions.map((contexts, partitionIndex) =>
       runTacticalAgencyConditionedMaterialityWorker({
@@ -571,11 +607,8 @@ export async function createTacticalAgencyB2MaterialityProfileFacts(input: {
       phaseOneDecision: set.decision,
       populationHeld: set.populationHeld,
       attribution,
-      replayReconciliationHeld: reproducesAcceptedB2Replay(setIndex, attribution),
     });
   }
-  const reconciliationHeld = sets.every(({ replayReconciliationHeld }) =>
-    replayReconciliationHeld);
   const owners = new Set(sets.flatMap(({ attribution }) =>
     attribution === null ? [] : [attribution.owner]));
   const owner = owners.size === 1
@@ -584,12 +617,7 @@ export async function createTacticalAgencyB2MaterialityProfileFacts(input: {
   return {
     sets,
     owner,
-    decision: !reconciliationHeld
-      ? "STOP_RETHINK"
-      : owner === "mixed"
-        ? "MIXED"
-        : "OWNER_IDENTIFIED",
-    workerCount: input.workerCount,
+    workerCount,
     elapsedMilliseconds: performance.now() - startedAt,
     calibrationVersions: {
       ...measured.calibrationVersions,

@@ -78,6 +78,7 @@ export function matchTacticsCalibrationFixture(): MatchTacticsCalibrationConfig 
       },
       scoreStateCommitmentBasisPoints: 550,
       shapeControlShareBasisPoints: 5_500,
+      routeCapacitySeparationBasisPoints: 16_000,
       routeQualityBiasBasisPoints: 2_500,
       routeSelectionSharpness: 3,
     },
