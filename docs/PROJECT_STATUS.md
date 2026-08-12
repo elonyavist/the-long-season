@@ -23,10 +23,10 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **L6.29A `OWNER_IDENTIFIED: routine`:** all `5,685` accepted
-  prospects reconcile; only `0.3069` are stationary-capable and routine owns
-  `3,713/3,940 = 0.9424` of the deficit in `7/7`. L6.30 tests an exact
-  competition/role quota without changing class, current ability or volume.
+- Phase 81A **L6.30 `STOP / RETHINK`:** the removed quota improves stationary
+  share `0.3069 -> 0.4232`, ready share by `0.0632` and generated leaders by
+  `0.0690`, but misses material gates and changes later intake/exceptional
+  stock. 06B29Z3 tests a stable individual routine-youth runway instead.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;
   conversion `0.7260` and ordinary assisted share `0.7540` remain healthy.
 - Phase 81A **L6.3G `REFINE`:** `8000` yields `1.4692/1.4645` direct-free-kick

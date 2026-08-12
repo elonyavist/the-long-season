@@ -2,7 +2,7 @@
 
 ## Status
 
-Planned and active. Product candidate plus paired checkpoint.
+Done on 2026-08-12: **`STOP / RETHINK`; candidate removed.**
 
 ## User-Facing Reason
 
@@ -62,6 +62,25 @@ Structural mismatch is `STOP / RETHINK`. A reachable clean candidate missing a
 material transition is `REFINE` and is removed. `GO` ships the content rule;
 it does not claim the renewal problem closed until the integrated gates pass.
 
+The paired execution is staged to avoid spending a second long cohort on a
+candidate that is already disproved. The in-sample pair is the first rejection
+gate. The out-of-sample pair runs only if every in-sample structural and
+material-transition gate passes. An in-sample `REFINE` therefore records the
+out-of-sample arm as `not_evaluated`, never as a pass and never as missing
+evidence for a candidate that had already failed. This ordering was frozen
+before the first L6.30 product run.
+
+### Invalid First Pair
+
+The first in-sample pair is invalid and cannot support a product conclusion.
+The registry built the `control`/`candidate` mode, but
+`CareerWorldProjectionInput` did not carry it across the worker boundary. Both
+arms therefore ran the enabled product default. The reconciliation correctly
+returned `STOP_RETHINK`: `2,527` assignments were reported while paired
+generation facts changed zero potentials and every downstream delta was zero.
+The contaminated `facts-v1` caches are superseded, never read again. `facts-v2`
+adds the missing typed worker field and reruns both arms from fresh worlds.
+
 ## Expected Files
 
 - `packages/content/src/generators/career-intake-players.ts` and test;
@@ -69,6 +88,8 @@ it does not claim the renewal problem closed until the integrated gates pass.
   the existing constructive floor needs a public content-owned entry;
 - `packages/content/src/generators/player-generation-bands.ts` or one adjacent
   content asset owning the total target table, and test;
+- `packages/content/src/index.ts` if that asset needs the existing public
+  content boundary; it may export the one owner, never a duplicate table;
 - simulation-report career facts, attribution, registry/planner tests and i18n;
 - this document, generated audit/index, phase README and status.
 
@@ -80,3 +101,21 @@ global uplift, output-conditioned rule or compatibility shim.
 Focused equivalence/reachability tests, typecheck, paired in/out-of-sample 7x10
 runs with exactly seven workers, byte-identical report rebuilds,
 `git diff --check`, graphify update and `pnpm check` alone.
+
+## Outcome
+
+The valid `facts-v2` pair changed `2,527` routine potentials. Generation-time
+stationary share improved `0.3069 -> 0.4232`, season-ten ready share improved
+`0.2189 -> 0.2822`, the ceiling-gap share fell `0.9232 -> 0.8778`, and generated
+leaders rose `0.2714 -> 0.3405`. Those are real effects, but they miss the
+frozen `0.48`, `+0.08`, `0.08` and `5/7` coherence requirements. The candidate
+also changed later role/class populations, national six-star placements
+`154 -> 148`, and introduced `players:top_ten_assist_mean` as a new failure.
+
+The content rule, report profiles, analysis seam and tests were removed in the
+same step. The generated artifacts remain ignored evidence; the durable account
+is
+[`PHASE_81A_CHECKPOINT_L6_30_STATIONARY_CEILING_QUOTA.md`](../../audits/PHASE_81A_CHECKPOINT_L6_30_STATIONARY_CEILING_QUOTA.md).
+L6.30 proves potential supply has leverage, while rejecting a state-conditioned
+quota as its owner. Step 06B29Z3 tests an individual, stable authored runway for
+routine youth.

@@ -16,6 +16,11 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_L6_30_STATIONARY_CEILING_QUOTA.md` — **`STOP /
+  RETHINK`; candidate removed.** The quota improves ready share by `0.0632` and
+  generated leaders by `0.0690`, but misses the frozen transition gates and
+  changes later intake composition and exceptional stock.
+
 - `PHASE_81A_CHECKPOINT_L6_29A_GENERATION_TIME_STATIONARY_CEILING.md` —
   **`OWNER_IDENTIFIED: routine`.** Routine prospects own `3,713/3,940` of the
   full-population ceiling deficit, coherent in `7/7` worlds.
