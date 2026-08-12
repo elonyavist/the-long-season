@@ -23,19 +23,19 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **L6.31 `GO` twice:** the adopted stable routine-youth runway raises
-  ready replacements `+0.1363` in-sample and `+0.1034` OOS, ceiling-gap
-  reduction `0.2127/0.1698` and generated leaders `+0.0810/+0.0905`; exact
-  immediate purity, zero new integrated red. The mutable L6.30 quota is gone.
+- Phase 81A **Checkpoint B2 `REFINE`:** `3/9` best responses, `134/133` local
+  cycles, no universal response; `high_pressing|balanced` covers `2269/2385`
+  contexts (`6.0026/6.3095 > 4`). Population is `21/21` and `19/21`; two OOS
+  leagues have `4-4-2 = 6/18`. 06C1 attributes; Step 07 remains closed.
+- **L6.31 stays green twice:** routine-youth runway improves ready replacements
+  `+0.1363/+0.1034`, leaders `+0.0810/+0.0905`, with exact immediate purity.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;
   conversion `0.7260` and ordinary assisted share `0.7540` remain healthy.
 - Phase 81A **L6.3G `REFINE`:** `8000` yields `1.4692/1.4645` direct-free-kick
-  candidates and `8250` only `0.8688/0.8366` versus real `1.1529`; use an
-  independent rounded `7500` direct-shot choice at `8000`, never an exact fit.
-- Phase 81A **L6.5 `REFINE`:** priority raises division replacement `0.4767 ->
-  0.5604` but lowers local `0.0698 -> 0.0549`. Only `16-18%` of succession
-  acquisitions are 21-29 and about `64%` are 33-plus. L6.6 tests a soft ready-
-  successor tier; generic market expansion remains closed by L6.1C.
+  candidates and `8250` `0.8688/0.8366` versus real `1.1529`; use rounded `7500`.
+- Phase 81A **L6.5 `REFINE`:** priority raises division replacement
+  `0.4767 -> 0.5604` but lowers local `0.0698 -> 0.0549`; only `16-18%` of
+  acquisitions are 21-29, about `64%` 33-plus. Generic expansion stays closed.
 - Step 03A Done; hard-cap probe **`FOUND`**, `21/21` reconciled. Its temporary
   projection hold is resolved by 06B7F1. Checkpoint A's `STOP / RETHINK` and
   frozen before-state stand.

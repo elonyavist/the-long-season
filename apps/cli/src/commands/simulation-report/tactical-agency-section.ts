@@ -1,10 +1,15 @@
 import {
+  buildTacticalAgencyConditionedResponses,
   buildTacticalAgencyStructuralActions,
   buildTacticalAgencyAuditReport,
   poolTacticalAgencyLowBlockResults,
   runTacticalAgencyLowBlockSeries,
+  summarizeTacticalAgencyConditionedAnalysis,
   summarizeTacticalAgencyStructuralAnalysis,
   type TacticalAgencyAuditReport,
+  type TacticalAgencyConditionedAnalysis,
+  type TacticalAgencyConditionedContextRow,
+  type TacticalAgencyConditionedMatchupInput,
   type TacticalAgencyRoleSummary,
   type TacticalAgencySelectionRow,
   type TacticalAgencyStructuralAnalysis,
@@ -17,8 +22,10 @@ import {
   buildTacticalAgencyLowBlockInput,
   PRE_PHASE_81A_SQUAD_SKELETON,
   runTacticalAgencyArchetypeCounterfactual,
+  runTacticalAgencyConditionedWorld,
   runTacticalAgencyWorld,
   runTacticalAgencyWorldInWorker,
+  type TacticalAgencyConditionedPopulationRow,
   type TacticalAgencySquadChart,
   type TacticalAgencyWorldResult,
 } from "./tactical-agency-world.ts";
@@ -33,7 +40,14 @@ import {
   type CheckpointA2SetEvaluation,
 } from "./tactical-agency-checkpoint-a2.ts";
 import { measureTacticalShapeQualityBands } from "./tactical-shape-section.ts";
-import { runTacticalAgencyStructuralWorker } from "./tactical-agency-structural-worker.ts";
+import {
+  runTacticalAgencyConditionedWorker,
+  runTacticalAgencyStructuralWorker,
+} from "./tactical-agency-structural-worker.ts";
+import {
+  evaluateLeagueDiversityOpeningGate,
+  type LeagueDiversityOpeningGateVerdict,
+} from "./league-diversity-gate.ts";
 
 /**
  * Phase 81A Step 02 before-state command.
@@ -75,6 +89,18 @@ export const TACTICAL_AGENCY_A2_COUNTERFACTUAL_CLUB_COUNT = 6;
 
 /** World supplying the equal-quality band and versioned engine configuration. */
 export const TACTICAL_AGENCY_B_WORLD_SEED = "phase81a-b-structural-world-v1";
+
+/** B2 uses the exact A2 seed populations, separately and without pooling. */
+export const TACTICAL_AGENCY_B2_SEED_SETS = [
+  {
+    setName: "in-sample (Checkpoint A before-state seeds)",
+    seedPrefix: DEFAULT_TACTICAL_AGENCY_WORLD_SEED,
+  },
+  {
+    setName: "out-of-sample (never used for selection or tuning)",
+    seedPrefix: TACTICAL_AGENCY_A2_OUT_OF_SAMPLE_WORLD_SEED,
+  },
+] as const;
 
 /**
  * Runs the low-block guardrail on the legacy chart and reuses the current arm.
@@ -182,6 +208,27 @@ export interface TacticalAgencyBProfileFacts {
   readonly worldSeeds: readonly [string];
 }
 
+/** One independently decided B2 seed set. */
+export interface TacticalAgencyB2SetFacts {
+  readonly setName: string;
+  readonly worldSeeds: readonly string[];
+  readonly populationRows: readonly TacticalAgencyConditionedPopulationRow[];
+  readonly population: readonly LeagueDiversityOpeningGateVerdict[];
+  readonly populationHeld: boolean;
+  readonly analysis: TacticalAgencyConditionedAnalysis;
+  readonly decision: "PASS_PHASE_1" | "REFINE" | "STOP_RETHINK";
+}
+
+/** Complete B2 Phase-1 result; replay is added only after an analytic pass. */
+export interface TacticalAgencyB2ProfileFacts {
+  readonly sets: readonly TacticalAgencyB2SetFacts[];
+  readonly decision: "PASS_PHASE_1" | "REFINE" | "STOP_RETHINK";
+  readonly workerCount: number;
+  readonly elapsedMilliseconds: number;
+  readonly calibrationVersions: Readonly<Record<string, string>>;
+  readonly worldSeeds: readonly string[];
+}
+
 /**
  * Runs Checkpoint B Phase 1 across seven real worker threads.
  *
@@ -230,6 +277,96 @@ export async function createTacticalAgencyBProfileFacts(input: {
       tacticalAgencyStructural: "phase81a-b-phase1-v1",
     },
     worldSeeds: [TACTICAL_AGENCY_B_WORLD_SEED],
+  };
+}
+
+/** Runs B2 Phase 1 over both frozen real-career seed sets. */
+export async function createTacticalAgencyB2ProfileFacts(input: {
+  readonly workerCount: number;
+}): Promise<TacticalAgencyB2ProfileFacts> {
+  if (input.workerCount !== 7) {
+    throw new Error(`Checkpoint B2 requires exactly 7 workers: ${input.workerCount}`);
+  }
+  const startedAt = performance.now();
+  const responses = buildTacticalAgencyConditionedResponses();
+  const sets: TacticalAgencyB2SetFacts[] = [];
+  const allWorldSeeds: string[] = [];
+  const calibrationVersions = new Set<string>();
+
+  for (const seedSet of TACTICAL_AGENCY_B2_SEED_SETS) {
+    const worldSeeds = Array.from(
+      { length: DEFAULT_TACTICAL_AGENCY_WORLD_COUNT },
+      (_unused, index) => `${seedSet.seedPrefix}-${String(index + 1).padStart(3, "0")}`,
+    );
+    allWorldSeeds.push(...worldSeeds);
+    const worlds = worldSeeds.map((worldSeed) =>
+      runTacticalAgencyConditionedWorld({ worldSeed }));
+    for (const world of worlds) calibrationVersions.add(world.matchTacticsCalibrationVersion);
+    const firstWorld = worlds[0];
+    if (firstWorld === undefined) throw new Error(`B2 set has no worlds: ${seedSet.setName}`);
+    const matchups: TacticalAgencyConditionedMatchupInput[] = worlds.flatMap((world) =>
+      world.matchups.map((matchup) => ({
+        matchupId: matchup.contextId,
+        ownShape: matchup.own.shape,
+        opponentShape: matchup.opponent.shape,
+      })));
+    const contextCount = matchups.length * responses.length;
+    const partitions = Array.from({ length: input.workerCount }, () => [] as number[]);
+    for (let contextIndex = 0; contextIndex < contextCount; contextIndex += 1) {
+      (partitions[contextIndex % input.workerCount] as number[]).push(contextIndex);
+    }
+    const completed = await Promise.all(partitions.map((contextIndexes, partitionIndex) =>
+      runTacticalAgencyConditionedWorker({
+        partitionIndex,
+        responses,
+        matchups,
+        contextIndexes,
+        engineConfig: firstWorld.engineConfig,
+        matchTacticsCalibration: firstWorld.matchTacticsCalibration,
+      })));
+    const contexts: TacticalAgencyConditionedContextRow[] = [];
+    for (const partition of completed.sort((left, right) => left.partitionIndex - right.partitionIndex)) {
+      contexts.push(...partition.contexts);
+    }
+    const analysis = summarizeTacticalAgencyConditionedAnalysis({ responses, contexts });
+    const population = worlds.flatMap(({ populationRows }) =>
+      populationRows.map(evaluateLeagueDiversityOpeningGate));
+    const populationHeld = population.every(({ held }) => held);
+    const decision = analysis.decision === "STOP_RETHINK"
+      ? analysis.decision
+      : populationHeld
+        ? analysis.decision
+        : "REFINE" as const;
+    sets.push({
+      setName: seedSet.setName,
+      worldSeeds,
+      populationRows: worlds.flatMap(({ populationRows }) => populationRows),
+      population,
+      populationHeld,
+      analysis,
+      decision,
+    });
+  }
+
+  if (calibrationVersions.size !== 1) {
+    throw new Error(`B2 worlds disagree about calibration: ${[...calibrationVersions].join(", ")}`);
+  }
+  const decision = sets.every(({ decision }) => decision === "PASS_PHASE_1")
+    ? "PASS_PHASE_1" as const
+    : sets.some(({ decision }) => decision === "STOP_RETHINK")
+      ? "STOP_RETHINK" as const
+      : "REFINE" as const;
+
+  return {
+    sets,
+    decision,
+    workerCount: input.workerCount,
+    elapsedMilliseconds: performance.now() - startedAt,
+    calibrationVersions: {
+      matchTactics: [...calibrationVersions][0] as string,
+      tacticalAgencyConditioned: "phase81a-b2-conditioned-phase1-v1",
+    },
+    worldSeeds: allWorldSeeds,
   };
 }
 

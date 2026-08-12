@@ -313,7 +313,8 @@ contexts; it never owns the analytic diversity gate.
 | 06B29Z1 | [generation-time stationary ceiling distribution](06b29z1-checkpoint-l6-29a-generation-time-stationary-ceiling.md) | no | Done: routine owner |
 | 06B29Z2 | [competition-role stationary ceiling quota](06b29z2-competition-role-stationary-ceiling-quota.md) | yes | Done: `STOP / RETHINK`; removed |
 | 06B29Z3 | [routine-youth stationary runway](06b29z3-routine-youth-stationary-runway.md) | yes | Done: `GO` in-sample and OOS |
-| 06C | [Checkpoint B2 conditioned tactical ceiling](06c-checkpoint-b2-conditioned-tactical-ceiling.md) | no | GO authorizes 07 |
+| 06C | [Checkpoint B2 conditioned tactical ceiling](06c-checkpoint-b2-conditioned-tactical-ceiling.md) | no | Done: `REFINE` |
+| 06C1 | [conditioned response and formation concentration attribution](06c1-conditioned-response-and-formation-concentration-attribution.md) | no | Ready: name correction owners |
 | 07 | [player task execution](07-player-task-execution.md) | yes | Step 08 |
 | 08 | [squad identity and lateral execution](08-squad-identity-and-lateral-execution.md) | yes | Step 09 |
 | 09 | [Checkpoint C player context](09-checkpoint-c-player-context.md) | no | GO authorizes 10 |
@@ -341,6 +342,12 @@ consultable English desktop HTML. Checkpoint B2 holds the squad-selected
 formation fixed and enumerates only `tactic profile + lateralFocus`. The old
 combined-space report remains the before-state; L1 and B2 `GO` are both required
 before Step 07.
+
+**Checkpoint B2 recorded `REFINE`.** Real formation conditioning removes the
+universal response and produces material local cycles, but
+`high_pressing|balanced` still covers about two thirds of contexts and two of
+forty-two league rows exceed the local `4-4-2` concentration gate. Step 06C1
+attributes both findings before any gameplay value moves.
 
 **Amendment A2 preserves L1's `REFINE` and separates its two player-world
 owners.** The committed canary has `395/420` season-ten scorer/assist rows still

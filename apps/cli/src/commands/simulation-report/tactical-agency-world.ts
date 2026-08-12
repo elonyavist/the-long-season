@@ -3,16 +3,21 @@ import { isMainThread, parentPort, Worker, workerData } from "node:worker_thread
 import {
   assignGeneratedSquadIdentities,
   createFakeDomesticWorld,
-  FAKE_DOMESTIC_COMPETITION_IDS,
   generatedRoleIdentityForPosition,
   GENERATED_SQUAD_IDENTITIES,
+  GENERATED_SQUAD_IDENTITY_KEYS,
   selectPlayerValuationConfig,
   squadIdentityPositionForSlot,
   type FakeDomesticWorld,
   type GeneratedSquadIdentityKey,
 } from "@game/content";
-import { generateRoundRobinCalendar, selectCareerAiTeam } from "@game/engine";
 import {
+  generateRoundRobinCalendar,
+  selectCareerAiTeam,
+  type MatchTeamContext,
+} from "@game/engine";
+import {
+  observeTacticalAgencyTeamSelection,
   runTacticalAgencySelectionSeries,
   summarizeTacticalAgencyPrimaryRoles,
   type TacticalAgencyLowBlockSeriesInput,
@@ -23,6 +28,7 @@ import {
 
 import { careerStateFromNewWorld } from "../career/scenarios.ts";
 import type { ClubId, CliCareerState, CliSaveId, PlayerId } from "../career/types.ts";
+import type { LeagueDiversityOpeningGateRow } from "./league-diversity-gate.ts";
 
 /** Competition identity as the CLI names it, through the career aliases. */
 type CliCompetitionId = FakeDomesticWorld["domesticCompetitionWorld"]["competitionIds"][number];
@@ -72,6 +78,28 @@ export interface TacticalAgencyWorldResult {
   readonly elapsedMilliseconds: number;
 }
 
+/** One directed real-squad matchup with both production-selected contexts. */
+export interface TacticalAgencyConditionedMatchup {
+  readonly contextId: string;
+  readonly own: MatchTeamContext;
+  readonly opponent: MatchTeamContext;
+}
+
+/** B2's opening row plus the formation distribution needed for attribution. */
+export interface TacticalAgencyConditionedPopulationRow extends LeagueDiversityOpeningGateRow {
+  readonly formationCounts: Readonly<Record<string, number>>;
+}
+
+/** One B2 world: all domestic clubs selected once and joined to opening gates. */
+export interface TacticalAgencyConditionedWorldResult {
+  readonly worldSeed: string;
+  readonly matchups: readonly TacticalAgencyConditionedMatchup[];
+  readonly populationRows: readonly TacticalAgencyConditionedPopulationRow[];
+  readonly matchTacticsCalibrationVersion: string;
+  readonly engineConfig: FakeDomesticWorld["matchEngineConfig"];
+  readonly matchTacticsCalibration: FakeDomesticWorld["matchTacticsCalibration"];
+}
+
 /** Envelope a worker posts back, so a failure is a message rather than a hang. */
 export type TacticalAgencyWorkerMessage =
   | { readonly ok: true; readonly result: TacticalAgencyWorldResult }
@@ -103,7 +131,12 @@ export function runTacticalAgencyWorld(input: TacticalAgencyWorldInput): Tactica
     seasonStartDate: world.seasonStartDate,
   });
 
-  const identityKeyByClubId = squadIdentityKeyByClubId(world, input.worldSeed, clubIds);
+  const identityKeyByClubId = squadIdentityKeyByClubId(
+    world,
+    input.worldSeed,
+    competitionId,
+    clubIds,
+  );
   const workItem = (
     clubId: ClubId,
     fixture: TacticalAgencySelectionWorkItem["fixture"],
@@ -147,6 +180,188 @@ export function runTacticalAgencyWorld(input: TacticalAgencyWorldInput): Tactica
 }
 
 /**
+ * Builds B2's complete opening population through one production selection per
+ * club. The selected contexts remain internal evidence; report assembly emits
+ * only summaries and canonical IDs rather than duplicating lineups in JSON.
+ */
+export function runTacticalAgencyConditionedWorld(
+  input: Pick<TacticalAgencyWorldInput, "worldSeed">,
+): TacticalAgencyConditionedWorldResult {
+  const world = createFakeDomesticWorld({ worldSeed: input.worldSeed });
+  const careerState = careerStateFromNewWorld(
+    careerSaveIdFor(input.worldSeed),
+    world,
+    input.worldSeed,
+  );
+  const valuationConfig = selectPlayerValuationConfig(careerState.gameState.meta.calibrationVersions);
+  const matchups: TacticalAgencyConditionedMatchup[] = [];
+  const populationRows: TacticalAgencyConditionedPopulationRow[] = [];
+
+  for (const competitionId of world.domesticCompetitionWorld.competitionIds) {
+    const competition = world.domesticCompetitionWorld.competitions[competitionId];
+    if (competition === undefined) throw new Error(`Generated competition is missing: ${competitionId}`);
+    const clubIds = competition.clubIds;
+    const calendar = generateRoundRobinCalendar({
+      seed: input.worldSeed,
+      seasonId: world.seasonId,
+      competitionId,
+      clubIds,
+      seasonStartDate: world.seasonStartDate,
+    });
+    const firstRound = calendar.fixtures.filter(({ roundNumber }) => roundNumber === 1);
+    const identityKeyByClubId = squadIdentityKeyByClubId(
+      world,
+      input.worldSeed,
+      competitionId,
+      clubIds,
+    );
+    const observedByClub = new Map<ClubId, ReturnType<typeof observeTacticalAgencyTeamSelection>>();
+    const selectionInput = {
+      careerState,
+      policy: {
+        roleWeights: world.roleWeights,
+        tacticalDistribution: NEUTRAL_TACTICS,
+        stateMultiplierCurves: world.stateMultiplierCurves,
+        benchSize: BENCH_SIZE,
+      },
+      matchTacticsCalibration: world.matchTacticsCalibration,
+      valuationConfig,
+    };
+
+    for (const fixture of firstRound) {
+      for (const clubId of [fixture.homeClubId, fixture.awayClubId]) {
+        const squadIdentityKey = identityKeyByClubId.get(clubId);
+        if (squadIdentityKey === undefined) {
+          throw new Error(`B2 identity join omitted ${clubId}`);
+        }
+        if (observedByClub.has(clubId)) {
+          throw new Error(`B2 selected ${clubId} more than once in round one`);
+        }
+        observedByClub.set(clubId, observeTacticalAgencyTeamSelection(selectionInput, {
+          clubId,
+          fixture,
+          squadIdentityKey,
+        }));
+      }
+    }
+    if (observedByClub.size !== clubIds.length) {
+      throw new Error(
+        `B2 selected ${observedByClub.size} of ${clubIds.length} clubs in ${competitionId}`,
+      );
+    }
+
+    for (const fixture of firstRound) {
+      const home = observedByClub.get(fixture.homeClubId)?.teamContext;
+      const away = observedByClub.get(fixture.awayClubId)?.teamContext;
+      if (home === undefined || away === undefined) {
+        throw new Error(`B2 fixture ${fixture.id} has an unselected side`);
+      }
+      const homeContextId = `${input.worldSeed}|${competitionId}|${fixture.id}|home`;
+      const awayContextId = `${input.worldSeed}|${competitionId}|${fixture.id}|away`;
+      matchups.push(
+        {
+          contextId: homeContextId,
+          own: home,
+          opponent: away,
+        },
+        {
+          contextId: awayContextId,
+          own: away,
+          opponent: home,
+        },
+      );
+    }
+
+    populationRows.push(conditionedPopulationRow({
+      careerState,
+      worldSeed: input.worldSeed,
+      competitionId,
+      clubIds,
+      identityKeyByClubId,
+      observedByClub,
+    }));
+  }
+
+  return {
+    worldSeed: input.worldSeed,
+    matchups,
+    populationRows,
+    matchTacticsCalibrationVersion: world.matchTacticsCalibration.version,
+    engineConfig: world.matchEngineConfig,
+    matchTacticsCalibration: world.matchTacticsCalibration,
+  };
+}
+
+/** Reads the frozen Step 06A opening row from the selections B2 already made. */
+function conditionedPopulationRow(input: {
+  readonly careerState: CliCareerState;
+  readonly worldSeed: string;
+  readonly competitionId: CliCompetitionId;
+  readonly clubIds: readonly ClubId[];
+  readonly identityKeyByClubId: ReadonlyMap<ClubId, string>;
+  readonly observedByClub: ReadonlyMap<ClubId, ReturnType<typeof observeTacticalAgencyTeamSelection>>;
+}): TacticalAgencyConditionedPopulationRow {
+  const identityCounts: Record<string, number> = Object.fromEntries(
+    GENERATED_SQUAD_IDENTITY_KEYS.map((key) => [key, 0]),
+  );
+  const formationCounts = new Map<string, number>();
+  const shapesByIdentity = new Map<string, Map<string, number>>();
+  let catalogOrderSensitiveSelectionCount = 0;
+  let avoidableOutOfPositionSlotCount = 0;
+
+  for (const clubId of input.clubIds) {
+    const identity = input.identityKeyByClubId.get(clubId);
+    const observed = input.observedByClub.get(clubId);
+    if (identity === undefined || observed === undefined) {
+      throw new Error(`B2 opening population omitted ${clubId}`);
+    }
+    identityCounts[identity] = (identityCounts[identity] ?? 0) + 1;
+    formationCounts.set(
+      observed.row.formationKey,
+      (formationCounts.get(observed.row.formationKey) ?? 0) + 1,
+    );
+    const identityShapes = shapesByIdentity.get(identity) ?? new Map<string, number>();
+    identityShapes.set(
+      observed.row.formationKey,
+      (identityShapes.get(observed.row.formationKey) ?? 0) + 1,
+    );
+    shapesByIdentity.set(identity, identityShapes);
+    if (observed.row.tiedAtBestCount > 1) catalogOrderSensitiveSelectionCount += 1;
+    avoidableOutOfPositionSlotCount += observed.row.outOfPositionSlotCount;
+  }
+
+  const modalFormations = [...shapesByIdentity.values()].map((counts) => {
+    const modal = [...counts].sort(([leftKey, leftCount], [rightKey, rightCount]) =>
+      rightCount - leftCount || leftKey.localeCompare(rightKey))[0];
+    if (modal === undefined) throw new Error("B2 observed identity has no formation");
+    return modal[0];
+  });
+  const topFormationCount = Math.max(0, ...formationCounts.values());
+  const roles = summarizeTacticalAgencyPrimaryRoles(
+    input.careerState,
+    seniorPlayerIds(input.careerState, input.clubIds),
+  );
+
+  return {
+    worldSeed: input.worldSeed,
+    competitionId: String(input.competitionId),
+    clubCount: input.clubIds.length,
+    identityCounts,
+    formationCounts: Object.fromEntries(
+      [...formationCounts].sort(([left], [right]) => left.localeCompare(right)),
+    ),
+    identityMismatchCount: 0,
+    primaryRolePositiveCount: roles.roleShares.filter(({ count }) => count > 0).length,
+    distinctFormationCount: formationCounts.size,
+    replicatedFormationCount: [...formationCounts.values()].filter((count) => count >= 2).length,
+    topFormationShare: input.clubIds.length === 0 ? 0 : topFormationCount / input.clubIds.length,
+    distinctIdentityModalFormationCount: new Set(modalFormations).size,
+    catalogOrderSensitiveSelectionCount,
+    avoidableOutOfPositionSlotCount,
+  };
+}
+
+/**
  * The competition the before-state is measured in.
  *
  * The third division, because that is where a career starts and therefore what
@@ -179,13 +394,10 @@ function observedCompetitionId(world: FakeDomesticWorld): CliCompetitionId {
 function squadIdentityKeyByClubId(
   world: FakeDomesticWorld,
   worldSeed: string,
+  competitionId: CliCompetitionId,
   clubIds: readonly ClubId[],
 ): ReadonlyMap<ClubId, string> {
-  const generationOrder = world.divisionClubIds["third_division"] ?? [];
-  const competitionId = FAKE_DOMESTIC_COMPETITION_IDS[2];
-  if (competitionId === undefined) {
-    throw new Error("The observed domestic third division has no competition identity");
-  }
+  const generationOrder = world.domesticCompetitionWorld.competitions[competitionId]?.clubIds ?? [];
   const assignments = assignGeneratedSquadIdentities({
     seed: worldSeed,
     competitionIdentityKey: competitionId,

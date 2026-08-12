@@ -12,6 +12,7 @@ import {
 } from "@game/domain";
 
 import {
+  buildTacticalAgencyConditionedResponses,
   buildTacticalAgencyStructuralActions,
   buildTacticalAgencyAuditReport,
   countTacticalAgencyOutOfPositionSlots,
@@ -19,6 +20,7 @@ import {
   legacyPhase81ControlWeightReference,
   poolTacticalAgencyLowBlockResults,
   runTacticalAgencyOwnershipReplay,
+  runTacticalAgencyConditionedAnalyticPartition,
   runTacticalAgencySelectionSeries,
   runTacticalAgencyStructuralAnalyticPartition,
   summarizeTacticalContributionConservation,
@@ -26,6 +28,7 @@ import {
   summarizeTacticalAgencySelections,
   summarizeTacticalAgencySquadIdentities,
   summarizeTacticalAgencyStructuralAnalysis,
+  summarizeTacticalAgencyConditionedAnalysis,
   tacticalAgencyReorderInvariantShare,
   TACTICAL_AGENCY_AUDIT_CONTRACT_VERSION,
   TACTICAL_AGENCY_CHECKPOINT_WORKER_COUNT,
@@ -502,6 +505,76 @@ test("Checkpoint B enumerates the declared complete space and conserves every ro
   assert.equal(analysis.effectiveSignatureCount > 0, true);
   assert.equal(analysis.effectiveSignatureCount <= analysis.rawActionCount, true);
   assert.equal(Number.isFinite(analysis.bestResponseUbiquityMultiple), true);
+});
+
+test("Checkpoint B2 fixes real shapes, enumerates nine responses and mirrors exactly", () => {
+  const calibration = matchTacticsCalibrationFixture();
+  const structural = buildTacticalAgencyStructuralActions({
+    referenceBand: {
+      bandKey: "checkpoint_b2_uniform",
+      goalkeeper: 10,
+      defense: 10,
+      midfield: 10,
+      attack: 10,
+    },
+    matchTacticsCalibration: calibration,
+  });
+  const first = structural.find(({ formationKey }) => formationKey === "4-4-2");
+  const second = structural.find(({ formationKey }) => formationKey === "3-5-2");
+  if (first === undefined || second === undefined) {
+    throw new Error("The B2 test requires both catalog formations");
+  }
+  const responses = buildTacticalAgencyConditionedResponses();
+  const matchups = [
+    {
+      matchupId: "fixture:test|home",
+      ownShape: first.shape,
+      opponentShape: second.shape,
+    },
+    {
+      matchupId: "fixture:test|away",
+      ownShape: second.shape,
+      opponentShape: first.shape,
+    },
+  ];
+  const engineConfig = {
+    tacticalDistributionCaps: {
+      directness: { minInclusive: 0, maxInclusive: 1 },
+      pressing: { minInclusive: 0, maxInclusive: 1 },
+      width: { minInclusive: 0, maxInclusive: 1 },
+      risk: { minInclusive: 0, maxInclusive: 1 },
+    },
+  } as MatchEngineConfig;
+  const contexts = runTacticalAgencyConditionedAnalyticPartition({
+    responses,
+    matchups,
+    contextIndexes: Array.from({ length: matchups.length * responses.length }, (_, index) => index),
+    engineConfig,
+    matchTacticsCalibration: calibration,
+  });
+  const analysis = summarizeTacticalAgencyConditionedAnalysis({ responses, contexts });
+
+  assert.equal(responses.length, 9);
+  assert.equal(contexts.length, 18);
+  assert.equal(analysis.rawResponseCount, 9);
+  assert.equal(analysis.matchupCount, 2);
+  assert.equal(analysis.declaredContextCount, 18);
+  assert.equal(analysis.conservationMismatchCount, 0);
+  assert.equal(analysis.mirrorMismatchCount, 0);
+  assert.equal(
+    analysis.bestResponseUbiquityMultiple,
+    analysis.maximumResponseContextCount * analysis.effectiveSignatureCount / contexts.length,
+  );
+
+  assert.throws(
+    () => summarizeTacticalAgencyConditionedAnalysis({
+      responses,
+      contexts: contexts.map((context, index) => index === 1
+        ? { ...context, opponentResponseIndex: 0 }
+        : context),
+    }),
+    /does not contain each opponent response exactly once/,
+  );
 });
 
 function neutralIntensity(): Parameters<typeof legacyPhase81ControlWeightReference>[0] {

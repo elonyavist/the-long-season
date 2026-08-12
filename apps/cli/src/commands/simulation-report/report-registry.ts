@@ -16,6 +16,7 @@ import {
   DEFAULT_TACTICAL_AGENCY_WORLD_COUNT,
   DEFAULT_TACTICAL_AGENCY_WORLD_SEED,
   createTacticalAgencyA2ProfileFacts,
+  createTacticalAgencyB2ProfileFacts,
   createTacticalAgencyBProfileFacts,
   createTacticalAgencySectionFacts,
   TACTICAL_AGENCY_B_WORLD_SEED,
@@ -63,6 +64,7 @@ export type SimulationReportModuleId = typeof SIMULATION_REPORT_MODULE_IDS[numbe
 export const SIMULATION_REPORT_PROFILE_IDS = [
   "phase81a-a2",
   "phase81a-b",
+  "phase81a-b2",
   "phase81a-substitution-minute-l2-7x1",
   "phase81a-availability-aging-l3-7x2",
   "phase81a-generational-succession-l4-7x10",
@@ -434,6 +436,21 @@ export const SIMULATION_REPORT_PROFILES = {
       includedSectionIds: ["tactical_agency"],
       detail: "diagnostic",
       seedPrefix: TACTICAL_AGENCY_B_WORLD_SEED,
+      workerCount: 7,
+    },
+  },
+  "phase81a-b2": {
+    id: "phase81a-b2",
+    titleKey: "simulationReport.profile.phase81aB2.title",
+    descriptionKey: "simulationReport.profile.phase81aB2.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-b2",
+      worldCount: DEFAULT_TACTICAL_AGENCY_WORLD_COUNT,
+      seasonCount: 1,
+      includedSectionIds: ["tactical_agency"],
+      detail: "diagnostic",
+      seedPrefix: DEFAULT_TACTICAL_AGENCY_WORLD_SEED,
       workerCount: 7,
     },
   },
@@ -1589,6 +1606,23 @@ export async function executeSimulationReportModule(
           },
         }),
         decision: facts.analysis.decision === "PASS_PHASE_1" ? "NOT_EVALUATED" : "FAIL",
+        calibrationVersions: facts.calibrationVersions,
+        worldSeeds: facts.worldSeeds,
+      };
+    }
+    if (request.profileId === "phase81a-b2") {
+      const facts = await createTacticalAgencyB2ProfileFacts({ workerCount: request.workerCount });
+      return {
+        data: toSimulationReportJsonValue({
+          sets: facts.sets,
+          decision: facts.decision,
+          execution: {
+            workerCount: facts.workerCount,
+            partitionCount: facts.workerCount,
+            elapsedMilliseconds: facts.elapsedMilliseconds,
+          },
+        }),
+        decision: facts.decision === "PASS_PHASE_1" ? "NOT_EVALUATED" : "FAIL",
         calibrationVersions: facts.calibrationVersions,
         worldSeeds: facts.worldSeeds,
       };

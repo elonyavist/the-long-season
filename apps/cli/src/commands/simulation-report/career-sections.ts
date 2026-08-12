@@ -66,6 +66,7 @@ import {
   type GenerationalSuccessionWorldFacts,
   type SupersededGateFact,
 } from "./generational-succession.ts";
+import { evaluateLeagueDiversityOpeningGate } from "./league-diversity-gate.ts";
 import {
   FIRST_DIVISION_COMPETITION_ID,
   OwnerAttributionObserver,
@@ -5803,22 +5804,8 @@ export function evaluateLeagueDiversityCheckpoint(
   const openingFailed: string[] = [];
   let passingCompetitionCount = 0;
   for (const row of openingRows) {
-    const minimum = Math.floor(row.clubCount / GENERATED_SQUAD_IDENTITY_KEYS.length);
-    const maximum = Math.ceil(row.clubCount / GENERATED_SQUAD_IDENTITY_KEYS.length);
-    const identityCounts = GENERATED_SQUAD_IDENTITY_KEYS.map((key) => row.identityCounts[key] ?? 0);
-    const held = row.clubCount < GENERATED_SQUAD_IDENTITY_KEYS.length || (
-      identityCounts.every((count) => count >= minimum && count <= maximum)
-      && identityCounts.every((count) => count > 0)
-      && row.identityMismatchCount === 0
-      && row.primaryRolePositiveCount === 10
-      && row.distinctFormationCount >= 6
-      && row.replicatedFormationCount >= 4
-      && row.topFormationShare <= 0.30
-      && row.distinctIdentityModalFormationCount >= 6
-      && row.catalogOrderSensitiveSelectionCount === 0
-      && row.avoidableOutOfPositionSlotCount === 0
-    );
-    if (held) passingCompetitionCount += 1;
+    const verdict = evaluateLeagueDiversityOpeningGate(row);
+    if (verdict.held) passingCompetitionCount += 1;
     else openingFailed.push(`${row.worldSeed}|${row.competitionId}`);
   }
 

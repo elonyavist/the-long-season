@@ -16,6 +16,11 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_B2_CONDITIONED_TACTICAL_CEILING.md` — **`REFINE`.**
+  Real squad-selected formations create material local cycles and no universal
+  response, but `high_pressing|balanced` covers about two thirds of contexts;
+  two of forty-two local population rows also exceed the `4-4-2` share gate.
+
 - `PHASE_81A_CHECKPOINT_L6_31_ROUTINE_YOUTH_STATIONARY_RUNWAY.md` — **`GO`
   twice.** Stable ordinary-youth ceilings raise ready replacement share by
   `+0.1363` in-sample and `+0.1034` out-of-sample, with exact immediate purity,

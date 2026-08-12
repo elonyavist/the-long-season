@@ -10,7 +10,10 @@ import {
   type OpportunityRoutePlan,
 } from "@game/engine";
 
-import { buildTacticalAgencyLowBlockInput } from "./tactical-agency-world.ts";
+import {
+  buildTacticalAgencyLowBlockInput,
+  runTacticalAgencyConditionedWorld,
+} from "./tactical-agency-world.ts";
 
 test("all lateral focuses reallocate a route budget on production-selected real-career elevens", () => {
   const input = buildTacticalAgencyLowBlockInput({
@@ -50,4 +53,21 @@ test("all lateral focuses reallocate a route budget on production-selected real-
     true,
   );
   assert.equal(new Set([balanced, left, right].map(opportunityRouteStrategicSignature)).size, 3);
+});
+
+test("B2 selects every domestic club once and retains both directions of each fixture", () => {
+  const world = runTacticalAgencyConditionedWorld({
+    worldSeed: "phase81a-b2-real-population-reachability",
+  });
+  const clubCount = world.populationRows.reduce((sum, row) => sum + row.clubCount, 0);
+  const ownClubIds = world.matchups.map(({ own }) => String(own.clubId));
+
+  assert.equal(world.populationRows.length, 3);
+  assert.equal(world.matchups.length, clubCount);
+  assert.equal(new Set(ownClubIds).size, clubCount);
+  assert.equal(world.matchups.every((matchup) =>
+    world.matchups.some((candidate) =>
+      candidate.own.clubId === matchup.opponent.clubId
+      && candidate.opponent.clubId === matchup.own.clubId)), true);
+  assert.equal(world.populationRows.every(({ distinctFormationCount }) => distinctFormationCount > 1), true);
 });
