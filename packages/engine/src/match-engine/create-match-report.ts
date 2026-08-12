@@ -81,6 +81,7 @@ function toShotOutcomeEvent(event: MatchShotOutcomeStepEvent): MatchEvent {
     isShotOnTarget: event.isShotOnTarget,
     shotType: event.shotType,
     chanceType: event.chanceType,
+    ...(event.deadBallKind === undefined ? {} : { deadBallKind: event.deadBallKind }),
     // Omitted rather than defaulted when the shot had no route: a scored
     // penalty is the one shot outcome the route model never produced.
     ...(event.route === undefined ? {} : { route: event.route }),

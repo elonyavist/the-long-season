@@ -27,6 +27,7 @@ import {
   flatMatchTacticsCalibrationFixture,
   tacticalShapeProfileFixture,
 } from "../test-fixtures/match-tactics-calibration.ts";
+import { matchDisciplineConfigFixture } from "../test-fixtures/match-engine-config.ts";
 import { withNeutralIncidentProfiles } from "../test-fixtures/match-player-incident-profiles.ts";
 
 /**
@@ -283,6 +284,7 @@ function engineConfig(strengthGapMultiplier = 1): MatchEngineConfig {
     conversionBands: [{ bandKey: "low", minQualityInclusive: 0, maxQualityExclusive: 1, goalProbability: 0.1 }],
     homeAdvantageFactor: 1,
     strengthGapMultiplier,
+    discipline: matchDisciplineConfigFixture(),
     tacticalDistributionCaps: { directness: cap, pressing: cap, width: cap, risk: cap },
   };
 }

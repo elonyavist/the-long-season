@@ -42,6 +42,7 @@ import {
   deriveAiTransferAffordabilitySnapshot,
   deriveAiTransferOfferFee,
   deriveAiMarketNeeds as deriveAiMarketNeedsWithPolicy,
+  orderAiMarketNeedsForSubmission,
 } from "./ai-market-lifecycle.ts";
 import type { PublicPlayerAssessment } from "../squad/public-player-assessment.ts";
 import { playerValuationConfigFixture } from "../test-fixtures/player-valuation-config.ts";
@@ -616,6 +617,42 @@ test("the market-off analysis seam is exactly the pre-06B16 department decision 
     current.filter(({ target }) => target.kind === "department"),
   );
   assert.equal(legacy.every(({ target }) => target.kind === "department"), true);
+});
+
+test("bounded submission order preserves urgent needs before exact-role succession", () => {
+  const actualNeed = deriveAiMarketNeeds({
+    careerState: upgradeNeedFixture(),
+    asOf: gameDate(20_000),
+  })[0];
+  assert.ok(actualNeed !== undefined);
+  const actualRoleNeed = {
+    ...actualNeed,
+    target: { kind: "role", role: "striker" } as const,
+    reasons: ["role_succession"] as const,
+  };
+  const opportunity = {
+    ...actualRoleNeed,
+    reasons: ["elite_prospect_opportunity"] as const,
+  };
+  const urgent = {
+    ...actualRoleNeed,
+    reasons: ["structural_depth"] as const,
+  };
+
+  assert.deepEqual(
+    orderAiMarketNeedsForSubmission(
+      [opportunity, actualRoleNeed, urgent],
+      "bounded_succession",
+    ).map(({ reasons }) => reasons[0]),
+    ["structural_depth", "role_succession", "elite_prospect_opportunity"],
+  );
+  assert.deepEqual(
+    orderAiMarketNeedsForSubmission(
+      [opportunity, actualRoleNeed, urgent],
+      "legacy",
+    ),
+    [opportunity, actualRoleNeed, urgent],
+  );
 });
 
 function marketFixture(): CareerState {

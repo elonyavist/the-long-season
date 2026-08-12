@@ -33,6 +33,7 @@ import {
   matchTacticsCalibrationFixture,
   tacticalShapeProfileFixture,
 } from "../test-fixtures/match-tactics-calibration.ts";
+import { matchDisciplineConfigFixture } from "../test-fixtures/match-engine-config.ts";
 import { withNeutralIncidentProfiles } from "../test-fixtures/match-player-incident-profiles.ts";
 
 
@@ -300,6 +301,7 @@ function traceConfig(): MatchEngineConfig {
     conversionBands: [{ bandKey: "low", minQualityInclusive: 0, maxQualityExclusive: 1, goalProbability: 0.1 }],
     homeAdvantageFactor: 1.05,
     strengthGapMultiplier: 1,
+    discipline: matchDisciplineConfigFixture(),
     tacticalDistributionCaps: {
       directness: { minInclusive: -1, maxInclusive: 1 },
       pressing: { minInclusive: -1, maxInclusive: 1 },

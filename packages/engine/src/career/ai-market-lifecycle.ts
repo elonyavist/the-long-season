@@ -105,6 +105,61 @@ export interface AiMarketNeed {
   readonly canRecruit: boolean;
 }
 
+/** Submission order used only to preserve the measured Phase 81A control. */
+export type AiMarketNeedSubmissionOrder = "legacy" | "bounded_succession";
+
+/**
+ * Prioritizes exact-role succession without changing inter-club contention.
+ *
+ * Each club keeps the same positions it occupied in the input stream. Only its
+ * own queue changes: urgent depth/contract needs, succession, then everything
+ * else in prior order. No market need or capacity is created here.
+ */
+export function orderAiMarketNeedsForSubmission(
+  needs: readonly AiMarketNeed[],
+  order: AiMarketNeedSubmissionOrder,
+): readonly AiMarketNeed[] {
+  if (order === "legacy") return needs;
+
+  const queuesByClubId = new Map<ClubId, AiMarketNeed[]>();
+  for (const need of needs) {
+    const queue = queuesByClubId.get(need.clubId) ?? [];
+    queue.push(need);
+    queuesByClubId.set(need.clubId, queue);
+  }
+  for (const [clubId, queue] of queuesByClubId) {
+    queuesByClubId.set(
+      clubId,
+      queue
+        .map((need, originalIndex) => ({ need, originalIndex }))
+        .sort((left, right) =>
+          marketNeedSubmissionTier(left.need) - marketNeedSubmissionTier(right.need)
+          || left.originalIndex - right.originalIndex
+        )
+        .map(({ need }) => need),
+    );
+  }
+
+  const nextIndexByClubId = new Map<ClubId, number>();
+  return needs.map((need) => {
+    const index = nextIndexByClubId.get(need.clubId) ?? 0;
+    const ordered = queuesByClubId.get(need.clubId)?.[index];
+    if (ordered === undefined) {
+      throw new Error(`AI market order lost need ${String(need.clubId)}:${index}`);
+    }
+    nextIndexByClubId.set(need.clubId, index + 1);
+    return ordered;
+  });
+}
+
+function marketNeedSubmissionTier(need: AiMarketNeed): 0 | 1 | 2 {
+  if (
+    need.reasons.includes("structural_depth")
+    || need.reasons.includes("expiring_contracts")
+  ) return 0;
+  return need.reasons.includes("role_succession") ? 1 : 2;
+}
+
 /** One non-blocking structured market history fact emitted by the AI policy. */
 export interface AiMarketLifecycleFact {
   readonly occurredOn: GameDate;
@@ -161,6 +216,26 @@ export type AiMarketDiagnosticReason =
   | "preliminary_target_unavailable"
   | "preliminary_offer_rejected";
 
+/** Complete terminal-stage vocabulary for prime-age exact-role succession options. */
+export const AI_SUCCESSION_TARGET_POOL_STAGES = [
+  "no_exact_role_candidate",
+  "no_prime_age_candidate",
+  "no_talk_free_prime_age_candidate",
+  "no_seller_safe_prime_age_candidate",
+  "no_willing_prime_age_candidate",
+  "no_commercial_prime_age_candidate",
+  "no_finance_account_prime_age_candidate",
+  "no_transfer_fee_prime_age_candidate",
+  "no_wage_budget_prime_age_candidate",
+  "no_cash_prime_age_candidate",
+  "no_public_quality_prime_age_candidate",
+  "qualified_prime_age_already_wins",
+  "qualified_prime_age_loses_generic_score",
+] as const;
+
+export type AiSuccessionTargetPoolStage =
+  (typeof AI_SUCCESSION_TARGET_POOL_STAGES)[number];
+
 /** One compact, language-agnostic observation from an AI recruitment checkpoint. */
 export interface AiMarketDiagnosticFact {
   readonly occurredOn: GameDate;
@@ -175,6 +250,8 @@ export interface AiMarketDiagnosticFact {
     | "preliminary_candidate_unavailable";
   readonly reason?: AiMarketDiagnosticReason;
   readonly playerId?: PlayerId;
+  /** Observation-only L6.9B funnel stage; never participates in selection. */
+  readonly successionTargetPoolStage?: AiSuccessionTargetPoolStage;
   /** Whether the competition transfer window was open for this observation. */
   readonly transferWindowOpen?: boolean;
   /** Number of identical observations compacted into this row. */
@@ -434,6 +511,8 @@ export function advanceAiMarketLifecycle(input: {
   readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
   /** Analysis-only pre-06B16 market semantics; Phase 81A closeout removes it. */
   readonly useRoleSuccessionNeeds?: boolean;
+  /** Analysis-only legacy ordering control; Phase 81A closeout removes it. */
+  readonly needSubmissionOrder?: AiMarketNeedSubmissionOrder;
 }): AdvanceAiMarketLifecycleResult {
   if (
     input.throughDate <= input.fromDate
@@ -481,6 +560,7 @@ export function advanceAiMarketLifecycle(input: {
       wagePolicy: input.wagePolicy,
       marketBehaviorPolicy: input.marketBehaviorPolicy,
       useRoleSuccessionNeeds: input.useRoleSuccessionNeeds !== false,
+      needSubmissionOrder: input.needSubmissionOrder ?? "legacy",
     });
     careerState = submitted.careerState;
     facts.push(...submitted.facts);
@@ -824,6 +904,7 @@ function submitDueAiMarketTalks(input: {
   readonly wagePolicy: PlayerWagePolicyConfig;
   readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
   readonly useRoleSuccessionNeeds: boolean;
+  readonly needSubmissionOrder: AiMarketNeedSubmissionOrder;
 }): {
   readonly careerState: CareerState;
   readonly facts: readonly AiMarketLifecycleFact[];
@@ -851,10 +932,10 @@ function submitDueAiMarketTalks(input: {
     assessmentByPlayerId,
     marketBehaviorPolicy: input.marketBehaviorPolicy,
   });
-  const needs = [
-    ...opportunityNeeds,
-    ...ordinaryNeeds,
-  ];
+  const needs = orderAiMarketNeedsForSubmission(
+    [...opportunityNeeds, ...ordinaryNeeds],
+    input.needSubmissionOrder,
+  );
   const marketTargets = buildCareerMarketCatalog(careerState).targets;
   const handledClubIds = new Set<ClubId>();
 
@@ -941,6 +1022,7 @@ function submitDueAiMarketTalks(input: {
           "permanent_target_found",
           undefined,
           target.player.id,
+          selection.successionTargetPoolStage,
         ));
         const negotiationId = nextAiTransferNegotiationId(
           careerState,
@@ -985,6 +1067,8 @@ function submitDueAiMarketTalks(input: {
           input.submittedOn,
           "permanent_target_unavailable",
           selection.reason,
+          undefined,
+          selection.successionTargetPoolStage,
         ));
       }
     }
@@ -1179,6 +1263,20 @@ export function deriveAiTransferOfferFee(
   return Math.min(desiredFee, input.maximumAffordableFee) as Money;
 }
 
+type PermanentTargetUnavailableReason = Extract<
+  AiMarketDiagnosticReason,
+  | "permanent_target_unavailable"
+  | "seller_squad_floor"
+  | "department_target_unavailable"
+  | "role_target_unavailable"
+  | "target_has_live_market_talk"
+  | "seller_department_floor"
+  | "implausible_downward_move"
+  | "seller_not_for_sale"
+  | "transfer_terms_unaffordable"
+  | "transfer_budget_insufficient"
+>;
+
 function selectPermanentTransferTarget(
   careerState: CareerState,
   marketTargets: readonly CareerMarketCatalogTarget[],
@@ -1191,19 +1289,8 @@ function selectPermanentTransferTarget(
   marketBehaviorPolicy: MarketBehaviorCalibrationConfig,
 ): {
   readonly target?: TransferTarget;
-  readonly reason: Extract<
-    AiMarketDiagnosticReason,
-    | "permanent_target_unavailable"
-    | "seller_squad_floor"
-    | "department_target_unavailable"
-    | "role_target_unavailable"
-    | "target_has_live_market_talk"
-    | "seller_department_floor"
-    | "implausible_downward_move"
-    | "seller_not_for_sale"
-    | "transfer_terms_unaffordable"
-    | "transfer_budget_insufficient"
-  >;
+  readonly successionTargetPoolStage?: AiSuccessionTargetPoolStage;
+  readonly reason: PermanentTargetUnavailableReason;
 } {
   const buyer = careerState.gameState.clubs[need.clubId];
   if (buyer === undefined) return { reason: "permanent_target_unavailable" };
@@ -1216,6 +1303,23 @@ function selectPermanentTransferTarget(
   let plausibleTargetFound = false;
   let sellerWillingTargetFound = false;
   let termsAffordableTargetFound = false;
+  const successionP50Floor = exactRoleSuccessionPlanningFloor(
+    careerState,
+    buyer,
+    need,
+    assessmentByPlayerId,
+    marketBehaviorPolicy,
+  );
+  let primeAgeRoleTargetFound = false;
+  let talkFreePrimeAgeTargetFound = false;
+  let sellerSafePrimeAgeTargetFound = false;
+  let willingPrimeAgeTargetFound = false;
+  let commercialPrimeAgeTargetFound = false;
+  let financeAccountPrimeAgeTargetFound = false;
+  let transferFeePrimeAgeTargetFound = false;
+  let wageBudgetPrimeAgeTargetFound = false;
+  let cashPrimeAgeTargetFound = false;
+  const qualifiedPrimeAgePlayerIds = new Set<PlayerId>();
   const eliteProspectOpportunity = need.reasons.includes(
     "elite_prospect_opportunity",
   );
@@ -1241,12 +1345,18 @@ function selectPermanentTransferTarget(
       || !playerMatchesMarketTarget(player, need.target)
     ) continue;
     marketTargetFound = true;
+    const assessment = requiredAssessment(assessmentByPlayerId, player.id);
+    const primeAge = successionP50Floor !== undefined
+      && assessment.age >= 18
+      && assessment.age <= 29;
+    if (primeAge) primeAgeRoleTargetFound = true;
     if (hasAnyLiveMarketTalk(careerState, player.id)) continue;
     talkFreeTargetFound = true;
+    if (primeAge) talkFreePrimeAgeTargetFound = true;
     if (!sellerCanLosePlayer(careerState, sellingClub, player)) continue;
     sellerSafeTargetFound = true;
+    if (primeAge) sellerSafePrimeAgeTargetFound = true;
 
-    const assessment = requiredAssessment(assessmentByPlayerId, player.id);
     if (
       eliteProspectOpportunity
       && (
@@ -1267,6 +1377,7 @@ function selectPermanentTransferTarget(
     });
     if (willingness.status === "rejected") continue;
     plausibleTargetFound = true;
+    if (primeAge) willingPrimeAgeTargetFound = true;
     const commercial = deriveTransferCommercialSnapshot({
       careerState,
       sellingClubId: sellingClub.id,
@@ -1278,8 +1389,10 @@ function selectPermanentTransferTarget(
     });
     if (commercial === undefined) continue;
     sellerWillingTargetFound = true;
+    if (primeAge) commercialPrimeAgeTargetFound = true;
     const account = careerState.clubFinanceState?.accounts[buyer.id];
     if (account === undefined) continue;
+    if (primeAge) financeAccountPrimeAgeTargetFound = true;
     const affordability = deriveAiTransferAffordabilitySnapshot({
       account,
       policy: marketBehaviorPolicy.affordability,
@@ -1303,15 +1416,33 @@ function selectPermanentTransferTarget(
       currentContract: contract,
       isFreeAgent: false,
     });
-    if (!transferTermsAreAffordable(
+    const termsAffordability = evaluateTransferTermsAffordability(
       careerState,
       buyer.id,
       demand.preferredTerms,
       offerFee,
       wagePolicy,
       marketBehaviorPolicy,
-    )) continue;
+      false,
+    );
+    if (primeAge && termsAffordability.reason !== "transfer_fee") {
+      transferFeePrimeAgeTargetFound = true;
+    }
+    if (
+      primeAge
+      && termsAffordability.reason !== "transfer_fee"
+      && termsAffordability.reason !== "wage_budget"
+    ) {
+      wageBudgetPrimeAgeTargetFound = true;
+    }
+    if (termsAffordability.status === "unaffordable") continue;
     termsAffordableTargetFound = true;
+    if (primeAge) {
+      cashPrimeAgeTargetFound = true;
+      if (assessment.p50Ability >= (successionP50Floor ?? Number.POSITIVE_INFINITY)) {
+        qualifiedPrimeAgePlayerIds.add(player.id);
+      }
+    }
     const roleNeedScore = Math.min(100, Math.max(
       0,
       (need.targetDepth - need.currentDepth) / Math.max(1, need.targetDepth) * 100,
@@ -1336,25 +1467,119 @@ function selectPermanentTransferTarget(
     });
   }
 
-  const target = candidates.sort((left, right) =>
+  const rankedCandidates = candidates.sort((left, right) =>
     right.score - left.score
     || String(left.player.id).localeCompare(String(right.player.id)),
-  )[0];
-  if (target !== undefined) return { target, reason: "permanent_target_unavailable" };
-  if (!sellerAboveSquadFloor) return { reason: "seller_squad_floor" };
+  );
+  const target = rankedCandidates[0];
+  const successionTargetPoolStage = successionP50Floor === undefined
+    ? undefined
+    : successionTargetPoolStageFor({
+        marketTargetFound,
+        primeAgeRoleTargetFound,
+        talkFreePrimeAgeTargetFound,
+        sellerSafePrimeAgeTargetFound,
+        willingPrimeAgeTargetFound,
+        commercialPrimeAgeTargetFound,
+        financeAccountPrimeAgeTargetFound,
+        transferFeePrimeAgeTargetFound,
+        wageBudgetPrimeAgeTargetFound,
+        cashPrimeAgeTargetFound,
+        qualifiedPrimeAgePlayerIds,
+        ...(target === undefined ? {} : { target }),
+      });
+  if (target !== undefined) {
+    return {
+      target,
+      reason: "permanent_target_unavailable",
+      ...(successionTargetPoolStage === undefined ? {} : { successionTargetPoolStage }),
+    };
+  }
+  if (!sellerAboveSquadFloor) return withSuccessionPoolStage("seller_squad_floor", successionTargetPoolStage);
   if (!marketTargetFound) {
     return {
       reason: need.target.kind === "role"
         ? "role_target_unavailable"
         : "department_target_unavailable",
+      ...(successionTargetPoolStage === undefined ? {} : { successionTargetPoolStage }),
     };
   }
-  if (!talkFreeTargetFound) return { reason: "target_has_live_market_talk" };
-  if (!sellerSafeTargetFound) return { reason: "seller_department_floor" };
-  if (!plausibleTargetFound) return { reason: "implausible_downward_move" };
-  if (!sellerWillingTargetFound) return { reason: "seller_not_for_sale" };
-  if (!termsAffordableTargetFound) return { reason: "transfer_terms_unaffordable" };
-  return { reason: "transfer_budget_insufficient" };
+  if (!talkFreeTargetFound) return withSuccessionPoolStage("target_has_live_market_talk", successionTargetPoolStage);
+  if (!sellerSafeTargetFound) return withSuccessionPoolStage("seller_department_floor", successionTargetPoolStage);
+  if (!plausibleTargetFound) return withSuccessionPoolStage("implausible_downward_move", successionTargetPoolStage);
+  if (!sellerWillingTargetFound) return withSuccessionPoolStage("seller_not_for_sale", successionTargetPoolStage);
+  if (!termsAffordableTargetFound) return withSuccessionPoolStage("transfer_terms_unaffordable", successionTargetPoolStage);
+  return withSuccessionPoolStage("transfer_budget_insufficient", successionTargetPoolStage);
+}
+
+function exactRoleSuccessionPlanningFloor(
+  careerState: CareerState,
+  buyer: Club,
+  need: AiMarketNeed,
+  assessmentByPlayerId: ReadonlyMap<PlayerId, PublicPlayerAssessment>,
+  marketBehaviorPolicy: MarketBehaviorCalibrationConfig,
+): number | undefined {
+  if (!need.reasons.includes("role_succession") || need.target.kind !== "role") {
+    return undefined;
+  }
+  const successionRole = need.target.role;
+  const roleAssessments = buyer.playerIds.flatMap((playerId) => {
+    const player = careerState.gameState.players[playerId];
+    const assessment = assessmentByPlayerId.get(playerId);
+    return player === undefined
+      || player.primaryRole !== successionRole
+      || assessment === undefined
+      ? []
+      : [assessment];
+  });
+  if (roleAssessments.length === 0) return undefined;
+  return average(roleAssessments.map(({ currentAbility }) => currentAbility))
+    - marketBehaviorPolicy.aiLifecycle.weakestQualityGap;
+}
+
+function successionTargetPoolStageFor(input: {
+  readonly marketTargetFound: boolean;
+  readonly primeAgeRoleTargetFound: boolean;
+  readonly talkFreePrimeAgeTargetFound: boolean;
+  readonly sellerSafePrimeAgeTargetFound: boolean;
+  readonly willingPrimeAgeTargetFound: boolean;
+  readonly commercialPrimeAgeTargetFound: boolean;
+  readonly financeAccountPrimeAgeTargetFound: boolean;
+  readonly transferFeePrimeAgeTargetFound: boolean;
+  readonly wageBudgetPrimeAgeTargetFound: boolean;
+  readonly cashPrimeAgeTargetFound: boolean;
+  readonly qualifiedPrimeAgePlayerIds: ReadonlySet<PlayerId>;
+  readonly target?: TransferTarget;
+}): AiSuccessionTargetPoolStage {
+  if (!input.marketTargetFound) return "no_exact_role_candidate";
+  if (!input.primeAgeRoleTargetFound) return "no_prime_age_candidate";
+  if (!input.talkFreePrimeAgeTargetFound) return "no_talk_free_prime_age_candidate";
+  if (!input.sellerSafePrimeAgeTargetFound) return "no_seller_safe_prime_age_candidate";
+  if (!input.willingPrimeAgeTargetFound) return "no_willing_prime_age_candidate";
+  if (!input.commercialPrimeAgeTargetFound) return "no_commercial_prime_age_candidate";
+  if (!input.financeAccountPrimeAgeTargetFound) return "no_finance_account_prime_age_candidate";
+  if (!input.transferFeePrimeAgeTargetFound) return "no_transfer_fee_prime_age_candidate";
+  if (!input.wageBudgetPrimeAgeTargetFound) return "no_wage_budget_prime_age_candidate";
+  if (!input.cashPrimeAgeTargetFound) return "no_cash_prime_age_candidate";
+  if (input.qualifiedPrimeAgePlayerIds.size === 0) {
+    return "no_public_quality_prime_age_candidate";
+  }
+  return input.target !== undefined && input.qualifiedPrimeAgePlayerIds.has(input.target.player.id)
+    ? "qualified_prime_age_already_wins"
+    : "qualified_prime_age_loses_generic_score";
+}
+
+function withSuccessionPoolStage(
+  reason: PermanentTargetUnavailableReason,
+  successionTargetPoolStage: AiSuccessionTargetPoolStage | undefined,
+): {
+  readonly reason: PermanentTargetUnavailableReason;
+  readonly successionTargetPoolStage?: AiSuccessionTargetPoolStage;
+} {
+  return {
+    reason,
+    ...(successionTargetPoolStage === undefined ? {} : { successionTargetPoolStage }),
+  };
 }
 
 /**
@@ -1675,16 +1900,42 @@ function transferTermsAreAffordable(
   transferFee: Money,
   wagePolicy: PlayerWagePolicyConfig,
   marketBehaviorPolicy: MarketBehaviorCalibrationConfig,
+  allowFullWageBudgetForStructuralRepair = false,
 ): boolean {
+  return evaluateTransferTermsAffordability(
+    careerState,
+    clubId,
+    terms,
+    transferFee,
+    wagePolicy,
+    marketBehaviorPolicy,
+    allowFullWageBudgetForStructuralRepair,
+  ).status === "affordable";
+}
+
+function evaluateTransferTermsAffordability(
+  careerState: CareerState,
+  clubId: ClubId,
+  terms: ReturnType<typeof deriveContractDemand>["preferredTerms"],
+  transferFee: Money,
+  wagePolicy: PlayerWagePolicyConfig,
+  marketBehaviorPolicy: MarketBehaviorCalibrationConfig,
+  allowFullWageBudgetForStructuralRepair = false,
+):
+  | { readonly status: "affordable"; readonly reason: "affordable" }
+  | {
+      readonly status: "unaffordable";
+      readonly reason: "transfer_fee" | "wage_budget" | "cash";
+    } {
   if (evaluateTransferFeeCapacity({
     careerState,
     buyingClubId: clubId,
     fee: transferFee,
     marketBehaviorPolicy,
   }).status === "unaffordable") {
-    return false;
+    return { status: "unaffordable", reason: "transfer_fee" };
   }
-  return evaluateCareerContractCapacity({
+  const contractCapacity = evaluateCareerContractCapacity({
     careerState,
     clubId,
     wagePolicy,
@@ -1692,7 +1943,17 @@ function transferTermsAreAffordable(
     addedAnnualWage: terms.annualWage,
     addedSigningBonus: terms.bonuses.signingBonus,
     additionalImmediateCost: transferFee,
-  }).status === "affordable";
+    allowFullWageBudgetForStructuralRepair,
+  });
+  if (contractCapacity.status === "affordable") {
+    return { status: "affordable", reason: "affordable" };
+  }
+  return {
+    status: "unaffordable",
+    reason: contractCapacity.reason === "wage_budget_exceeded"
+      ? "wage_budget"
+      : "cash",
+  };
 }
 
 function contractTermsAreAffordable(
@@ -1962,6 +2223,7 @@ function diagnosticFact(
   event: AiMarketDiagnosticFact["event"],
   reason?: AiMarketDiagnosticReason,
   playerId?: PlayerId,
+  successionTargetPoolStage?: AiSuccessionTargetPoolStage,
 ): AiMarketDiagnosticFact {
   return {
     occurredOn,
@@ -1970,6 +2232,7 @@ function diagnosticFact(
     event,
     ...(reason === undefined ? {} : { reason }),
     ...(playerId === undefined ? {} : { playerId }),
+    ...(successionTargetPoolStage === undefined ? {} : { successionTargetPoolStage }),
     count: 1,
   };
 }
@@ -1986,6 +2249,7 @@ function accumulateDiagnosticFacts(
       fact.event,
       fact.reason ?? "",
       fact.playerId ?? "",
+      fact.successionTargetPoolStage ?? "",
       fact.transferWindowOpen === true ? "open" : "closed",
     ].join("|");
     const previous = accumulator.get(key);

@@ -86,6 +86,19 @@ export const SIMULATION_REPORT_PROFILE_IDS = [
   "phase81a-integrated-l6-2-7x10",
   "phase81a-integrated-l6-3-7x10",
   "phase81a-integrated-l6-3b-7x10",
+  "phase81a-assist-supply-l6-3c-7x1",
+  "phase81a-assist-eligibility-l6-3d-7x1",
+  "phase81a-dead-ball-attribution-l6-3e-7x1",
+  "phase81a-penalty-award-l6-3f-7x1",
+  "phase81a-direct-free-kick-geometry-l6-3g-14x1",
+  "phase81a-direct-free-kick-l6-3h-7x1",
+  "phase81a-renewal-baseline-l6-4-7x10",
+  "phase81a-succession-priority-l6-5-7x10",
+  "phase81a-succession-target-pool-l6-9b-7x10",
+  "phase81a-succession-affordability-l6-9c-7x10",
+  "phase81a-succession-affordability-l6-9d-7x10",
+  "phase81a-succession-downstream-funnel-l6-12b-cached",
+  "phase81a-succession-growth-feasibility-l6-13-cached",
   "phase81a-renewal-ablation-l6-1-control-7x10",
   "phase81a-renewal-ablation-l6-1-market-7x10",
   "phase81a-renewal-ablation-l6-1-blueprint-7x10",
@@ -133,6 +146,19 @@ const CAREER_PROFILE_CHECKPOINT_KIND = {
   "phase81a-integrated-l6-2-7x10": "integrated_player_world_l6_2",
   "phase81a-integrated-l6-3-7x10": "integrated_player_world_l6_2",
   "phase81a-integrated-l6-3b-7x10": "integrated_player_world_l6_2",
+  "phase81a-assist-supply-l6-3c-7x1": "assist_supply_l6_3c",
+  "phase81a-assist-eligibility-l6-3d-7x1": "assist_eligibility_l6_3d",
+  "phase81a-dead-ball-attribution-l6-3e-7x1": "dead_ball_attribution_l6_3e",
+  "phase81a-penalty-award-l6-3f-7x1": "penalty_award_retry_l6_3f",
+  "phase81a-direct-free-kick-geometry-l6-3g-14x1": "direct_free_kick_geometry_l6_3g",
+  "phase81a-direct-free-kick-l6-3h-7x1": "direct_free_kick_path_l6_3h",
+  "phase81a-renewal-baseline-l6-4-7x10": "integrated_player_world_l6_2",
+  "phase81a-succession-priority-l6-5-7x10": "succession_priority_l6_5",
+  "phase81a-succession-target-pool-l6-9b-7x10": "succession_target_pool_l6_9b",
+  "phase81a-succession-affordability-l6-9c-7x10": "succession_affordability_l6_9c",
+  "phase81a-succession-affordability-l6-9d-7x10": "succession_affordability_l6_9d",
+  "phase81a-succession-downstream-funnel-l6-12b-cached": "succession_downstream_funnel_l6_12b",
+  "phase81a-succession-growth-feasibility-l6-13-cached": "succession_growth_feasibility_l6_13",
   "phase81a-renewal-ablation-l6-1-control-7x10": "renewal_ablation_l6_1",
   "phase81a-renewal-ablation-l6-1-market-7x10": "renewal_ablation_l6_1",
   "phase81a-renewal-ablation-l6-1-blueprint-7x10": "renewal_ablation_l6_1",
@@ -175,6 +201,19 @@ const CAREER_PROFILE_CACHE_SUFFIX = {
   "phase81a-integrated-l6-2-7x10": "-facts-v1",
   "phase81a-integrated-l6-3-7x10": "-facts-v1",
   "phase81a-integrated-l6-3b-7x10": "-facts-v1",
+  "phase81a-assist-supply-l6-3c-7x1": "-facts-v1",
+  "phase81a-assist-eligibility-l6-3d-7x1": "-facts-v1",
+  "phase81a-dead-ball-attribution-l6-3e-7x1": "-facts-v1",
+  "phase81a-penalty-award-l6-3f-7x1": "-facts-v1",
+  "phase81a-direct-free-kick-geometry-l6-3g-14x1": "-facts-v1",
+  "phase81a-direct-free-kick-l6-3h-7x1": "-facts-v1",
+  "phase81a-renewal-baseline-l6-4-7x10": "-facts-v1",
+  "phase81a-succession-priority-l6-5-7x10": "-facts-v1",
+  "phase81a-succession-target-pool-l6-9b-7x10": "-facts-v1",
+  "phase81a-succession-affordability-l6-9c-7x10": "-facts-v1",
+  "phase81a-succession-affordability-l6-9d-7x10": "-facts-v1",
+  "phase81a-succession-downstream-funnel-l6-12b-cached": "-facts-v1",
+  "phase81a-succession-growth-feasibility-l6-13-cached": "-facts-v1",
   "phase81a-renewal-ablation-l6-1-control-7x10": "-facts-v2",
   "phase81a-renewal-ablation-l6-1-market-7x10": "-facts-v2",
   "phase81a-renewal-ablation-l6-1-blueprint-7x10": "-facts-v2",
@@ -443,6 +482,201 @@ export const SIMULATION_REPORT_PROFILES = {
       includedSectionIds: CAREER_SECTION_IDS,
       detail: "standard",
       seedPrefix: "phase81a-integrated-l6-3b-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-assist-supply-l6-3c-7x1": {
+    id: "phase81a-assist-supply-l6-3c-7x1",
+    titleKey: "simulationReport.profile.phase81aAssistSupplyL6_3C.title",
+    descriptionKey: "simulationReport.profile.phase81aAssistSupplyL6_3C.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-assist-supply-l6-3c-7x1",
+      worldCount: 7,
+      seasonCount: 1,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "standard",
+      seedPrefix: "phase81a-assist-supply-l6-3c-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-assist-eligibility-l6-3d-7x1": {
+    id: "phase81a-assist-eligibility-l6-3d-7x1",
+    titleKey: "simulationReport.profile.phase81aAssistEligibilityL6_3D.title",
+    descriptionKey: "simulationReport.profile.phase81aAssistEligibilityL6_3D.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-assist-eligibility-l6-3d-7x1",
+      worldCount: 7,
+      seasonCount: 1,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "standard",
+      seedPrefix: "phase81a-assist-eligibility-l6-3d-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-dead-ball-attribution-l6-3e-7x1": {
+    id: "phase81a-dead-ball-attribution-l6-3e-7x1",
+    titleKey: "simulationReport.profile.phase81aDeadBallAttributionL6_3E.title",
+    descriptionKey: "simulationReport.profile.phase81aDeadBallAttributionL6_3E.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-dead-ball-attribution-l6-3e-7x1",
+      worldCount: 7,
+      seasonCount: 1,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "standard",
+      seedPrefix: "phase81a-dead-ball-attribution-l6-3e-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-penalty-award-l6-3f-7x1": {
+    id: "phase81a-penalty-award-l6-3f-7x1",
+    titleKey: "simulationReport.profile.phase81aPenaltyAwardL6_3F.title",
+    descriptionKey: "simulationReport.profile.phase81aPenaltyAwardL6_3F.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-penalty-award-l6-3f-7x1",
+      worldCount: 7,
+      seasonCount: 1,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "standard",
+      seedPrefix: "phase81a-penalty-award-l6-3f-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-direct-free-kick-geometry-l6-3g-14x1": {
+    id: "phase81a-direct-free-kick-geometry-l6-3g-14x1",
+    titleKey: "simulationReport.profile.phase81aDirectFreeKickGeometryL6_3G.title",
+    descriptionKey: "simulationReport.profile.phase81aDirectFreeKickGeometryL6_3G.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-direct-free-kick-geometry-l6-3g-14x1",
+      worldCount: 14,
+      seasonCount: 1,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "standard",
+      seedPrefix: "phase81a-direct-free-kick-geometry-l6-3g-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-direct-free-kick-l6-3h-7x1": {
+    id: "phase81a-direct-free-kick-l6-3h-7x1",
+    titleKey: "simulationReport.profile.phase81aDirectFreeKickL6_3H.title",
+    descriptionKey: "simulationReport.profile.phase81aDirectFreeKickL6_3H.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-direct-free-kick-l6-3h-7x1",
+      worldCount: 7,
+      seasonCount: 1,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "standard",
+      seedPrefix: "phase81a-direct-free-kick-l6-3h-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-renewal-baseline-l6-4-7x10": {
+    id: "phase81a-renewal-baseline-l6-4-7x10",
+    titleKey: "simulationReport.profile.phase81aRenewalBaselineL6_4.title",
+    descriptionKey: "simulationReport.profile.phase81aRenewalBaselineL6_4.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-renewal-baseline-l6-4-7x10",
+      worldCount: 7,
+      seasonCount: 10,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-renewal-baseline-l6-4-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-succession-priority-l6-5-7x10": {
+    id: "phase81a-succession-priority-l6-5-7x10",
+    titleKey: "simulationReport.profile.phase81aSuccessionPriorityL6_5.title",
+    descriptionKey: "simulationReport.profile.phase81aSuccessionPriorityL6_5.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-succession-priority-l6-5-7x10",
+      worldCount: 7,
+      seasonCount: 10,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-succession-priority-l6-5-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-succession-target-pool-l6-9b-7x10": {
+    id: "phase81a-succession-target-pool-l6-9b-7x10",
+    titleKey: "simulationReport.profile.phase81aSuccessionTargetPoolL6_9B.title",
+    descriptionKey: "simulationReport.profile.phase81aSuccessionTargetPoolL6_9B.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-succession-target-pool-l6-9b-7x10",
+      worldCount: 7,
+      seasonCount: 10,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-succession-target-pool-l6-9b-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-succession-affordability-l6-9c-7x10": {
+    id: "phase81a-succession-affordability-l6-9c-7x10",
+    titleKey: "simulationReport.profile.phase81aSuccessionAffordabilityL6_9C.title",
+    descriptionKey: "simulationReport.profile.phase81aSuccessionAffordabilityL6_9C.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-succession-affordability-l6-9c-7x10",
+      worldCount: 7,
+      seasonCount: 10,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-succession-affordability-l6-9c-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-succession-affordability-l6-9d-7x10": {
+    id: "phase81a-succession-affordability-l6-9d-7x10",
+    titleKey: "simulationReport.profile.phase81aSuccessionAffordabilityL6_9D.title",
+    descriptionKey: "simulationReport.profile.phase81aSuccessionAffordabilityL6_9D.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-succession-affordability-l6-9d-7x10",
+      worldCount: 7,
+      seasonCount: 10,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-succession-affordability-l6-9d-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-succession-downstream-funnel-l6-12b-cached": {
+    id: "phase81a-succession-downstream-funnel-l6-12b-cached",
+    titleKey: "simulationReport.profile.phase81aSuccessionDownstreamFunnelL6_12B.title",
+    descriptionKey: "simulationReport.profile.phase81aSuccessionDownstreamFunnelL6_12B.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-succession-downstream-funnel-l6-12b-cached",
+      worldCount: 7,
+      seasonCount: 10,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-succession-affordability-l6-9d-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-succession-growth-feasibility-l6-13-cached": {
+    id: "phase81a-succession-growth-feasibility-l6-13-cached",
+    titleKey: "simulationReport.profile.phase81aSuccessionGrowthFeasibilityL6_13.title",
+    descriptionKey: "simulationReport.profile.phase81aSuccessionGrowthFeasibilityL6_13.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-succession-growth-feasibility-l6-13-cached",
+      worldCount: 7,
+      seasonCount: 10,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-succession-affordability-l6-9d-v1",
       workerCount: 7,
     },
   },
@@ -1216,13 +1450,22 @@ async function leagueDiversityExecution(
     readonly independentOwnersMode?: "canary" | "full";
     readonly strengthContestMode?: StrengthContestMode;
     readonly renewalCommonSupportMode?: "canary" | "full";
+    readonly successionPriorityMode?: "l6_5";
   };
 }> {
   if (profileId === null || !Object.hasOwn(CAREER_PROFILE_CHECKPOINT_KIND, profileId)) return {};
   const careerProfileId = profileId as keyof typeof CAREER_PROFILE_CHECKPOINT_KIND;
   const cacheIdentityProfileId = careerProfileId === "phase81a-integrated-l5-4h-reeval-7x10"
     ? "phase81a-integrated-l5-4-7x10"
+    : careerProfileId === "phase81a-succession-downstream-funnel-l6-12b-cached"
+      || careerProfileId === "phase81a-succession-growth-feasibility-l6-13-cached"
+      ? "phase81a-succession-wage-buffer-l6-10-7x10:qualified_succession_selection"
     : careerProfileId;
+  const checkpointDirectory = careerProfileId ===
+    "phase81a-succession-downstream-funnel-l6-12b-cached"
+    || careerProfileId === "phase81a-succession-growth-feasibility-l6-13-cached"
+    ? "saves/long-run-checkpoints/phase81a-succession-wage-buffer-l6-10-7x10-facts-v2/qualified_succession_selection"
+    : `saves/long-run-checkpoints/${careerProfileId}${CAREER_PROFILE_CACHE_SUFFIX[careerProfileId]}`;
   const renewalAblationArm = renewalAblationArmForProfile(careerProfileId);
   const renewalRefinementMode = careerProfileId === "phase81a-renewal-refinement-l6-1a-canary-7x1"
     ? "canary" as const
@@ -1249,19 +1492,26 @@ async function leagueDiversityExecution(
       : careerProfileId === "phase81a-renewal-common-support-l6-1c-7x10"
         ? "full" as const
         : undefined;
+  const successionPriorityMode =
+    careerProfileId === "phase81a-succession-priority-l6-5-7x10"
+      ? "l6_5" as const
+      : undefined;
   return {
     leagueDiversityProfile: {
       profileId: cacheIdentityProfileId,
       checkpointKind: CAREER_PROFILE_CHECKPOINT_KIND[careerProfileId],
       checkpointDirectoryPath: await resolveWorkspaceOutputPath(
-        `saves/long-run-checkpoints/${careerProfileId}${CAREER_PROFILE_CACHE_SUFFIX[careerProfileId]}`,
+        checkpointDirectory,
       ),
-      readOnly: careerProfileId === "phase81a-integrated-l5-4h-reeval-7x10",
+      readOnly: careerProfileId === "phase81a-integrated-l5-4h-reeval-7x10"
+        || careerProfileId === "phase81a-succession-downstream-funnel-l6-12b-cached"
+        || careerProfileId === "phase81a-succession-growth-feasibility-l6-13-cached",
       ...(renewalAblationArm === undefined ? {} : { renewalAblationArm }),
       ...(renewalRefinementMode === undefined ? {} : { renewalRefinementMode }),
       ...(independentOwnersMode === undefined ? {} : { independentOwnersMode }),
       ...(strengthContestMode === undefined ? {} : { strengthContestMode }),
       ...(renewalCommonSupportMode === undefined ? {} : { renewalCommonSupportMode }),
+      ...(successionPriorityMode === undefined ? {} : { successionPriorityMode }),
     },
   };
 }

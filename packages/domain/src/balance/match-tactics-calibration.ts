@@ -586,6 +586,15 @@ export interface TacticalShapeCalibrationConfig {
  * they may exceed `10000`. Their common scale cancels in the weighted draw.
  */
 export interface ChanceActorSelectionCalibrationConfig {
+  /**
+   * Share of ordinary routed opportunities with an assist-eligible creator.
+   *
+   * The draw happens before resolution. When it succeeds, actor selection
+   * guarantees that creator and shooter are distinct; penalties bypass this
+   * path. The value reproduces the external non-dead-ball goal population,
+   * where `2,596 / 3,456` goals have a distinct credited creator.
+   */
+  readonly nonSetPieceAssistEligibilityBasisPoints: number;
   readonly shooterPropensityBasisPointsByRole: Readonly<Record<CanonicalPlayerRole, number>>;
 }
 
@@ -612,6 +621,7 @@ export type MatchTacticsCalibrationErrorCode =
   | "invalid_schema_version"
   | "invalid_version"
   | "invalid_classification"
+  | "invalid_assist_eligibility"
   | "incomplete_shooter_propensity"
   | "invalid_shooter_propensity"
   | "goalkeeper_shooter_propensity"
@@ -708,6 +718,14 @@ export function validateMatchTacticsCalibration(config: MatchTacticsCalibrationC
 export function validateChanceActorSelectionCalibration(
   config: ChanceActorSelectionCalibrationConfig,
 ): void {
+  const assistEligibility = config.nonSetPieceAssistEligibilityBasisPoints;
+  if (!isBasisPointShare(assistEligibility) || assistEligibility === 0 || assistEligibility === 10_000) {
+    throw new MatchTacticsCalibrationError(
+      "invalid_assist_eligibility",
+      `Non-set-piece assist eligibility must keep both outcomes reachable: ${assistEligibility}`,
+    );
+  }
+
   for (const role of CANONICAL_PLAYER_ROLES) {
     const propensity = config.shooterPropensityBasisPointsByRole[role];
     if (propensity === undefined) {
@@ -966,7 +984,7 @@ export function lateralChannelShares(
 }
 
 /** Schema version of the match-tactics calibration asset. */
-export const MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION = 3;
+export const MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION = 4;
 
 /**
  * Derives the exact budget allocated by one role row.

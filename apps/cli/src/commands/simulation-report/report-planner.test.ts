@@ -214,6 +214,86 @@ describe("simulation-report planner", () => {
     })).toThrow(/refuses measurement overrides/);
   });
 
+  it("freezes L6.3C assist attribution to seven fresh one-season worlds", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-assist-supply-l6-3c-7x1",
+      workerCount: 7,
+    });
+
+    expect(plan.measurementRequest).toMatchObject({
+      profileId: "phase81a-assist-supply-l6-3c-7x1",
+      worldCount: 7,
+      seasonCount: 1,
+      workerCount: 7,
+      seedPrefix: "phase81a-assist-supply-l6-3c-v1",
+    });
+    expect(plan.measurementRequest.includedSectionIds).toEqual(CAREER_SECTION_IDS);
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-assist-supply-l6-3c-7x1",
+      seasonCount: 2,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
+  it("freezes L6.3D assist eligibility to seven fresh one-season worlds", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-assist-eligibility-l6-3d-7x1",
+      workerCount: 7,
+    });
+
+    expect(plan.measurementRequest).toMatchObject({
+      profileId: "phase81a-assist-eligibility-l6-3d-7x1",
+      worldCount: 7,
+      seasonCount: 1,
+      workerCount: 7,
+      seedPrefix: "phase81a-assist-eligibility-l6-3d-v1",
+    });
+    expect(plan.measurementRequest.includedSectionIds).toEqual(CAREER_SECTION_IDS);
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-assist-eligibility-l6-3d-7x1",
+      worldCount: 8,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
+  it("freezes L6.3E dead-ball attribution to seven fresh one-season worlds", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-dead-ball-attribution-l6-3e-7x1",
+      workerCount: 7,
+    });
+
+    expect(plan.measurementRequest).toMatchObject({
+      profileId: "phase81a-dead-ball-attribution-l6-3e-7x1",
+      worldCount: 7,
+      seasonCount: 1,
+      workerCount: 7,
+      seedPrefix: "phase81a-dead-ball-attribution-l6-3e-v1",
+    });
+    expect(plan.measurementRequest.includedSectionIds).toEqual(CAREER_SECTION_IDS);
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-dead-ball-attribution-l6-3e-7x1",
+      seasonCount: 2,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
+  it("freezes L6.3F penalty award retry to seven fresh one-season worlds", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-penalty-award-l6-3f-7x1",
+      workerCount: 7,
+    });
+
+    expect(plan.measurementRequest).toMatchObject({
+      profileId: "phase81a-penalty-award-l6-3f-7x1",
+      worldCount: 7,
+      seasonCount: 1,
+      workerCount: 7,
+      seedPrefix: "phase81a-penalty-award-l6-3f-v1",
+    });
+    expect(plan.measurementRequest.includedSectionIds).toEqual(CAREER_SECTION_IDS);
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-penalty-award-l6-3f-7x1",
+      worldCount: 14,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
   it("freezes the independent L6.1B canary and powered current-world cohort", () => {
     const canary = createSimulationReportPlan({
       profileId: "phase81a-independent-owners-l6-1b-canary-7x1",
@@ -657,6 +737,45 @@ describe("simulation-report planner", () => {
         .toThrow(/refuses measurement overrides/);
     }
   });
+
+  it("freezes L6.12B to the cached L6.11 candidate population and seven workers", () => {
+    const profileId = "phase81a-succession-downstream-funnel-l6-12b-cached";
+    const plan = createSimulationReportPlan({ profileId, workerCount: 7 });
+
+    expect(plan.measurementRequest).toMatchObject({
+      profileId,
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-succession-affordability-l6-9d-v1",
+      includedSectionIds: [
+        "season", "standings", "players", "transfers",
+        "formations", "economy", "development", "anomalies",
+      ],
+    });
+    expect(() => createSimulationReportPlan({ profileId, workerCount: 6 }))
+      .toThrow(/refuses measurement overrides/);
+  });
+
+  it("freezes L6.13 to the same cached population and seven workers", () => {
+    const profileId = "phase81a-succession-growth-feasibility-l6-13-cached";
+    const plan = createSimulationReportPlan({ profileId, workerCount: 7 });
+
+    expect(plan.measurementRequest).toMatchObject({
+      profileId,
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-succession-affordability-l6-9d-v1",
+      includedSectionIds: [
+        "season", "standings", "players", "transfers",
+        "formations", "economy", "development", "anomalies",
+      ],
+    });
+    expect(() => createSimulationReportPlan({ profileId, workerCount: 6 }))
+      .toThrow(/refuses measurement overrides/);
+  });
+
 
   it("plans no audit work when a custom request lacks the locked shape population", () => {
     const plan = createSimulationReportPlan({

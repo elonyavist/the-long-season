@@ -112,6 +112,16 @@ export function buildOccasionContext(input: BuildOccasionContextInput): Occasion
   const attackingTeam = teamBySide(input.simulation, input.attackingSide);
   const defendingTeam = teamBySide(input.simulation, input.defendingSide);
   const chanceType = OPPORTUNITY_ROUTE_CHANCE_TYPE[input.route];
+  const assistEligibilityRequested = requestsAssistEligibleCreator({
+    seed: input.simulation.context.seed,
+    fixtureId: input.simulation.context.fixtureId,
+    minute: input.minute,
+    attackingSide: input.attackingSide,
+    scoreBeforeOccasion: input.scoreBeforeOccasion,
+    route: input.route,
+    probabilityBasisPoints: input.simulation.context.matchTacticsCalibration
+      .chanceActorSelection.nonSetPieceAssistEligibilityBasisPoints,
+  });
   const actors = selectChanceActors({
     seed: input.simulation.context.seed,
     fixtureId: input.simulation.context.fixtureId,
@@ -122,6 +132,7 @@ export function buildOccasionContext(input: BuildOccasionContextInput): Occasion
     defendingTeam,
     route: input.route,
     matchTacticsCalibration: input.simulation.context.matchTacticsCalibration,
+    requiresDistinctCreator: assistEligibilityRequested,
   });
 
   const shooter = incidentProfileFor(attackingTeam, actors.shooterPlayerId);
@@ -141,17 +152,8 @@ export function buildOccasionContext(input: BuildOccasionContextInput): Occasion
     shooterPlayerId: actors.shooterPlayerId,
     primaryDefenderPlayerId: actors.primaryDefenderPlayerId,
     goalkeeperPlayerId: actors.goalkeeperPlayerId,
-    creatorIsCreditedWithAssist: creditsCreatorWithAssist({
-      seed: input.simulation.context.seed,
-      fixtureId: input.simulation.context.fixtureId,
-      minute: input.minute,
-      attackingSide: input.attackingSide,
-      scoreBeforeOccasion: input.scoreBeforeOccasion,
-      creatorPlayerId: actors.creatorPlayerId,
-      shooterPlayerId: actors.shooterPlayerId,
-      shotType,
-      chanceType,
-    }),
+    creatorIsCreditedWithAssist:
+      assistEligibilityRequested && actors.creatorPlayerId !== actors.shooterPlayerId,
     shooterQualityEdge: shooterQualityEdgeFor(
       attackingTeam,
       shooter,
@@ -323,68 +325,37 @@ function weightedLineupMean(
   return totalWeight === 0 ? 0 : weightedTotal / totalWeight;
 }
 
-/** Input for the assist-credit decision, which happens before resolution. */
-interface CreditsCreatorWithAssistInput {
+/** Input for the assist-eligibility decision, which happens before resolution. */
+interface AssistEligibilityInput {
   readonly seed: string;
   readonly fixtureId: MatchSimulationState["context"]["fixtureId"];
   readonly minute: number;
   readonly attackingSide: MatchSide;
   readonly scoreBeforeOccasion: MatchScore;
-  readonly creatorPlayerId: PlayerId;
-  readonly shooterPlayerId: PlayerId;
-  readonly shotType: ShotType;
-  readonly chanceType: ShotChanceType;
+  readonly route: TacticalRoute;
+  readonly probabilityBasisPoints: number;
 }
 
 /**
- * Decides whether the creator would be credited with the assist on a goal.
+ * Decides whether an ordinary opportunity requires an assist-eligible creator.
  *
- * A player who shoots his own chance has nobody to assist him, which is a fact
- * about the occasion rather than about the outcome, so it is settled here too.
+ * This is sampled before actors and outcome. Actor selection then makes the
+ * creator distinct when the lineup contains another eligible player, so the
+ * external non-dead-ball share is not multiplied by accidental overlap.
  */
-function creditsCreatorWithAssist(input: CreditsCreatorWithAssistInput): boolean {
-  if (input.creatorPlayerId === input.shooterPlayerId) {
-    return false;
-  }
-
+function requestsAssistEligibleCreator(input: AssistEligibilityInput): boolean {
   const rng = deriveRng(
     input.seed,
-    OCCASION_ASSIST_STREAM,
+    OCCASION_ASSIST_ELIGIBILITY_STREAM,
     input.fixtureId,
     input.minute,
     input.attackingSide,
     input.scoreBeforeOccasion.home,
     input.scoreBeforeOccasion.away,
-    input.creatorPlayerId,
-    input.shooterPlayerId,
-    input.shotType,
-    input.chanceType,
+    input.route,
   );
 
-  return rng.nextFloat() < assistProbabilityForShot(input.shotType, input.chanceType);
-}
-
-/**
- * Derives how often a goal of this kind is set up rather than made alone.
- */
-function assistProbabilityForShot(shotType: ShotType, chanceType: ShotChanceType): number {
-  if (chanceType === "dead_ball" || shotType === "set_piece") {
-    return 0.25;
-  }
-
-  if (chanceType === "cross" && shotType === "header") {
-    return 0.85;
-  }
-
-  if (chanceType === "cross") {
-    return 0.75;
-  }
-
-  if (chanceType === "counter") {
-    return 0.6;
-  }
-
-  return 0.5;
+  return rng.nextFloat() < input.probabilityBasisPoints / 10_000;
 }
 
 /** Reads one team context by explicit side. */
@@ -398,7 +369,7 @@ function clamp(value: number, minInclusive: number, maxInclusive: number): numbe
 }
 
 /** Stable RNG stream deciding assist credit, separate from selection and resolution. */
-const OCCASION_ASSIST_STREAM = "occasion-assist";
+const OCCASION_ASSIST_ELIGIBILITY_STREAM = "occasion-assist-eligibility";
 
 /**
  * How far a shooter's attribute gap moves opportunity quality.

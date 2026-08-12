@@ -8,7 +8,10 @@ import {
   selectPlayerValuationConfig,
   selectPlayerWagePolicyConfig,
 } from "@game/content";
-import { advanceAiMarketLifecycle, deriveAiMarketNeeds } from "@game/engine";
+import {
+  advanceAiMarketLifecycle,
+  deriveAiMarketNeeds,
+} from "@game/engine";
 
 import { careerStateFromNewWorld } from "../career/scenarios.ts";
 import type { CliSaveId } from "../career/types.ts";
@@ -18,6 +21,7 @@ test("generated domestic worlds reach department and exact-role market paths", (
   let roleNeedCount = 0;
   let recruitableRoleNeedCount = 0;
   let exactRoleTargetFoundCount = 0;
+  let boundedReorderCount = 0;
 
   // Three consecutive generated worlds are a search of the real input space,
   // not a statistical checkpoint. Keeping the smallest consecutive corpus
@@ -57,7 +61,22 @@ test("generated domestic worlds reach department and exact-role market paths", (
       askingPriceConfig: selectAskingPriceCurves(versions),
       wagePolicy: selectPlayerWagePolicyConfig(versions),
       marketBehaviorPolicy,
+      needSubmissionOrder: "legacy",
     });
+    const bounded = advanceAiMarketLifecycle({
+      careerState,
+      fromDate: careerState.gameState.calendar.currentDate,
+      throughDate: (careerState.gameState.calendar.currentDate + 30) as typeof careerState.gameState.calendar.currentDate,
+      transferWindows,
+      valuationConfig,
+      askingPriceConfig: selectAskingPriceCurves(versions),
+      wagePolicy: selectPlayerWagePolicyConfig(versions),
+      marketBehaviorPolicy,
+      needSubmissionOrder: "bounded_succession",
+    });
+    boundedReorderCount += Number(
+      JSON.stringify(advanced.facts) !== JSON.stringify(bounded.facts),
+    );
     recruitableRoleNeedCount += advanced.diagnostics.filter(({ event, target }) =>
       event === "need_recruitable" && target.kind === "role"
     ).reduce((sum, { count }) => sum + count, 0);
@@ -70,4 +89,5 @@ test("generated domestic worlds reach department and exact-role market paths", (
   assert.equal(roleNeedCount > 0, true, "generated squads never expressed role succession");
   assert.equal(recruitableRoleNeedCount > 0, true, "role needs never cleared canonical finance");
   assert.equal(exactRoleTargetFoundCount > 0, true, "exact-role domestic candidates were unreachable");
+  assert.equal(boundedReorderCount > 0, true, "generated squads never reached bounded reordering");
 });

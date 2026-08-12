@@ -107,6 +107,29 @@ test("self-created and two-player chances are both reachable", () => {
   assert.ok(twoPlayerCount > 0);
 });
 
+test("requiring a distinct creator preserves every other actor and changes only overlap", () => {
+  let overlapWasSeparated = false;
+
+  for (let minute = 1; minute <= 2_000; minute += 1) {
+    const independent = selectChanceActors(chanceInput({ minute, requiresDistinctCreator: false }));
+    const distinct = selectChanceActors(chanceInput({ minute, requiresDistinctCreator: true }));
+
+    assert.equal(distinct.shooterPlayerId, independent.shooterPlayerId);
+    assert.equal(distinct.primaryDefenderPlayerId, independent.primaryDefenderPlayerId);
+    assert.equal(distinct.goalkeeperPlayerId, independent.goalkeeperPlayerId);
+    assert.notEqual(distinct.creatorPlayerId, distinct.shooterPlayerId);
+
+    if (independent.creatorPlayerId === independent.shooterPlayerId) {
+      assert.notEqual(distinct.creatorPlayerId, independent.creatorPlayerId);
+      overlapWasSeparated = true;
+      break;
+    }
+    assert.equal(distinct.creatorPlayerId, independent.creatorPlayerId);
+  }
+
+  assert.equal(overlapWasSeparated, true, "the real deterministic input space must reach an overlap");
+});
+
 test("defender role weights favor expected outfield responsibilities and exclude goalkeepers", () => {
   assert.ok(primaryDefenderWeightForRole("defender") > primaryDefenderWeightForRole("midfielder"));
   assert.equal(primaryDefenderWeightForRole("gk"), 0);
@@ -127,6 +150,7 @@ test("equal-quality shooter weights use the one empirical role propensity on eve
   const calibration = {
     ...base,
     chanceActorSelection: {
+      ...base.chanceActorSelection,
       shooterPropensityBasisPointsByRole: {
         ...base.chanceActorSelection.shooterPropensityBasisPointsByRole,
         center_back: 4_000,
@@ -215,6 +239,7 @@ function chanceInput(
     defendingTeam: awayTeamFixture(),
     route: "central",
     matchTacticsCalibration: matchTacticsCalibrationFixture(),
+    requiresDistinctCreator: false,
     ...overrides,
   };
 }

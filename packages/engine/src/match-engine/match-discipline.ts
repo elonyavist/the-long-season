@@ -19,6 +19,7 @@ export interface MatchDisciplineResolution {
   readonly events: readonly MatchDisciplineEvent[];
   readonly dismissedPlayerId?: PlayerId;
   readonly penalty?: MatchPenaltyResolution;
+  readonly directFreeKick?: MatchDirectFreeKickResolution;
 }
 
 /** Incident events emitted by the disciplinary policy. */
@@ -36,6 +37,15 @@ export interface MatchPenaltyResolution {
   readonly takerPlayerId: PlayerId;
   readonly goalkeeperPlayerId: PlayerId;
   readonly outcome: PenaltyOutcome;
+}
+
+/** Direct free-kick shot consumed by the canonical score/stat pipeline. */
+export interface MatchDirectFreeKickResolution {
+  readonly side: MatchEventSide;
+  readonly takerPlayerId: PlayerId;
+  readonly goalkeeperPlayerId: PlayerId;
+  readonly outcome: PenaltyOutcome;
+  readonly expectedGoals: number;
 }
 
 /** Resolves at most one causal foul for one defending side and minute. */
@@ -107,15 +117,21 @@ export function resolveMatchMinuteDiscipline(
   }
 
   const dismissal = events.find((event) => event.type === "red_card" || event.type === "second_yellow_card");
-  const penalty = zoneDanger >= 0.84 && rng.nextFloat() < PENALTY_AWARD_PROBABILITY_AFTER_DANGEROUS_FOUL
+  const penaltyAwardProbability = simulation.context.engineConfig.discipline
+    .penaltyAwardProbabilityAfterDangerousFoulBasisPoints / 10_000;
+  const penalty = zoneDanger >= 0.84 && rng.nextFloat() < penaltyAwardProbability
     ? resolvePenalty(simulation, minute, attackingSide, committedBy.playerId, sufferedBy.playerId)
     : undefined;
   if (penalty !== undefined) events.push(...penalty.events);
+  const directFreeKick = penalty === undefined
+    ? resolveDirectFreeKick(simulation, minute, attackingSide, zoneDanger)
+    : undefined;
 
   return {
     events,
     ...(dismissal === undefined ? {} : { dismissedPlayerId: dismissal.playerId }),
     ...(penalty === undefined ? {} : { penalty: penalty.resolution }),
+    ...(directFreeKick === undefined ? {} : { directFreeKick }),
   };
 }
 
@@ -125,10 +141,6 @@ function bookingProbability(severity: number, previousYellows: number): number {
   // second offence. This keeps dismissals meaningful without suppressing fouls.
   return previousYellows >= 1 ? firstBookingProbability * 0.2 : firstBookingProbability;
 }
-
-// `zoneDanger` identifies the small subset of fouls near the penalty area; this
-// second gate prevents every dangerous foul from becoming a penalty.
-const PENALTY_AWARD_PROBABILITY_AFTER_DANGEROUS_FOUL = 0.3;
 
 function resolvePenalty(
   simulation: MatchSimulationState,
@@ -189,6 +201,75 @@ function resolvePenalty(
   return {
     events: [awarded, penaltyOutcome],
     resolution: { side: attackingSide, takerPlayerId: taker.playerId, goalkeeperPlayerId: goalkeeper.playerId, outcome },
+  };
+}
+
+function resolveDirectFreeKick(
+  simulation: MatchSimulationState,
+  minute: number,
+  attackingSide: MatchEventSide,
+  zoneDanger: number,
+): MatchDirectFreeKickResolution | undefined {
+  const calibration = simulation.context.engineConfig.discipline;
+  if (Math.round(zoneDanger * 10_000) < calibration.directFreeKickMinimumZoneDangerBasisPoints) {
+    return undefined;
+  }
+  const attackingTeam = teamFor(simulation, attackingSide);
+  const defendingTeam = teamFor(simulation, oppositeSide(attackingSide));
+  const taker = [...attackingTeam.lineup]
+    .filter((slot) => slot.canonicalRole !== "goalkeeper")
+    .sort((left, right) => {
+      const abilityDifference = incidentProfileFor(attackingTeam, right.playerId).freeKicks
+        - incidentProfileFor(attackingTeam, left.playerId).freeKicks;
+      return abilityDifference !== 0 ? abilityDifference : String(left.playerId).localeCompare(String(right.playerId));
+    })[0];
+  const goalkeeper = defendingTeam.lineup.find((slot) => slot.canonicalRole === "goalkeeper");
+  if (taker === undefined || goalkeeper === undefined) return undefined;
+
+  const choiceRng = deriveRng(
+    simulation.context.seed,
+    "match-direct-free-kick-choice",
+    simulation.context.fixtureId,
+    minute,
+    attackingSide,
+  );
+  if (choiceRng.nextInt(0, 10_000) >= calibration.directFreeKickShotProbabilityBasisPoints) {
+    return undefined;
+  }
+
+  const takerProfile = incidentProfileFor(attackingTeam, taker.playerId);
+  const goalkeeperProfile = incidentProfileFor(defendingTeam, goalkeeper.playerId);
+  const probabilityBasisPoints = clamp(
+    calibration.directFreeKickBaseGoalProbabilityBasisPoints
+      + (takerProfile.freeKicks - calibration.directFreeKickReferenceTakerAbility)
+        * calibration.directFreeKickTakerAbilityStepBasisPoints
+      - (goalkeeperProfile.goalkeeperReflexes - calibration.directFreeKickReferenceGoalkeeperReflexes)
+        * calibration.directFreeKickGoalkeeperAbilityStepBasisPoints,
+    calibration.directFreeKickMinimumGoalProbabilityBasisPoints,
+    calibration.directFreeKickMaximumGoalProbabilityBasisPoints,
+  );
+  const expectedGoals = probabilityBasisPoints / 10_000;
+  const outcomeRng = deriveRng(
+    simulation.context.seed,
+    "match-direct-free-kick-outcome",
+    simulation.context.fixtureId,
+    minute,
+    attackingSide,
+    taker.playerId,
+    goalkeeper.playerId,
+  );
+  const scored = outcomeRng.nextInt(0, 10_000) < probabilityBasisPoints;
+  const outcome: PenaltyOutcome = scored
+    ? "scored"
+    : outcomeRng.nextFloat() < clamp(0.52 + (goalkeeperProfile.goalkeeperHandling - 10) * 0.015, 0.38, 0.7)
+      ? "saved"
+      : "missed";
+  return {
+    side: attackingSide,
+    takerPlayerId: taker.playerId,
+    goalkeeperPlayerId: goalkeeper.playerId,
+    outcome,
+    expectedGoals,
   };
 }
 

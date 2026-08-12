@@ -1,8 +1,9 @@
 {
-  "schemaVersion": 3,
-  "version": "match-tactics-calibration-v4",
+  "schemaVersion": 4,
+  "version": "match-tactics-calibration-v5",
   "classification": "explicit_game_design_target",
   "chanceActorSelection": {
+    "nonSetPieceAssistEligibilityBasisPoints": 7512,
     "shooterPropensityBasisPointsByRole": {
       "goalkeeper": 0,
       "right_full_back": 4372,

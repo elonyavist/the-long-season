@@ -4,6 +4,7 @@ import {
   type MatchEventSide,
   type PlayerId,
   type ShotChanceType,
+  type ShotDeadBallKind,
   type ShotType,
   type SubstitutionMatchEvent,
   type TacticalRoute,
@@ -24,6 +25,7 @@ import { accumulateControlUnits, deriveMatchMinuteControl } from "./match-contro
 import {
   resolveMatchMinuteDiscipline,
   type MatchDisciplineEvent,
+  type MatchDirectFreeKickResolution,
   type MatchPenaltyResolution,
 } from "./match-discipline.ts";
 import { injuryForcesExit, resolveMatchMinuteInjury } from "./match-injury.ts";
@@ -93,6 +95,8 @@ export interface MatchGoalStepEvent {
   readonly shotType: ShotType;
   /** Structured source type for the chance. */
   readonly chanceType: ShotChanceType;
+  /** Exact restart for a dead-ball shot. */
+  readonly deadBallKind?: ShotDeadBallKind;
   /** The way through the chance came down. Absent for a penalty, which had none. */
   readonly route?: TacticalRoute;
   /** Exact creator selected before resolution; absent only for penalties. */
@@ -125,6 +129,8 @@ export interface MatchNonGoalShotOutcomeStepEvent {
   readonly shotType: ShotType;
   /** Structured source type for the chance. */
   readonly chanceType: ShotChanceType;
+  /** Exact restart for a dead-ball shot. */
+  readonly deadBallKind?: ShotDeadBallKind;
   /**
    * The way through the chance came down.
    *
@@ -321,6 +327,19 @@ export function stepMatch(input: StepMatchInput): StepMatchResult {
       nextStats = penaltyApplied.stats;
       nextTelemetry = penaltyApplied.telemetry;
       if (penaltyApplied.goalEvent !== undefined) events.push(penaltyApplied.goalEvent);
+    }
+    if (discipline.directFreeKick !== undefined) {
+      const directFreeKickApplied = applyDirectFreeKickResolution(
+        nextScore,
+        nextStats,
+        nextTelemetry,
+        discipline.directFreeKick,
+        currentMinute,
+      );
+      nextScore = directFreeKickApplied.score;
+      nextStats = directFreeKickApplied.stats;
+      nextTelemetry = directFreeKickApplied.telemetry;
+      events.push(directFreeKickApplied.shotEvent);
     }
   }
 
@@ -627,7 +646,62 @@ function applyPenaltyResolution(
       isShotOnTarget: true,
       shotType: "set_piece",
       chanceType: "dead_ball",
+      deadBallKind: "penalty",
       scorerPlayerId: penalty.takerPlayerId,
+    },
+  };
+}
+
+function applyDirectFreeKickResolution(
+  score: MatchScore,
+  stats: MatchSimulationStats,
+  telemetry: MatchSimulationTelemetry,
+  directFreeKick: MatchDirectFreeKickResolution,
+  minute: number,
+): {
+  readonly score: MatchScore;
+  readonly stats: MatchSimulationStats;
+  readonly telemetry: MatchSimulationTelemetry;
+  readonly shotEvent: MatchShotOutcomeStepEvent;
+} {
+  const isScored = directFreeKick.outcome === "scored";
+  const isSaved = directFreeKick.outcome === "saved";
+  const resolution: OccasionResolution = {
+    outcome: isScored ? "goal" : isSaved ? "save" : "miss",
+    quality: directFreeKick.expectedGoals,
+    expectedGoals: directFreeKick.expectedGoals,
+    isShotOnTarget: isScored || isSaved,
+    resultsInCorner: false,
+  };
+  const nextStats = applyOccasionToStats(stats, directFreeKick.side, resolution);
+  const nextTelemetry = applyOccasionToTelemetry(telemetry, directFreeKick.side, resolution);
+  const common = {
+    type: "shot_outcome" as const,
+    minute,
+    side: directFreeKick.side,
+    quality: directFreeKick.expectedGoals,
+    isShotOnTarget: isScored || isSaved,
+    shotType: "set_piece" as const,
+    chanceType: "dead_ball" as const,
+    deadBallKind: "direct_free_kick" as const,
+  };
+  if (isScored) {
+    return {
+      score: applyGoalToScore(score, directFreeKick.side),
+      stats: nextStats,
+      telemetry: nextTelemetry,
+      shotEvent: { ...common, outcome: "goal", scorerPlayerId: directFreeKick.takerPlayerId },
+    };
+  }
+  return {
+    score,
+    stats: nextStats,
+    telemetry: nextTelemetry,
+    shotEvent: {
+      ...common,
+      outcome: isSaved ? "save" : "miss",
+      shooterPlayerId: directFreeKick.takerPlayerId,
+      ...(isSaved ? { goalkeeperPlayerId: directFreeKick.goalkeeperPlayerId } : {}),
     },
   };
 }

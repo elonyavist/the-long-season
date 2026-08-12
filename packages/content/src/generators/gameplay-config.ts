@@ -68,6 +68,19 @@ export interface FakeMatchEngineConfig {
   }[];
   readonly homeAdvantageFactor: number;
   readonly strengthGapMultiplier: number;
+  readonly discipline: {
+    readonly version: string;
+    readonly penaltyAwardProbabilityAfterDangerousFoulBasisPoints: number;
+    readonly directFreeKickMinimumZoneDangerBasisPoints: number;
+    readonly directFreeKickShotProbabilityBasisPoints: number;
+    readonly directFreeKickBaseGoalProbabilityBasisPoints: number;
+    readonly directFreeKickReferenceTakerAbility: number;
+    readonly directFreeKickTakerAbilityStepBasisPoints: number;
+    readonly directFreeKickReferenceGoalkeeperReflexes: number;
+    readonly directFreeKickGoalkeeperAbilityStepBasisPoints: number;
+    readonly directFreeKickMinimumGoalProbabilityBasisPoints: number;
+    readonly directFreeKickMaximumGoalProbabilityBasisPoints: number;
+  };
   readonly tacticalDistributionCaps: {
     readonly directness: { readonly minInclusive: number; readonly maxInclusive: number };
     readonly pressing: { readonly minInclusive: number; readonly maxInclusive: number };
@@ -94,6 +107,9 @@ export interface FakeGameplayConfig {
 
 /** Product strength-gap exposure, frozen by Phase 81A Step 06B20C. */
 export const PRODUCT_STRENGTH_GAP_MULTIPLIER = 1.25;
+
+/** Stable identity of the shipped match-discipline calibration. */
+export const MATCH_DISCIPLINE_CALIBRATION_VERSION = "match-discipline-calibration-v2";
 
 /**
  * Returns one deterministic immutable-by-value gameplay configuration.
@@ -131,6 +147,19 @@ export function createFakeGameplayConfig(): FakeGameplayConfig {
       ],
       homeAdvantageFactor: 1.1,
       strengthGapMultiplier: PRODUCT_STRENGTH_GAP_MULTIPLIER,
+      discipline: {
+        version: MATCH_DISCIPLINE_CALIBRATION_VERSION,
+        penaltyAwardProbabilityAfterDangerousFoulBasisPoints: 3_500,
+        directFreeKickMinimumZoneDangerBasisPoints: 8_000,
+        directFreeKickShotProbabilityBasisPoints: 7_500,
+        directFreeKickBaseGoalProbabilityBasisPoints: 646,
+        directFreeKickReferenceTakerAbility: 14,
+        directFreeKickTakerAbilityStepBasisPoints: 30,
+        directFreeKickReferenceGoalkeeperReflexes: 12,
+        directFreeKickGoalkeeperAbilityStepBasisPoints: 15,
+        directFreeKickMinimumGoalProbabilityBasisPoints: 250,
+        directFreeKickMaximumGoalProbabilityBasisPoints: 1_300,
+      },
       tacticalDistributionCaps: {
         directness: { minInclusive: 0, maxInclusive: 1 },
         pressing: { minInclusive: 0, maxInclusive: 1 },

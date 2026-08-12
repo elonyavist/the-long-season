@@ -15,6 +15,19 @@ test("focused league uses the reusable generated gameplay configuration", () => 
   assert.deepEqual(league.matchEngineConfig, expected.matchEngineConfig);
   assert.deepEqual(league.roleWeights, expected.roleWeights);
   assert.equal(league.matchEngineConfig.strengthGapMultiplier, PRODUCT_STRENGTH_GAP_MULTIPLIER);
+  assert.deepEqual(league.matchEngineConfig.discipline, {
+    version: "match-discipline-calibration-v2",
+    penaltyAwardProbabilityAfterDangerousFoulBasisPoints: 3_500,
+    directFreeKickMinimumZoneDangerBasisPoints: 8_000,
+    directFreeKickShotProbabilityBasisPoints: 7_500,
+    directFreeKickBaseGoalProbabilityBasisPoints: 646,
+    directFreeKickReferenceTakerAbility: 14,
+    directFreeKickTakerAbilityStepBasisPoints: 30,
+    directFreeKickReferenceGoalkeeperReflexes: 12,
+    directFreeKickGoalkeeperAbilityStepBasisPoints: 15,
+    directFreeKickMinimumGoalProbabilityBasisPoints: 250,
+    directFreeKickMaximumGoalProbabilityBasisPoints: 1_300,
+  });
   assert.deepEqual(league.stateMultiplierCurves, expected.stateMultiplierCurves);
 });
 

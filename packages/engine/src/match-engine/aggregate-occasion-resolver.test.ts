@@ -15,6 +15,7 @@ import {
   matchTacticsCalibrationFixture,
   tacticalShapeProfileFixture,
 } from "../test-fixtures/match-tactics-calibration.ts";
+import { matchDisciplineConfigFixture } from "../test-fixtures/match-engine-config.ts";
 import { withNeutralIncidentProfiles } from "../test-fixtures/match-player-incident-profiles.ts";
 
 /**
@@ -276,6 +277,7 @@ function engineConfig(strengthGapMultiplier = 1): MatchEngineConfig {
     ],
     homeAdvantageFactor: 1.05,
     strengthGapMultiplier,
+    discipline: matchDisciplineConfigFixture(),
     tacticalDistributionCaps: { directness: knob, pressing: knob, width: knob, risk: knob },
   };
 }

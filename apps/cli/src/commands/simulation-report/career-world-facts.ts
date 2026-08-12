@@ -233,6 +233,8 @@ export interface CareerWorldInspection {
     /** Report-only ceiling oracle; absent preserves the versioned product value. */
     readonly maximumActiveTalksOverride?: number;
   };
+  /** Analysis-only L6.5 order arm; Phase 81A closeout removes the legacy case. */
+  readonly aiMarketNeedSubmissionOrder?: "legacy" | "bounded_succession";
   /** Receives each completed selected-competition season. */
   readonly observeSeasonResult?: (context: {
     readonly seasonNumber: number;
@@ -4689,6 +4691,9 @@ function advanceCareerForReport(
           useRoleSuccessionMarketNeeds:
             inspection.renewalAblationPolicy.roleAwareMarket,
         }),
+    ...(inspection?.aiMarketNeedSubmissionOrder === undefined
+      ? {}
+      : { aiMarketNeedSubmissionOrder: inspection.aiMarketNeedSubmissionOrder }),
     playerDevelopmentEnvironmentConfig: selectPlayerDevelopmentEnvironmentConfig(
       careerStateWithParticipation.gameState.meta.calibrationVersions,
     ),

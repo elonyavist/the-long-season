@@ -23,15 +23,19 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Step: Phase 81A **06B20C1 is Done: L6.1D2 `GO`.** Fresh `28 x 10` seeds
-  accept `1.25`: champion points `75.2143`, health `25/28`, direction `28/28`,
-  all `17` guardrails and zero reconciliation. L6.1D remains `REFINE`.
-- Step: Phase 81A **06B23B is Done: `pre_existing`.** Corrected L6.3B accepts
-  scorers `18.45` but rejects assists `7.1614`; cached pre-06B22B facts also
-  reject assists at `7.1914`, byte-identical before/after reader correction.
-  Empirical shooter propensity is accepted; creator-only attribution is next.
-- L6.1C remains `STOP / RETHINK: antagonistic`; 06B20A/B/D/E, `100 x 10`, B2 and Steps
-  07-16 remain closed; no further implementation step is currently documented.
+- Phase 81A **L6.14 `STOP / RETHINK`:** public-runway selection improved local
+  replacement but raised transfers `27.40%` and lowered generated leaders
+  `1.90` points. Candidate removed. Next is cached leader-conversion
+  attribution; target selection and global development stay closed.
+- Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;
+  conversion `0.7260` and ordinary assisted share `0.7540` remain healthy.
+- Phase 81A **L6.3G `REFINE`:** `8000` yields `1.4692/1.4645` direct-free-kick
+  candidates and `8250` only `0.8688/0.8366` versus real `1.1529`; use an
+  independent rounded `7500` direct-shot choice at `8000`, never an exact fit.
+- Phase 81A **L6.5 `REFINE`:** priority raises division replacement `0.4767 ->
+  0.5604` but lowers local `0.0698 -> 0.0549`. Only `16-18%` of succession
+  acquisitions are 21-29 and about `64%` are 33-plus. L6.6 tests a soft ready-
+  successor tier; generic market expansion remains closed by L6.1C.
 - Step 03A Done; hard-cap probe **`FOUND`**, `21/21` reconciled. Its temporary
   projection hold is resolved by 06B7F1. Checkpoint A's `STOP / RETHINK` and
   frozen before-state stand.

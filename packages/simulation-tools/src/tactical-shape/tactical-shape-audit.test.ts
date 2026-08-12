@@ -23,6 +23,7 @@ import {
   type TacticalShapeQualityBands,
 } from "../index.ts";
 import { matchTacticsCalibrationFixture } from "../test-fixtures/match-tactics-calibration.ts";
+import { matchDisciplineConfigFixture } from "../test-fixtures/match-engine-config.ts";
 
 
 const CALIBRATION = matchTacticsCalibrationFixture();
@@ -37,6 +38,7 @@ const ENGINE_CONFIG: MatchEngineConfig = {
   ],
   homeAdvantageFactor: 1.05,
   strengthGapMultiplier: 1,
+  discipline: matchDisciplineConfigFixture(),
   tacticalDistributionCaps: {
     directness: { minInclusive: 0, maxInclusive: 1 },
     pressing: { minInclusive: 0, maxInclusive: 1 },

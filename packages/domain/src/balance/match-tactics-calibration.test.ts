@@ -271,6 +271,15 @@ test("shooter propensity is total, integral, and keeps every outfield role reach
   );
 });
 
+test("assist eligibility is an interior integral basis-point share", () => {
+  for (const value of [Number.NaN, 1.5, -1, 0, 10_000, 10_001]) {
+    assertRejects(
+      withActorSelection({ nonSetPieceAssistEligibilityBasisPoints: value }),
+      "invalid_assist_eligibility",
+    );
+  }
+});
+
 test("every capacity has a mirror, and mirroring twice is the identity", () => {
   for (const capacity of TACTICAL_SHAPE_CAPACITIES) {
     const mirrored = TACTICAL_SHAPE_CAPACITY_MIRROR[capacity];
@@ -422,6 +431,7 @@ function validCalibration(): MatchTacticsCalibrationConfig {
     version: "match-tactics-test",
     classification: "explicit_game_design_target",
     chanceActorSelection: {
+      nonSetPieceAssistEligibilityBasisPoints: 7_512,
       shooterPropensityBasisPointsByRole: shooterPropensities(),
     },
     tacticalShape: validShape(),

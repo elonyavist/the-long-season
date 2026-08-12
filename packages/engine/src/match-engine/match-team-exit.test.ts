@@ -10,6 +10,7 @@ import {
   matchTacticsCalibrationFixture,
   tacticalShapeProfileFixture,
 } from "../test-fixtures/match-tactics-calibration.ts";
+import { matchDisciplineConfigFixture } from "../test-fixtures/match-engine-config.ts";
 
 
 test("a forced-off goalkeeper promotes the strongest remaining emergency option", () => {
@@ -88,6 +89,7 @@ function matchContext(options: MatchContextOptions = {}): MatchContext {
       conversionBands: [{ bandKey: "all", minQualityInclusive: 0, maxQualityExclusive: 1, goalProbability: 0.1 }],
       homeAdvantageFactor: 1,
       strengthGapMultiplier: 1,
+      discipline: matchDisciplineConfigFixture(),
       tacticalDistributionCaps: {
         directness: { minInclusive: 0, maxInclusive: 1 },
         pressing: { minInclusive: 0, maxInclusive: 1 },

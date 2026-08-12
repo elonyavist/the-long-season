@@ -13,6 +13,7 @@ import {
   matchTacticsCalibrationFixture,
   tacticalShapeProfileFixture,
 } from "../test-fixtures/match-tactics-calibration.ts";
+import { matchDisciplineConfigFixture } from "../test-fixtures/match-engine-config.ts";
 import { deriveRng } from "@game/shared";
 
 /**
@@ -120,6 +121,27 @@ test("assist credit is settled before the occasion is resolved, not after a goal
   );
 
   assert.equal(occasionAt(simulation, 21, "left").creatorIsCreditedWithAssist, occasion.creatorIsCreditedWithAssist);
+});
+
+test("the empirical eligibility share reaches credited and uncredited ordinary opportunities", () => {
+  const simulation = simulationFixture();
+  let creditedCount = 0;
+  let uncreditedCount = 0;
+
+  for (let minute = 1; minute <= 2_000; minute += 1) {
+    const occasion = occasionAt(simulation, minute, "central");
+    if (occasion.creatorIsCreditedWithAssist) {
+      creditedCount += 1;
+      assert.notEqual(occasion.creatorPlayerId, occasion.shooterPlayerId);
+    } else {
+      uncreditedCount += 1;
+    }
+  }
+
+  assert.ok(creditedCount > 0);
+  assert.ok(uncreditedCount > 0);
+  assert.ok(creditedCount / (creditedCount + uncreditedCount) > 0.7);
+  assert.ok(creditedCount / (creditedCount + uncreditedCount) < 0.8);
 });
 
 test("the route decides the chance type and nothing else does", () => {
@@ -364,6 +386,7 @@ function engineConfig(): MatchEngineConfig {
     ],
     homeAdvantageFactor: 1.05,
     strengthGapMultiplier: 1,
+    discipline: matchDisciplineConfigFixture(),
     tacticalDistributionCaps: { directness: knob, pressing: knob, width: knob, risk: knob },
   };
 }

@@ -47,6 +47,7 @@ import {
 import { playerWagePolicyConfigFixture } from "../test-fixtures/player-wage-policy-config.ts";
 import { marketBehaviorConfigFixture } from "../test-fixtures/market-behavior-config.ts";
 import { playerValuationConfigFixture } from "../test-fixtures/player-valuation-config.ts";
+import { matchDisciplineConfigFixture } from "../test-fixtures/match-engine-config.ts";
 import {
   playerDevelopmentCalibrationVersionsFixture,
   playerDevelopmentEnvironmentConfigFixture,
@@ -1163,6 +1164,7 @@ function matchEngineConfigFixture(): MatchEngineConfig {
     ],
     homeAdvantageFactor: 1.1,
     strengthGapMultiplier: 1,
+    discipline: matchDisciplineConfigFixture(),
     tacticalDistributionCaps: {
       directness: { minInclusive: 0, maxInclusive: 1 },
       pressing: { minInclusive: 0, maxInclusive: 1 },

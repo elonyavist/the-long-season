@@ -11,6 +11,7 @@ export {
 export {
   isValidMatchEngineConfig,
   type ConversionBand,
+  type MatchDisciplineConfig,
   type MatchEngineConfig,
   type MatchRateConfig,
   type TacticalDistributionCaps,
@@ -90,6 +91,7 @@ export {
   type MatchDisciplineEvent,
   type MatchDisciplineResolution,
   type MatchPenaltyResolution,
+  type MatchDirectFreeKickResolution,
 } from "./match-discipline.ts";
 export {
   MATCH_INJURY_RISK_POLICY,

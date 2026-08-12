@@ -39,6 +39,7 @@ export function matchTacticsCalibrationFixture(): MatchTacticsCalibrationConfig 
     version: "match-tactics-simulation-tools-fixture",
     classification: "explicit_game_design_target",
     chanceActorSelection: {
+      nonSetPieceAssistEligibilityBasisPoints: 7_512,
       shooterPropensityBasisPointsByRole: Object.fromEntries(
         CANONICAL_PLAYER_ROLES.map((role) => [role, role === "goalkeeper" ? 0 : 10_000]),
       ) as Readonly<Record<CanonicalPlayerRole, number>>,

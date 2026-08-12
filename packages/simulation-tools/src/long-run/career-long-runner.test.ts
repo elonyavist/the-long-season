@@ -19,6 +19,7 @@ import type { SimulateSeasonInput, SimulateSeasonTeamInput } from "@game/engine"
 import type { LongRunContractFinanceSeasonRow } from "./contract-finance-stability.ts";
 import { runCareerLongRunSimulation } from "./career-long-runner.ts";
 import { matchTacticsCalibrationFixture } from "../test-fixtures/match-tactics-calibration.ts";
+import { matchDisciplineConfigFixture } from "../test-fixtures/match-engine-config.ts";
 import { seasonTeamInputFixture } from "../test-fixtures/season-team-input.ts";
 
 
@@ -404,6 +405,7 @@ function seasonInput(seed: string): SimulateSeasonInput {
       ],
       homeAdvantageFactor: 1,
       strengthGapMultiplier: 1,
+      discipline: matchDisciplineConfigFixture(),
       tacticalDistributionCaps: {
         directness: { minInclusive: 0, maxInclusive: 1 },
         pressing: { minInclusive: 0, maxInclusive: 1 },

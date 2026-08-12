@@ -25,11 +25,13 @@ export {
 } from "./career/career-market-catalog.ts";
 export {
   advanceAiMarketLifecycle,
+  AI_SUCCESSION_TARGET_POOL_STAGES,
   aiMarketTargetDepartment,
   deriveAiMarketNeeds,
   deriveAiMarketTargetScore,
   deriveAiTransferAffordabilitySnapshot,
   deriveAiTransferOfferFee,
+  orderAiMarketNeedsForSubmission,
   type AdvanceAiMarketLifecycleResult,
   type AiMarketDiagnosticFact,
   type AiMarketDiagnosticReason,
@@ -37,6 +39,8 @@ export {
   type AiMarketNeed,
   type AiMarketNeedReason,
   type AiMarketNeedTarget,
+  type AiMarketNeedSubmissionOrder,
+  type AiSuccessionTargetPoolStage,
   type AiTransferAffordabilitySnapshot,
   type DeriveAiTransferAffordabilitySnapshotInput,
   type DeriveAiTransferOfferFeeInput,

@@ -21,6 +21,7 @@ import {
   matchTacticsCalibrationFixture,
   tacticalShapeProfileFixture,
 } from "../test-fixtures/match-tactics-calibration.ts";
+import { matchDisciplineConfigFixture } from "../test-fixtures/match-engine-config.ts";
 import type { TacticalShapeProfile } from "./tactical-shape.ts";
 import { withNeutralIncidentProfiles } from "../test-fixtures/match-player-incident-profiles.ts";
 
@@ -843,6 +844,7 @@ function validConfig(options: {
     ],
     homeAdvantageFactor: 1.05,
     strengthGapMultiplier: 1,
+    discipline: matchDisciplineConfigFixture(),
     tacticalDistributionCaps: {
       directness: { minInclusive: -1, maxInclusive: 1 },
       pressing: { minInclusive: -1, maxInclusive: 1 },

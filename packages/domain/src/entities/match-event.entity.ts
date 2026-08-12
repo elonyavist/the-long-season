@@ -18,6 +18,9 @@ export type ShotType = "normal" | "header" | "set_piece";
  */
 export type ShotChanceType = "open_play" | "counter" | "cross" | "dead_ball";
 
+/** Exact restart that produced a dead-ball shot. */
+export type ShotDeadBallKind = "penalty" | "direct_free_kick";
+
 const SHOT_TYPES = ["normal", "header", "set_piece"] as const satisfies readonly ShotType[];
 
 const SHOT_CHANCE_TYPES = [
@@ -72,6 +75,8 @@ export interface ShotContext {
   readonly shotType: ShotType;
   /** Structured source type for the chance. */
   readonly chanceType: ShotChanceType;
+  /** Present for new dead-ball shots; absent for worked chances. */
+  readonly deadBallKind?: ShotDeadBallKind;
   /**
    * The way through the chance actually came down.
    *
@@ -82,9 +87,8 @@ export interface ShotContext {
    * it. It is persisted rather than re-derived because the shape and tactics
    * that produced it are gone by the time anyone reads the report.
    *
-   * Absent for a penalty, which is awarded rather than worked: there is no way
-   * through a defence that conceded it at the spot. Absence is the fact, not a
-   * missing value to fill in with `central`.
+   * Absent for a penalty or direct free kick, which is awarded rather than
+   * worked: there is no way through a defence to fill in with `central`.
    */
   readonly route?: TacticalRoute;
 }

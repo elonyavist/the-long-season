@@ -69,6 +69,7 @@ const tacticalShapeSchema = v.strictObject({
 });
 
 const chanceActorSelectionSchema = v.strictObject({
+  nonSetPieceAssistEligibilityBasisPoints: basisPoints,
   shooterPropensityBasisPointsByRole: v.strictObject(
     Object.fromEntries(CANONICAL_PLAYER_ROLES.map((role) => [role, nonNegativeInteger])) as Record<
       (typeof CANONICAL_PLAYER_ROLES)[number],

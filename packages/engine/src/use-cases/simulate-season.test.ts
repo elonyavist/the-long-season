@@ -37,6 +37,7 @@ import {
 import type { PlayerStateMultiplierCurves, RoleWeightProfile } from "../match-engine/index.ts";
 import { playerValuationConfigFixture } from "../test-fixtures/player-valuation-config.ts";
 import { matchTacticsCalibrationFixture } from "../test-fixtures/match-tactics-calibration.ts";
+import { matchDisciplineConfigFixture } from "../test-fixtures/match-engine-config.ts";
 import { playerStateCurvesConfigFixture } from "../test-fixtures/player-state-curves-config.ts";
 
 
@@ -1139,6 +1140,7 @@ function seasonInput(seed: string): SimulateSeasonInput {
       ],
       homeAdvantageFactor: 1.05,
       strengthGapMultiplier: 1,
+      discipline: matchDisciplineConfigFixture(),
       tacticalDistributionCaps: {
         directness: { minInclusive: 0, maxInclusive: 1 },
         pressing: { minInclusive: 0, maxInclusive: 1 },

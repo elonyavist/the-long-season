@@ -19,7 +19,18 @@ test("the shipped asset parses and is deeply frozen", () => {
   assert.equal(Object.isFrozen(calibration), true);
   assert.equal(Object.isFrozen(calibration.tacticalShape.taskAllocationBasisPointsByRole), true);
   assert.equal(Object.isFrozen(calibration.tacticalShape.taskAllocationBasisPointsByRole.striker), true);
+  assert.equal(calibration.chanceActorSelection.nonSetPieceAssistEligibilityBasisPoints, 7_512);
   assert.equal(Object.isFrozen(calibration.chanceActorSelection.shooterPropensityBasisPointsByRole), true);
+});
+
+test("a missing assist-eligibility share is rejected structurally", () => {
+  const raw = structuredClone(matchTacticsCalibrationJson) as Record<string, unknown>;
+  const actors = raw["chanceActorSelection"] as Record<string, unknown>;
+  delete actors["nonSetPieceAssistEligibilityBasisPoints"];
+
+  assert.throws(() => {
+    parseMatchTacticsCalibrationAsset(raw);
+  }, MatchTacticsCalibrationValidationError);
 });
 
 test("a missing shooter role is rejected structurally", () => {

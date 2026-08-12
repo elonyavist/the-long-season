@@ -38,6 +38,14 @@ corrections stay closed until L6.1 demonstrates owners. 06B18 is Done and
 06B19 completed with `REFINE`: local capacity and champion points are
 `not_reproduced`, three metrics are `shared_interaction`, and both new
 player-use gates are red across every arm. No 06B20 correction is authorized.
+The later L6.4-L6.12 sequence now isolates the remaining renewal problem:
+priority, age, aging, prospective planning, development-horizon targeting and a
+larger wage buffer were measured and rejected rather than accumulated. L6.11
+proved that qualified prime-age acquisition can move, but not leadership.
+L6.12 was invalidated by a same-season ownership join; corrected L6.12B finds
+88 generated prime-age acquisitions and identifies sub-`0.5` two-season growth
+in 61. L6.13 must separate stored potential, buyer load and development before
+any new product correction.
 Addendum A6.1 and 06B19A are implemented. The canary is `GO`; the full
 checkpoint is `STOP / RETHINK`. It attributes squad use to
 `matchday_selection` and standings to `population_strength`, and absolves the
@@ -251,6 +259,41 @@ contexts; it never owns the analytic diversity gate.
 | 06B23A | [Checkpoint L6.3B empirical shooter retry](06b23a-checkpoint-l6-3b-empirical-shooter-retry-7x10.md) | no | **SHOOTER `GO`; overall `REFINE`** |
 | 06B23A1 | [world-isolated leader reader](06b23a1-world-isolated-leader-reader.md) | no | Done: `GO` |
 | 06B23B | [corrected creator-lane attribution](06b23b-corrected-creator-lane-attribution.md) | no | Done: `pre_existing` |
+| 06B23C | [empirical creator and assist-supply baseline](06b23c-empirical-creator-and-assist-supply-baseline.md) | no | Done: `assist_supply` |
+| 06B23D | [Checkpoint L6.3C assist-supply attribution](06b23d-checkpoint-l6-3c-assist-supply-attribution-7x1.md) | no | Done: `assist_credit_probability` |
+| 06B23E | [empirical assist credit by chance baseline](06b23e-empirical-assist-credit-by-chance-baseline.md) | no | Done: `STOP / RETHINK` |
+| 06B23F | [empirical assist eligibility](06b23f-empirical-assist-eligibility.md) | yes | Done |
+| 06B23G | [Checkpoint L6.3D assist eligibility](06b23g-checkpoint-l6-3d-assist-eligibility-7x1.md) | no | Done: `GO`; `dead_ball_supply` |
+| 06B23H | [empirical dead-ball supply baseline](06b23h-empirical-dead-ball-supply-baseline.md) | no | Done: `GO` |
+| 06B23I | [Checkpoint L6.3E dead-ball attribution](06b23i-checkpoint-l6-3e-dead-ball-attribution-7x1.md) | no | Done: owners identified |
+| 06B23J | [versioned penalty award frequency](06b23j-versioned-penalty-award-frequency.md) | yes | Done: `3500` accepted |
+| 06B23J1 | [Checkpoint L6.3F penalty award retry](06b23j1-checkpoint-l6-3f-penalty-award-retry-7x1.md) | no | Done: `GO`; direct-free-kick geometry next |
+| 06B23K | [Checkpoint L6.3G direct-free-kick geometry](06b23k-checkpoint-l6-3g-direct-free-kick-geometry-14x1.md) | no | Done: `REFINE`; two-stage decision |
+| 06B23L | [versioned direct-free-kick path](06b23l-versioned-direct-free-kick-path.md) | yes | Done: v2 |
+| 06B23L1 | [Checkpoint L6.3H direct-free-kick path](06b23l1-checkpoint-l6-3h-direct-free-kick-path-7x1.md) | no | Done: `GO` |
+| 06B24 | [Checkpoint L6.4 current renewal baseline](06b24-checkpoint-l6-4-current-renewal-baseline-7x10.md) | no | Done: `market_distribution` |
+| 06B25 | [bounded role-succession priority](06b25-bounded-role-succession-priority.md) | yes | Done: analysis candidate only |
+| 06B25A | [Checkpoint L6.5 bounded succession priority](06b25a-checkpoint-l6-5-bounded-succession-priority-7x10.md) | no | Done: `REFINE` |
+| 06B25B | [cached target age/origin attribution](06b25b-cached-succession-target-age-and-origin-attribution.md) | no | Done: `mixed` |
+| 06B26 | [soft ready-successor targeting](06b26-soft-ready-successor-targeting.md) | yes | Done: rejected by L6.6 |
+| 06B26A | [Checkpoint L6.6 ready-successor targeting](06b26a-checkpoint-l6-6-ready-successor-targeting-7x10.md) | no | Done: `REFINE` |
+| 06B27 | [soft earlier outfield aging](06b27-soft-earlier-outfield-aging.md) | yes | Done: insufficient at L6.7 |
+| 06B27A | [Checkpoint L6.7 soft aging](06b27a-checkpoint-l6-7-soft-aging-7x10.md) | no | Done: `REFINE` |
+| 06B27B | [physical aging refinement](06b27b-soft-aging-physical-strength-refinement.md) | yes | Done: rejected |
+| 06B27C | [Checkpoint L6.7B physical aging](06b27c-checkpoint-l6-7b-physical-aging-7x10.md) | no | Done: `REFINE` |
+| 06B28 | [prospective role succession](06b28-prospective-role-succession-planning.md) | yes | Done: rejected by L6.8 |
+| 06B28A | [Checkpoint L6.8 prospective succession](06b28a-checkpoint-l6-8-prospective-succession-7x10.md) | no | Done: `REFINE` |
+| 06B29 | [development-horizon succession](06b29-development-horizon-role-succession.md) | yes | Done: rejected by L6.9 |
+| 06B29A | [Checkpoint L6.9 development horizon](06b29a-checkpoint-l6-9-development-horizon-succession-7x10.md) | no | Done: `REFINE` |
+| 06B29B | [Checkpoint L6.9B target pool](06b29b-checkpoint-l6-9b-succession-target-pool-attribution.md) | no | Done: `affordability` |
+| 06B29C | [Checkpoint L6.9C affordability](06b29c-checkpoint-l6-9c-succession-affordability-attribution.md) | no | Done: invalid instrument |
+| 06B29D | [Checkpoint L6.9D canonical affordability](06b29d-checkpoint-l6-9d-canonical-affordability-attribution.md) | no | Done: planning buffer owner |
+| 06B29E | [structural succession wage buffer](06b29e-structural-succession-wage-buffer.md) | yes | Done: rejected by L6.10 |
+| 06B29F | [qualified prime-age selection](06b29f-qualified-prime-age-succession-selection.md) | yes | Done: selection solved, candidate rejected |
+| 06B29G | [Checkpoint L6.12 invalid funnel](06b29g-checkpoint-l6-12-cached-succession-downstream-funnel.md) | no | Done: `STOP / RETHINK` |
+| 06B29H | [Checkpoint L6.12B corrected funnel](06b29h-checkpoint-l6-12b-season-boundary-succession-funnel.md) | no | Done: growth owner |
+| 06B29I | [Checkpoint L6.13 growth feasibility](06b29i-checkpoint-l6-13-cached-growth-feasibility.md) | no | Done: stored runway owner |
+| 06B29J | [public-runway successor selection](06b29j-public-runway-successor-selection.md) | yes | Done: `STOP / RETHINK`; candidate removed |
 | 06C | [Checkpoint B2 conditioned tactical ceiling](06c-checkpoint-b2-conditioned-tactical-ceiling.md) | no | GO authorizes 07 |
 | 07 | [player task execution](07-player-task-execution.md) | yes | Step 08 |
 | 08 | [squad identity and lateral execution](08-squad-identity-and-lateral-execution.md) | yes | Step 09 |

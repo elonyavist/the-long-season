@@ -16,6 +16,79 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_L6_14_PUBLIC_RUNWAY_SUCCESSION.md` - **STOP /
+  RETHINK.** Immediate growth improved, but transfers rose 27.40% and generated
+  leaders fell 1.90 points. Candidate fully removed; leader conversion next.
+
+- `PHASE_81A_CHECKPOINT_L6_13_SUCCESSION_GROWTH_FEASIBILITY.md` -
+  **OWNER_IDENTIFIED: insufficient_stored_room.** `43/61` low-growth
+  successors lacked +0.5 actual room at acquisition; median load was already
+  3,401 minutes. Only public-P50 runway selection opens.
+
+- `PHASE_81A_CHECKPOINT_L6_12B_SUCCESSION_DOWNSTREAM_FUNNEL.md` -
+  **OWNER_IDENTIFIED: below_half_ability_growth.** The corrected season-boundary
+  join yields 88 generated prime-age acquisitions; 61 remain below +0.5 growth
+  after two buyer seasons. L6.13 separates stored room, load and development.
+
+- `PHASE_81A_CHECKPOINT_L6_12_INVALID_DOWNSTREAM_FUNNEL.md` - **STOP /
+  RETHINK.** The superseded same-season buyer join discarded 2,457/2,488 keys
+  and produced a one-player denominator; no product conclusion survives it.
+
+- `PHASE_81A_CHECKPOINT_L6_4_CURRENT_RENEWAL_BASELINE.md` - **OWNER QUESTION:
+  `market_distribution`.** Senior-quality young players exist and receive
+  material minutes, but same-club replacement is only `0.0879`; the next
+  checkpoint tests bounded succession priority, not more generation or market
+  volume.
+
+- `PHASE_81A_CHECKPOINT_L6_5_BOUNDED_SUCCESSION_PRIORITY.md` - **REFINE.**
+  Division replacement improves, but local replacement worsens and generated
+  leaders barely move; priority alone is rejected before target age/origin
+  attribution.
+
+- `PHASE_81A_SUCCESSION_TARGET_AGE_ORIGIN_ATTRIBUTION.md` - **mixed, upstream
+  `target_eligibility`.** Only `16-18%` of succession acquisitions are 21-29
+  and roughly `64%` are 33-plus; soft ready-successor targeting opens.
+
+- `PHASE_81A_CHECKPOINT_L6_3H_DIRECT_FREE_KICK_PATH.md` - **GO.** `2,281`
+  named direct attempts yield `129` goals; attempts, conversion, goals,
+  penalties and ordinary assists all hold with zero reconciliation.
+
+- `PHASE_81A_CHECKPOINT_L6_3G_DIRECT_FREE_KICK_GEOMETRY.md` - **REFINE.**
+  `8000` oversupplies and `8250` undersupplies identically in calibration and
+  validation; a separate versioned direct-shot decision is required.
+
+- `PHASE_81A_CHECKPOINT_L6_3F_PENALTY_AWARD_RETRY.md` - **GO.** Versioned
+  `3500` basis points produce `0.2624` penalty attempts/match; conversion holds
+  at `0.7260`, ordinary assisted share at `0.7540`, zero reconciliation.
+
+- `PHASE_81A_CHECKPOINT_L6_3E_DEAD_BALL_ATTRIBUTION.md` -
+  **OWNER_IDENTIFIED.** Penalty attempts are `0.2232`/match and low; conversion
+  is healthy at `0.7448`. The direct-free-kick path is independently absent.
+
+- `PHASE_81A_STATSBOMB_DEAD_BALL_SUPPLY_BASELINE.md` - **GO.** `400`
+  penalties yield `300` goals; `1,749` direct free kicks yield `113`. Their
+  separate per-match rates now govern game-side attribution.
+
+- `PHASE_81A_CHECKPOINT_L6_3D_ASSIST_ELIGIBILITY.md` - **GO: assist
+  semantics; residual `dead_ball_supply`.** Ordinary assisted share is `0.7578`
+  against external `0.7512`; all-goal share stays high because dead-ball goals
+  are `0.0515` against `0.1067`. Zero reconciliation.
+
+- `PHASE_81A_STATSBOMB_ASSIST_CREDIT_BY_CHANCE_BASELINE.md` - **STOP /
+  RETHINK.** All four reachable key-pass categories reconcile and clear the
+  sample floor, but each is credited `100%` by StatsBomb semantics. Category
+  probabilities are rejected; assist eligibility must be modelled separately.
+
+- `PHASE_81A_CHECKPOINT_L6_3C_ASSIST_SUPPLY_ATTRIBUTION.md` -
+  **assist_credit_probability.** Seven fresh one-season worlds classify `6,442`
+  goals with zero reconciliation. Distinct creators can reach `84.63%` versus
+  real `67.10%`; shipped category probabilities hold actual credit to `54.89%`.
+
+- `PHASE_81A_STATSBOMB_CREATOR_AND_ASSIST_SUPPLY_BASELINE.md` -
+  **assist_supply.** Across `1,517` matches, real top-ten creator concentration
+  differs from the game by only `0.0128`, but assisted goals are `67.10%`
+  against `54.13%`. The next step isolates overlap from credit probability.
+
 - `PHASE_81A_CHECKPOINT_L6_3B_EMPIRICAL_SHOOTER_AND_READER.md` - **SHOOTER GO /
   overall REFINE.** A world-isolation bug in the leader reader is corrected;
   empirical shooter propensity puts top-ten scoring at `18.45`. Cached

@@ -34,6 +34,7 @@ export function matchTacticsCalibrationFixture(): MatchTacticsCalibrationConfig 
     version: "match-tactics-fixture",
     classification: "explicit_game_design_target",
     chanceActorSelection: {
+      nonSetPieceAssistEligibilityBasisPoints: 7_512,
       shooterPropensityBasisPointsByRole: uniformShooterPropensities(),
     },
     tacticalShape: {
@@ -245,6 +246,7 @@ export function flatMatchTacticsCalibrationFixture(input: {
     version: input.version ?? "match-tactics-flat-fixture",
     classification: "explicit_game_design_target",
     chanceActorSelection: {
+      nonSetPieceAssistEligibilityBasisPoints: 7_512,
       shooterPropensityBasisPointsByRole: uniformShooterPropensities(),
     },
     tacticalShape: {

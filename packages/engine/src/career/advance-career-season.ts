@@ -178,6 +178,8 @@ export interface AdvanceCareerOneSeasonInput {
   readonly askingPriceConfig?: AskingPriceCurvesConfig;
   /** Analysis-only Phase 81A ablation seam; never persisted or player-visible. */
   readonly useRoleSuccessionMarketNeeds?: boolean;
+  /** Analysis-only Phase 81A legacy-order control; never persisted. */
+  readonly aiMarketNeedSubmissionOrder?: "legacy" | "bounded_succession";
 }
 
 /** Stable operation keys emitted to let tests and reports verify ordering. */
@@ -550,6 +552,9 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
     ...(input.useRoleSuccessionMarketNeeds === undefined
       ? {}
       : { useRoleSuccessionMarketNeeds: input.useRoleSuccessionMarketNeeds }),
+    ...(input.aiMarketNeedSubmissionOrder === undefined
+      ? {}
+      : { aiMarketNeedSubmissionOrder: input.aiMarketNeedSubmissionOrder }),
   });
   if (monthlyLifecycle.marketLifecycle !== undefined) {
     operationOrder.push("ai_market_lifecycle");

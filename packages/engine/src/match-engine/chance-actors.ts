@@ -78,6 +78,8 @@ export interface SelectChanceActorsInput {
   readonly route: TacticalRoute;
   /** Exact versioned task allocation already carried by the match context. */
   readonly matchTacticsCalibration: MatchTacticsCalibrationConfig;
+  /** Whether this opportunity needs a creator distinct from its shooter. */
+  readonly requiresDistinctCreator: boolean;
 }
 
 /**
@@ -128,6 +130,7 @@ export interface ChanceActorSelectionWeight {
  *   defendingTeam: context.away,
  *   route: "central",
  *   matchTacticsCalibration,
+ *   requiresDistinctCreator: false,
  * });
  */
 export function selectChanceActors(input: SelectChanceActorsInput): ChanceActors {
@@ -165,13 +168,24 @@ export function selectChanceActors(input: SelectChanceActorsInput): ChanceActors
     input.scoreBeforeChance.away,
     input.route,
   );
-  const creatorPlayerId = pickWeightedPlayer(creatorCandidates, rng.nextFloat());
+  const creatorRoll = rng.nextFloat();
+  const shooterRoll = rng.nextFloat();
+  const defenderRoll = rng.nextFloat();
   const shooterPool = shooterCandidates;
+  const shooterPlayerId = pickWeightedPlayer(shooterPool, shooterRoll);
+  const distinctCreatorCandidates = input.requiresDistinctCreator
+    ? creatorCandidates.filter((candidate) => candidate.slot.playerId !== shooterPlayerId)
+    : creatorCandidates;
+  // A one-outfielder team has no second player to credit. Keeping its sole
+  // candidate is the explicit self-created exception, not a fallback value.
+  const creatorPool = distinctCreatorCandidates.length === 0
+    ? creatorCandidates
+    : distinctCreatorCandidates;
 
   return {
-    creatorPlayerId,
-    shooterPlayerId: pickWeightedPlayer(shooterPool, rng.nextFloat()),
-    primaryDefenderPlayerId: pickWeightedPlayer(defenderCandidates, rng.nextFloat()),
+    creatorPlayerId: pickWeightedPlayer(creatorPool, creatorRoll),
+    shooterPlayerId,
+    primaryDefenderPlayerId: pickWeightedPlayer(defenderCandidates, defenderRoll),
     goalkeeperPlayerId,
     shooterSelectionPool: shooterPool.map(({ slot, weight }) => ({
       playerId: slot.playerId,
