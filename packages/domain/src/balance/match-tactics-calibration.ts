@@ -390,6 +390,8 @@ export interface TacticalSemanticsCalibrationConfig {
    * does, so the numbers cannot quietly disagree with the football.
    */
   readonly routeAffinityBasisPointsByKnob: Readonly<Record<TacticKnob, number>>;
+  /** How far an explicit left/right instruction reallocates between flanks. */
+  readonly lateralFocusAffinityBasisPoints: number;
   /** How far a knob at its cap moves this side's own chance volume. */
   readonly volumeBasisPointsByKnob: Readonly<Record<TacticKnob, number>>;
   /**
@@ -779,6 +781,15 @@ export function validateChanceActorSelectionCalibration(
  * quiet bonus.
  */
 export function validateTacticalSemanticsCalibration(config: TacticalSemanticsCalibrationConfig): void {
+  if (
+    !isBasisPointShare(config.lateralFocusAffinityBasisPoints)
+    || config.lateralFocusAffinityBasisPoints === 0
+  ) {
+    throw new MatchTacticsCalibrationError(
+      "invalid_route_affinity",
+      `Lateral focus affinity must be a positive basis-point share: ${config.lateralFocusAffinityBasisPoints}`,
+    );
+  }
   for (const knob of TACTIC_KNOBS) {
     const affinity = config.routeAffinityBasisPointsByKnob[knob];
     const volume = config.volumeBasisPointsByKnob[knob];

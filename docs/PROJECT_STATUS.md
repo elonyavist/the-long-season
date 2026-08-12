@@ -23,9 +23,10 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **06C2 population `GO` twice:** the double-width identity is now
-  distinct; unchanged B2 population passes `21/21` in both sets. Tactical
-  ubiquity remains `6.0529/6.3519 > 4`, owned only by lateral-route leverage.
+- Phase 81A **06C3 B2 Phase 1 passes twice:** the frozen ladder stopped at
+  `6000 bp`; ubiquity is `3.6587/3.7037`, six responses win contexts and
+  population is `21/21` twice. Step 06C4 owns independent Phase-2 replay;
+  Step 07 remains closed.
 - **L6.31 stays green twice:** routine-youth runway improves ready replacements
   `+0.1363/+0.1034`, leaders `+0.0810/+0.0905`, with exact immediate purity.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;

@@ -455,6 +455,7 @@ function withSemantics(
 function validSemantics(): TacticalSemanticsCalibrationConfig {
   return {
     routeAffinityBasisPointsByKnob: { directness: 3_000, pressing: 2_000, width: 3_500, risk: 0 },
+    lateralFocusAffinityBasisPoints: 4_000,
     volumeBasisPointsByKnob: { directness: 1_200, pressing: 800, width: 600, risk: 2_000 },
     exposureBasisPointsByKnob: { directness: 1_500, pressing: 2_000, width: 1_200, risk: 2_500 },
     controlBasisPointsByKnob: { directness: 900, pressing: 1_100, width: 400, risk: 600 },
@@ -471,6 +472,17 @@ function validSemantics(): TacticalSemanticsCalibrationConfig {
     routeSelectionSharpness: 3,
   };
 }
+
+test("lateral focus affinity is required, positive and bounded", () => {
+  assert.throws(
+    () => validateMatchTacticsCalibration(withSemantics({ lateralFocusAffinityBasisPoints: 0 })),
+    /Lateral focus affinity must be a positive basis-point share/,
+  );
+  assert.throws(
+    () => validateMatchTacticsCalibration(withSemantics({ lateralFocusAffinityBasisPoints: 10_001 })),
+    /Lateral focus affinity must be a positive basis-point share/,
+  );
+});
 
 function validShape(): TacticalShapeCalibrationConfig {
   return {

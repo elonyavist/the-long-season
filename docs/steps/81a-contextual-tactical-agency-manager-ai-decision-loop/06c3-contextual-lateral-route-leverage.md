@@ -2,8 +2,9 @@
 
 ## Status
 
-Active. B2.1 identified `lateral_route_leverage`; 06C2 closed the independent
-population owner. This is the only tactical correction now authorized.
+Done. The preregistered ladder stopped at its first passing value, `6000 bp`.
+Both seed sets pass every B2 Phase-1 gate and all `21 / 21` population rows.
+Phase 2 is now required; Step 06C4 owns it and Step 07 remains closed.
 
 ## Goal
 
@@ -39,6 +40,9 @@ Phase 1 passes.
 - `packages/content/src/schemas/match-tactics-calibration.schema.ts`
 - `packages/content/src/balance/match-tactics-calibration.json` and test
 - `packages/engine/src/test-fixtures/match-tactics-calibration.ts`
+- `packages/simulation-tools/src/test-fixtures/match-tactics-calibration.ts`.
+  Both test-fixture owners must state the new required field; no default may
+  make an incomplete calibration look valid;
 - `packages/engine/src/match-engine/opportunity-route.ts` and test
 - any deterministic golden whose only change is the versioned calibration;
   each is added here with its measured account before editing
@@ -67,3 +71,23 @@ One candidate passes unchanged B2 in both sets, population stays `21 / 21`
 twice, the asset and validator own one magnitude, wrong-side cost and mirror
 symmetry remain real, Phase 2 becomes required, and no candidate-only seam or
 superseded value remains.
+
+## Result
+
+The `4000 bp` candidate was evaluated first and rejected. It increased the
+number of selected responses to `5 / 6`, but ubiquity remained
+`5.7989 / 6.1032`, above the unchanged `4` ceiling. The `6000 bp` candidate was
+therefore evaluated next and passed; `8000` and `10000` were not read.
+
+At `6000 bp`, all nine tactical-response signatures remain distinct and six
+appear as a best response in each seed set. Ubiquity is `3.6587 / 3.7037`,
+material local cycles are `145 / 144`, conservation and mirror mismatches are
+zero, no response is universal, and population remains `21 / 21` twice. The
+report correctly returns `PASS_PHASE_1`, not final B2 `GO`: independent replay
+is still required.
+
+Canonical artifact:
+`simulation-out/phase81a-b2-lateral-candidate-6000.json`, SHA-256
+`61521f2014b31918bb547d8b59b2ccceec5e6d16c086ad888aeabe52951d805a`.
+The rejected `4000 bp` artifact has SHA-256
+`e1384f7ee08587e8a40bd4773bba921a8d5aae4ecdc3c1f0a417024c12c6b23c`.

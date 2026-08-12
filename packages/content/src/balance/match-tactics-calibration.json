@@ -1,6 +1,6 @@
 {
   "schemaVersion": 4,
-  "version": "match-tactics-calibration-v5",
+  "version": "match-tactics-calibration-v6",
   "classification": "explicit_game_design_target",
   "chanceActorSelection": {
     "nonSetPieceAssistEligibilityBasisPoints": 7512,
@@ -213,6 +213,7 @@
       "width": 3200,
       "risk": 0
     },
+    "lateralFocusAffinityBasisPoints": 6000,
     "volumeBasisPointsByKnob": {
       "directness": 900,
       "pressing": 700,

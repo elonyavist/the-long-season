@@ -16,6 +16,11 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CONTEXTUAL_LATERAL_ROUTE_LEVERAGE.md` — **`PASS_PHASE_1`.** The
+  first passing preregistered value is `6000 bp`; ubiquity is
+  `3.6587 / 3.7037`, population is `21/21` twice, and independent Phase-2
+  replay is now required.
+
 - `PHASE_81A_DOUBLE_WIDTH_IDENTITY_CORRECTION.md` — **population `GO`.** The
   double-width chart is distinct and B2 population passes `21/21` twice;
   tactical leverage remains independently red.

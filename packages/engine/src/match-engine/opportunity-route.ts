@@ -152,8 +152,9 @@ export class OpportunityRouteError extends Error {
  *    scale volume alone. A side chasing a goal attacks more often; it does not
  *    suddenly discover a flank it did not have.
  *
- * Lateral focus uses width's authored magnitude to move budget from one flank
- * to the other; it does not introduce a second coefficient for the same idea.
+ * Lateral focus uses its own authored magnitude to move budget from one flank
+ * to the other. Width spreads a whole team; focus commits that width to a side,
+ * and B2.1 proved that treating those as one magnitude made focus inert.
  * Weights derive from the resulting saturations, so a side with one open
  * route uses it and a side with five equal routes spreads across them. Nothing
  * here consumes randomness: selection is a separate, explicit step.
@@ -203,7 +204,7 @@ export function deriveOpportunityRoutePlan(input: DeriveOpportunityRoutePlanInpu
 
     const focusRoute = LATERAL_FOCUS_ROUTE[lateralFocus];
     const abandonedRoute = LATERAL_FOCUS_EXPOSED_ROUTE[lateralFocus];
-    const focusMagnitude = share(semantics.routeAffinityBasisPointsByKnob.width);
+    const focusMagnitude = share(semantics.lateralFocusAffinityBasisPoints);
     if (focusRoute === route) bias += focusMagnitude;
     if (abandonedRoute === route) bias -= focusMagnitude;
     routeBias[route] = bias;

@@ -120,6 +120,7 @@ const FIXTURE_TACTICAL_MATCHUP = {
 
 const FIXTURE_TACTICAL_SEMANTICS = {
   routeAffinityBasisPointsByKnob: { directness: 3_000, pressing: 2_200, width: 3_200, risk: 0 },
+  lateralFocusAffinityBasisPoints: 4_000,
   volumeBasisPointsByKnob: { directness: 900, pressing: 700, width: 500, risk: 1_800 },
   exposureBasisPointsByKnob: { directness: 1_600, pressing: 1_900, width: 1_300, risk: 2_200 },
   controlBasisPointsByKnob: { directness: 700, pressing: 1_400, width: 400, risk: 500 },

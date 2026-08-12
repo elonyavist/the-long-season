@@ -92,6 +92,7 @@ const knobMagnitudesSchema = v.strictObject(
 
 const tacticalSemanticsSchema = v.strictObject({
   routeAffinityBasisPointsByKnob: knobMagnitudesSchema,
+  lateralFocusAffinityBasisPoints: basisPoints,
   volumeBasisPointsByKnob: knobMagnitudesSchema,
   exposureBasisPointsByKnob: knobMagnitudesSchema,
   controlBasisPointsByKnob: knobMagnitudesSchema,

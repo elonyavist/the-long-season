@@ -20,7 +20,7 @@ import { matchTacticsCalibration } from "./match-tactics-calibration.ts";
 
 test("the shipped calibration exposes one stable version and schema", () => {
   assert.equal(matchTacticsCalibration.schemaVersion, MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION);
-  assert.equal(matchTacticsCalibration.version, "match-tactics-calibration-v5");
+  assert.equal(matchTacticsCalibration.version, "match-tactics-calibration-v6");
   assert.equal(matchTacticsCalibration.classification, "explicit_game_design_target");
   assert.equal(matchTacticsCalibration.version.length > 0, true);
 });
