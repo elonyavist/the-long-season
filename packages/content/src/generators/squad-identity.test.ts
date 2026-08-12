@@ -79,6 +79,18 @@ test("the identity table reaches all ten primary roles without any one squad hol
   assert.equal(widestSquad < PLAYER_ROLES.length, true, "no single squad may hold all ten roles");
 });
 
+test("double-width stock is distinct from classic midfield width without a formation hint", () => {
+  const doubleWidth = GENERATED_SQUAD_IDENTITIES.double_width_stock.positions.slice(0, 11);
+  const midfieldWidth = GENERATED_SQUAD_IDENTITIES.wide_midfield_stock.positions.slice(0, 11);
+
+  assert.equal(doubleWidth.filter((position) => position === "cb").length, 3);
+  assert.equal(doubleWidth.filter((position) => position === "rwb" || position === "lwb").length, 2);
+  assert.equal(doubleWidth.filter((position) => position === "rw" || position === "lw").length, 2);
+  assert.equal(doubleWidth.filter((position) => position === "st").length, 1);
+  assert.equal(midfieldWidth.filter((position) => position === "rm" || position === "lm").length, 2);
+  assert.equal(midfieldWidth.filter((position) => position === "st").length, 2);
+});
+
 test("no role is stocked by every identity, so abundance varies between clubs", () => {
   const identities = allIdentities();
   const optionalRoles: readonly PlayerRole[] = [

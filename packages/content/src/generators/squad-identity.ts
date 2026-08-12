@@ -140,8 +140,8 @@ export const GENERATED_SQUAD_IDENTITIES: Readonly<
   double_width_stock: {
     key: "double_width_stock",
     positions: [
-      "gk", "rwb", "cb", "cb", "lwb", "cm", "cm", "rm", "lm", "st", "st",
-      "gk", "cb", "cb", "rwb", "lwb", "rm", "lm", "cm", "rw", "lw", "st",
+      "gk", "cb", "cb", "cb", "rwb", "lwb", "cm", "cm", "rw", "lw", "st",
+      "gk", "cb", "cb", "rwb", "lwb", "rm", "lm", "cm", "rw", "lw", "cm",
     ],
   },
   /** A deep, crowded defence and holders in front of it, ahead of one forward. */

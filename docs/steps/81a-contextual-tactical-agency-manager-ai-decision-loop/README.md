@@ -316,6 +316,7 @@ contexts; it never owns the analytic diversity gate.
 | 06C | [Checkpoint B2 conditioned tactical ceiling](06c-checkpoint-b2-conditioned-tactical-ceiling.md) | no | Done: `REFINE` |
 | 06C1 | [conditioned response and formation concentration attribution](06c1-conditioned-response-and-formation-concentration-attribution.md) | no | Done: lateral owner, formation mixed |
 | 06C1A | [formation identity-family concentration attribution](06c1a-formation-identity-family-concentration-attribution.md) | no | Done: two-identity owner |
+| 06C2 | [double-width squad identity separation](06c2-double-width-squad-identity-separation.md) | yes | Done: population `GO` twice |
 | 07 | [player task execution](07-player-task-execution.md) | yes | Step 08 |
 | 08 | [squad identity and lateral execution](08-squad-identity-and-lateral-execution.md) | yes | Step 09 |
 | 09 | [Checkpoint C player context](09-checkpoint-c-player-context.md) | no | GO authorizes 10 |
