@@ -1337,6 +1337,337 @@ export function evaluatePopulationStationarity(input: {
   };
 }
 
+export interface GenerationTimeStationaryCeilingFact {
+  readonly playerId: string;
+  readonly prospectClass: ContextualProspectClass;
+  readonly generatedSeasonNumber: number;
+  readonly generationDivision: "first_division" | "second_division" | "third_division";
+  readonly competitionId: string;
+  readonly role: OwnerAttributionPlayerSeasonFact["role"];
+  readonly currentAbility: number;
+  readonly storedCeiling: number;
+}
+
+export interface GenerationTimeStationaryClassCounts {
+  readonly candidate: number;
+  readonly stationaryCapable: number;
+  readonly belowStationaryCeiling: number;
+  readonly referenceNotObserved: number;
+}
+
+export interface GenerationTimeStationaryWorldFacts {
+  readonly worldSeed: string;
+  readonly competitionCount: number;
+  readonly referencePlayerCount: number;
+  readonly candidateCount: number;
+  readonly referenceCells: readonly {
+    readonly competitionId: string;
+    readonly role: GenerationTimeStationaryCeilingFact["role"];
+    readonly referenceCount: number;
+    readonly referenceCurrentP50: number;
+  }[];
+  readonly counts: Readonly<Record<ContextualProspectClass, GenerationTimeStationaryClassCounts>>;
+  readonly groups: readonly {
+    readonly generationDivision: GenerationTimeStationaryCeilingFact["generationDivision"];
+    readonly competitionId: string;
+    readonly role: GenerationTimeStationaryCeilingFact["role"];
+    readonly prospectClass: ContextualProspectClass;
+    readonly generatedSeasonNumber: number;
+    readonly counts: GenerationTimeStationaryClassCounts;
+  }[];
+  readonly reconciliationFailureCount: number;
+  readonly unknownOriginCount: number;
+}
+
+/** Classifies every accepted candidate from facts captured at generation time. */
+export function generationTimeStationaryWorldFacts(input: {
+  readonly worldSeed: string;
+  readonly candidates: readonly GenerationTimeStationaryCeilingFact[];
+  readonly playerSeasons: readonly OwnerAttributionPlayerSeasonFact[];
+  readonly playerOrigins: readonly {
+    readonly playerId: string;
+    readonly origin: GenerationalOrigin;
+    readonly generatedSeasonNumber: number;
+  }[];
+}): GenerationTimeStationaryWorldFacts {
+  const originByPlayerId = new Map<string, (typeof input.playerOrigins)[number]>();
+  let reconciliationFailureCount = 0;
+  for (const origin of input.playerOrigins) {
+    if (originByPlayerId.has(origin.playerId)) reconciliationFailureCount += 1;
+    originByPlayerId.set(origin.playerId, origin);
+  }
+  let unknownOriginCount = 0;
+  const references = input.playerSeasons.filter((row) => {
+    if (row.seasonNumber !== 1 || row.age < 23 || row.age > 27) return false;
+    const origin = originByPlayerId.get(row.playerId);
+    if (origin === undefined || origin.origin === "unknown") unknownOriginCount += 1;
+    return origin?.origin === "opening_senior";
+  });
+  const referenceByCell = groupStationarityRows(references);
+  const counts = emptyGenerationTimeStationaryCounts();
+  const groups = new Map<string, MutableGenerationTimeStationaryCounts>();
+  const seenCandidates = new Set<string>();
+  let candidateCount = 0;
+  for (const candidate of input.candidates) {
+    if (candidate.generatedSeasonNumber > 6) continue;
+    candidateCount += 1;
+    if (seenCandidates.has(candidate.playerId)) reconciliationFailureCount += 1;
+    seenCandidates.add(candidate.playerId);
+    const origin = originByPlayerId.get(candidate.playerId);
+    if (origin === undefined || origin.origin === "unknown") unknownOriginCount += 1;
+    if (
+      origin?.origin !== "annual_academy_intake"
+      || origin.generatedSeasonNumber !== candidate.generatedSeasonNumber
+    ) reconciliationFailureCount += 1;
+    const classCounts = counts[candidate.prospectClass];
+    const groupKey = [candidate.generationDivision, candidate.competitionId, candidate.role,
+      candidate.prospectClass, candidate.generatedSeasonNumber].join("|");
+    const groupCounts = groups.get(groupKey)
+      ?? { candidate: 0, stationaryCapable: 0, belowStationaryCeiling: 0,
+        referenceNotObserved: 0 };
+    groups.set(groupKey, groupCounts);
+    classCounts.candidate += 1;
+    groupCounts.candidate += 1;
+    if (
+      !Number.isFinite(candidate.currentAbility)
+      || !Number.isFinite(candidate.storedCeiling)
+      || candidate.storedCeiling < candidate.currentAbility
+    ) {
+      reconciliationFailureCount += 1;
+      continue;
+    }
+    const referenceRows = referenceByCell.get(
+      `${candidate.competitionId}|${candidate.role}`,
+    ) ?? [];
+    if (referenceRows.length < 3) {
+      classCounts.referenceNotObserved += 1;
+      groupCounts.referenceNotObserved += 1;
+      continue;
+    }
+    const referenceMedian = medianNumber(
+      referenceRows.map(({ currentAbility }) => currentAbility),
+    );
+    if (candidate.storedCeiling >= referenceMedian) {
+      classCounts.stationaryCapable += 1;
+      groupCounts.stationaryCapable += 1;
+    } else {
+      classCounts.belowStationaryCeiling += 1;
+      groupCounts.belowStationaryCeiling += 1;
+    }
+  }
+  return {
+    worldSeed: input.worldSeed,
+    competitionCount: new Set(references.map(({ competitionId }) => competitionId)).size,
+    referencePlayerCount: references.length,
+    candidateCount,
+    referenceCells: [...referenceByCell.entries()].sort(([left], [right]) =>
+      left.localeCompare(right)).flatMap(([key, rows]) => {
+        if (rows.length < 3) return [];
+        const [competitionId, role] = splitStationarityCellKey(key);
+        return [{
+          competitionId,
+          role,
+          referenceCount: rows.length,
+          referenceCurrentP50: medianNumber(rows.map(({ currentAbility }) => currentAbility)),
+        }];
+      }),
+    counts,
+    groups: [...groups.entries()].sort(([left], [right]) => left.localeCompare(right))
+      .map(([key, groupCounts]) => {
+        const [generationDivision, competitionId, role, prospectClass, generatedSeason] =
+          key.split("|");
+        if (
+          generationDivision === undefined
+          || competitionId === undefined
+          || role === undefined
+          || prospectClass === undefined
+          || generatedSeason === undefined
+        ) throw new Error(`Invalid generation-time stationarity group: ${key}`);
+        return {
+          generationDivision: generationDivision as GenerationTimeStationaryCeilingFact[
+            "generationDivision"
+          ],
+          competitionId,
+          role: role as GenerationTimeStationaryCeilingFact["role"],
+          prospectClass: prospectClass as ContextualProspectClass,
+          generatedSeasonNumber: Number(generatedSeason),
+          counts: groupCounts,
+        };
+      }),
+    reconciliationFailureCount,
+    unknownOriginCount,
+  };
+}
+
+/** Applies the frozen L6.29A full-population owner rule. */
+export function evaluateGenerationTimeStationaryCeiling(input: {
+  readonly worlds: readonly GenerationTimeStationaryWorldFacts[];
+  readonly seasonCount: number;
+}) {
+  const counts = combineGenerationTimeStationaryCounts(input.worlds);
+  const candidateCount = sumGenerationTimeStationaryCounts(counts, "candidate");
+  const declaredCandidateCount = input.worlds.reduce(
+    (total, world) => total + world.candidateCount,
+    0,
+  );
+  const stationaryCapableCount = sumGenerationTimeStationaryCounts(
+    counts,
+    "stationaryCapable",
+  );
+  const belowStationaryCeilingCount = sumGenerationTimeStationaryCounts(
+    counts,
+    "belowStationaryCeiling",
+  );
+  const referenceNotObservedCount = sumGenerationTimeStationaryCounts(
+    counts,
+    "referenceNotObserved",
+  );
+  const classifiedCount = stationaryCapableCount + belowStationaryCeilingCount;
+  const capableShare = observedShare(stationaryCapableCount, classifiedCount);
+  const referenceNotObservedShare = observedShare(referenceNotObservedCount, candidateCount);
+  const deficitToHalf = classifiedCount === 0
+    ? "not_observed" as const
+    : Math.max(0, Math.ceil(classifiedCount / 2) - stationaryCapableCount);
+  const capableWorldCount = input.worlds.filter((world) => {
+    const capable = sumGenerationTimeStationaryCounts(world.counts, "stationaryCapable");
+    const below = sumGenerationTimeStationaryCounts(world.counts, "belowStationaryCeiling");
+    return capable + below > 0 && capable / (capable + below) >= 0.50;
+  }).length;
+  const aggregateDeficitOwner = uniqueGenerationTimeDeficitClass(counts);
+  const ownerCoherenceCount = aggregateDeficitOwner === "mixed" ? 0 : input.worlds.filter(
+    (world) => uniqueGenerationTimeDeficitClass(world.counts) === aggregateDeficitOwner,
+  ).length;
+  const aggregateOwnerShare = aggregateDeficitOwner === "mixed"
+    || belowStationaryCeilingCount === 0
+    ? 0
+    : counts[aggregateDeficitOwner].belowStationaryCeiling / belowStationaryCeilingCount;
+  const competitionCount = input.worlds.reduce(
+    (total, world) => total + world.competitionCount,
+    0,
+  );
+  const reconciliationFailureCount = input.worlds.reduce(
+    (total, world) => total + world.reconciliationFailureCount,
+    0,
+  );
+  const unknownOriginCount = input.worlds.reduce(
+    (total, world) => total + world.unknownOriginCount,
+    0,
+  );
+  const referenceCellCount = input.worlds.reduce(
+    (total, world) => total + world.referenceCells.length,
+    0,
+  );
+  const structuralFailure = input.worlds.length !== 7
+    || new Set(input.worlds.map(({ worldSeed }) => worldSeed)).size !== 7
+    || input.seasonCount !== 10
+    || competitionCount !== 21
+    || candidateCount === 0
+    || declaredCandidateCount !== candidateCount
+    || classifiedCount + referenceNotObservedCount !== candidateCount
+    || reconciliationFailureCount > 0
+    || unknownOriginCount > 0
+    || referenceNotObservedShare === "not_observed"
+    || referenceNotObservedShare > 0.10;
+  const postGenerationOwner = capableShare !== "not_observed"
+    && capableShare >= 0.50
+    && capableWorldCount >= 5;
+  const classOwner = aggregateDeficitOwner !== "mixed"
+    && aggregateOwnerShare >= 0.50
+    && ownerCoherenceCount >= 5;
+  return {
+    decision: structuralFailure
+      ? "STOP_RETHINK" as const
+      : belowStationaryCeilingCount === 0
+        ? "NOT_REPRODUCED" as const
+        : postGenerationOwner || classOwner
+          ? "OWNER_IDENTIFIED" as const
+          : "MIXED" as const,
+    owner: structuralFailure
+      ? "structural_reconciliation" as const
+      : postGenerationOwner
+        ? "post_generation_lifecycle" as const
+        : classOwner
+          ? aggregateDeficitOwner
+          : belowStationaryCeilingCount === 0
+            ? "not_reproduced" as const
+            : "mixed" as const,
+    counts,
+    candidateCount,
+    declaredCandidateCount,
+    stationaryCapableCount,
+    belowStationaryCeilingCount,
+    referenceNotObservedCount,
+    capableShare,
+    capableWorldCount,
+    deficitToHalf,
+    aggregateOwnerShare,
+    ownerCoherenceCount,
+    competitionCount,
+    reconciliationFailureCount,
+    unknownOriginCount,
+    referenceCellCount,
+    worlds: input.worlds,
+  };
+}
+
+type MutableGenerationTimeStationaryCounts = {
+  -readonly [Key in keyof GenerationTimeStationaryClassCounts]:
+    GenerationTimeStationaryClassCounts[Key];
+};
+
+function emptyGenerationTimeStationaryCounts(): Record<
+  ContextualProspectClass,
+  MutableGenerationTimeStationaryCounts
+> {
+  return Object.fromEntries(ACADEMY_PROSPECT_CLASSES.map((prospectClass) => [
+    prospectClass,
+    { candidate: 0, stationaryCapable: 0, belowStationaryCeiling: 0,
+      referenceNotObserved: 0 },
+  ])) as Record<ContextualProspectClass, MutableGenerationTimeStationaryCounts>;
+}
+
+function combineGenerationTimeStationaryCounts(
+  worlds: readonly GenerationTimeStationaryWorldFacts[],
+): Record<ContextualProspectClass, GenerationTimeStationaryClassCounts> {
+  const combined = emptyGenerationTimeStationaryCounts();
+  for (const world of worlds) {
+    for (const prospectClass of ACADEMY_PROSPECT_CLASSES) {
+      const source = world.counts[prospectClass];
+      const target = combined[prospectClass];
+      target.candidate += source.candidate;
+      target.stationaryCapable += source.stationaryCapable;
+      target.belowStationaryCeiling += source.belowStationaryCeiling;
+      target.referenceNotObserved += source.referenceNotObserved;
+    }
+  }
+  return combined;
+}
+
+function sumGenerationTimeStationaryCounts(
+  counts: Readonly<Record<ContextualProspectClass, GenerationTimeStationaryClassCounts>>,
+  key: keyof GenerationTimeStationaryClassCounts,
+): number {
+  return ACADEMY_PROSPECT_CLASSES.reduce(
+    (total, prospectClass) => total + counts[prospectClass][key],
+    0,
+  );
+}
+
+function uniqueGenerationTimeDeficitClass(
+  counts: Readonly<Record<ContextualProspectClass, GenerationTimeStationaryClassCounts>>,
+): ContextualProspectClass | "mixed" {
+  const ordered = ACADEMY_PROSPECT_CLASSES.map((prospectClass) => ({
+    prospectClass,
+    count: counts[prospectClass].belowStationaryCeiling,
+  })).sort((left, right) => right.count - left.count
+    || ACADEMY_PROSPECT_CLASSES.indexOf(left.prospectClass)
+      - ACADEMY_PROSPECT_CLASSES.indexOf(right.prospectClass));
+  const first = ordered[0];
+  return first !== undefined && first.count > 0 && first.count !== ordered[1]?.count
+    ? first.prospectClass
+    : "mixed";
+}
+
 function groupStationarityRows(
   rows: readonly OwnerAttributionPlayerSeasonFact[],
 ): ReadonlyMap<string, readonly OwnerAttributionPlayerSeasonFact[]> {

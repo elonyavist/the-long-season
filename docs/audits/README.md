@@ -16,6 +16,10 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_L6_29A_GENERATION_TIME_STATIONARY_CEILING.md` —
+  **`OWNER_IDENTIFIED: routine`.** Routine prospects own `3,713/3,940` of the
+  full-population ceiling deficit, coherent in `7/7` worlds.
+
 - `PHASE_81A_CHECKPOINT_L6_29_CACHED_STATIONARY_TARGET_STOP.md` — **`STOP /
   RETHINK`; reader removed.** Senior season facts omit `3,025/5,685` accepted
   prospects, so the full distribution must be observed at generation time.

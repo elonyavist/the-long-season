@@ -9,6 +9,7 @@ import {
   evaluateGeneratedPlayerLifecycleAttribution,
   evaluateRenewalLadder,
   evaluatePopulationStationarity,
+  evaluateGenerationTimeStationaryCeiling,
   evaluateLeaderConversionFunnel,
   evaluateLeaderCeilingDistance,
   evaluateLeaderQualityFeasibility,
@@ -20,12 +21,14 @@ import {
   leaderCeilingDistanceWorldFacts,
   leaderQualityFeasibilityWorldFacts,
   populationStationarityWorldFacts,
+  generationTimeStationaryWorldFacts,
   successionGrowthFeasibilityStage,
   type SuccessionPriorityArmSummary,
   type GeneratedPlayerLifecycleFact,
   type GeneratedLeaderLaneWorldFacts,
   type RenewalLadderWorldFacts,
   type PopulationStationarityWorldFacts,
+  type GenerationTimeStationaryWorldFacts,
 } from "./succession-priority-attribution.ts";
 
 test("bounded succession passes only with paired renewal and guardrails", () => {
@@ -767,6 +770,80 @@ test("population stationarity fails closed on a sparse comparator", () => {
   }
 });
 
+test("generation-time stationarity includes every candidate at the exact median", () => {
+  const playerOrigins: {
+    playerId: string;
+    origin: "opening_senior" | "annual_academy_intake";
+    generatedSeasonNumber: number;
+  }[] = [0, 1, 2].map((index) => ({
+    playerId: `opening-${index}`,
+    origin: "opening_senior" as const,
+    generatedSeasonNumber: 0,
+  }));
+  playerOrigins.push(
+    { playerId: "routine-low", origin: "annual_academy_intake", generatedSeasonNumber: 1 },
+    { playerId: "interesting-edge", origin: "annual_academy_intake", generatedSeasonNumber: 2 },
+  );
+  const world = generationTimeStationaryWorldFacts({
+    worldSeed: "generation-target-world",
+    candidates: [
+      generationCandidate("routine-low", "routine", 1, 11),
+      generationCandidate("interesting-edge", "interesting", 2, 12),
+    ],
+    playerOrigins,
+    playerSeasons: [
+      stationarityPlayerSeason("opening-0", 1, 23, 10, 0),
+      stationarityPlayerSeason("opening-1", 1, 25, 12, 0),
+      stationarityPlayerSeason("opening-2", 1, 27, 14, 0),
+    ],
+  });
+
+  assert.equal(world.candidateCount, 2);
+  assert.equal(world.counts.routine.belowStationaryCeiling, 1);
+  assert.equal(world.counts.interesting.stationaryCapable, 1);
+  assert.equal(world.groups.length, 2);
+  assert.equal(world.referenceCells[0]?.referenceCurrentP50, 12);
+  assert.equal(world.reconciliationFailureCount, 0);
+});
+
+test("generation-time stationarity identifies a coherent class owner", () => {
+  const worlds = Array.from({ length: 7 }, (_, index) => generationStationarityWorld(
+    `generation-target-${index + 1}`,
+    { routine: [1, 8], interesting: [2, 1], serious: [1, 0], rare: [1, 0] },
+  ));
+  const result = evaluateGenerationTimeStationaryCeiling({ worlds, seasonCount: 10 });
+
+  assert.equal(result.decision, "OWNER_IDENTIFIED");
+  assert.equal(result.owner, "routine");
+  assert.equal(result.ownerCoherenceCount, 7);
+  assert.equal(result.deficitToHalf, 14);
+});
+
+test("generation-time stationary supply can identify post-generation lifecycle", () => {
+  const worlds = Array.from({ length: 7 }, (_, index) => generationStationarityWorld(
+    `generation-target-${index + 1}`,
+    { routine: [6, 4], interesting: [2, 1], serious: [1, 0], rare: [1, 0] },
+  ));
+  const result = evaluateGenerationTimeStationaryCeiling({ worlds, seasonCount: 10 });
+
+  assert.equal(result.owner, "post_generation_lifecycle");
+  assert.equal(result.capableWorldCount, 7);
+});
+
+test("generation-time stationarity fails closed when accepted counts do not reconcile", () => {
+  const worlds = Array.from({ length: 7 }, (_, index) => ({
+    ...generationStationarityWorld(
+      `generation-target-${index + 1}`,
+      { routine: [1, 8], interesting: [0, 0], serious: [0, 0], rare: [0, 0] },
+    ),
+    candidateCount: 10,
+  }));
+  const result = evaluateGenerationTimeStationaryCeiling({ worlds, seasonCount: 10 });
+
+  assert.equal(result.decision, "STOP_RETHINK");
+  assert.equal(result.owner, "structural_reconciliation");
+});
+
 function arm(
   local: number,
   generated: number,
@@ -876,6 +953,51 @@ function stationarityWorld(
     replacementPlayerCount: Object.values(counts).reduce((total, count) => total + count, 0),
     counts,
     cells: [],
+    reconciliationFailureCount: 0,
+    unknownOriginCount: 0,
+  };
+}
+
+function generationCandidate(
+  playerId: string,
+  prospectClass: "routine" | "interesting" | "serious" | "rare",
+  generatedSeasonNumber: number,
+  storedCeiling: number,
+) {
+  return {
+    playerId,
+    prospectClass,
+    generatedSeasonNumber,
+    generationDivision: "first_division" as const,
+    competitionId: "competition:ita-1",
+    role: "striker" as const,
+    currentAbility: 8,
+    storedCeiling,
+  };
+}
+
+function generationStationarityWorld(
+  worldSeed: string,
+  values: Readonly<Record<"routine" | "interesting" | "serious" | "rare",
+    readonly [stationaryCapable: number, belowStationaryCeiling: number]>>,
+): GenerationTimeStationaryWorldFacts {
+  const counts = Object.fromEntries(Object.entries(values).map(([prospectClass, value]) => [
+    prospectClass,
+    {
+      candidate: value[0] + value[1],
+      stationaryCapable: value[0],
+      belowStationaryCeiling: value[1],
+      referenceNotObserved: 0,
+    },
+  ])) as GenerationTimeStationaryWorldFacts["counts"];
+  return {
+    worldSeed,
+    competitionCount: 3,
+    referencePlayerCount: 30,
+    candidateCount: Object.values(counts).reduce((total, row) => total + row.candidate, 0),
+    referenceCells: [],
+    counts,
+    groups: [],
     reconciliationFailureCount: 0,
     unknownOriginCount: 0,
   };

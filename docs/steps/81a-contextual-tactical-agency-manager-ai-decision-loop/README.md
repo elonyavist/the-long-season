@@ -310,7 +310,8 @@ contexts; it never owns the analytic diversity gate.
 | 06B29X | [age-conditioned population stationarity](06b29x-checkpoint-l6-27-age-conditioned-population-stationarity.md) | no | Done: ceiling supply owns `7/7` |
 | 06B29Y | [exit-linked stationary ceiling regeneration](06b29y-exit-linked-stationary-ceiling-regeneration.md) | yes | Done: rejected and removed |
 | 06B29Z | [stationary ceiling target distribution](06b29z-checkpoint-l6-29-stationary-ceiling-target-distribution.md) | no | Done: cached instrument invalid |
-| 06B29Z1 | [generation-time stationary ceiling distribution](06b29z1-checkpoint-l6-29a-generation-time-stationary-ceiling.md) | no | Active: fresh attribution |
+| 06B29Z1 | [generation-time stationary ceiling distribution](06b29z1-checkpoint-l6-29a-generation-time-stationary-ceiling.md) | no | Done: routine owner |
+| 06B29Z2 | [competition-role stationary ceiling quota](06b29z2-competition-role-stationary-ceiling-quota.md) | yes | Active: paired candidate |
 | 06C | [Checkpoint B2 conditioned tactical ceiling](06c-checkpoint-b2-conditioned-tactical-ceiling.md) | no | GO authorizes 07 |
 | 07 | [player task execution](07-player-task-execution.md) | yes | Step 08 |
 | 08 | [squad identity and lateral execution](08-squad-identity-and-lateral-execution.md) | yes | Step 09 |

@@ -2,7 +2,8 @@
 
 ## Status
 
-Planned and active. Fresh observation only; no gameplay correction.
+Done: `OWNER_IDENTIFIED: routine`, coherent in `7/7` worlds. Fresh observation
+only; no gameplay correction.
 
 ## User-Facing Reason
 
@@ -67,3 +68,26 @@ report entrypoint change.
 Focused tests, typecheck, fresh 7x10 run and byte-identical cache rebuild with
 exactly seven workers, `git diff --check`, graphify update and `pnpm check`
 alone.
+
+## Outcome
+
+All `5,685` accepted candidates reconciled exactly; zero candidate, origin,
+ability or comparator was missing. Of those, `1,745` (`0.3069`) were born with
+a stored ceiling at or above their like-aged opening-senior median and `3,940`
+were below. Reaching a stationary `0.50` would require `1,098` additional
+capable candidates across the six observed intake cohorts.
+
+| Class | Candidates | Capable | Below ceiling |
+| --- | ---: | ---: | ---: |
+| routine | `4,067` | `354` | `3,713` |
+| interesting | `1,157` | `941` | `216` |
+| serious | `371` | `360` | `11` |
+| rare | `90` | `90` | `0` |
+
+Routine owns `3,713/3,940 = 0.9424` of the deficit and is the largest deficit
+class in `7/7` worlds. This does not authorize relabeling half the intake as
+interesting: L6.21 already rejected generic class frequency. L6.30 instead
+tests a competition-and-role stationary ceiling quota inside the existing
+routine class, leaving current ability, class identity and exceptional budgets
+unchanged. Byte-identical report SHA-256:
+`8c8b18342880d51b2a60fbc413f5cf44dde3725aa92b8eb8da30b94eb165a2df`.
