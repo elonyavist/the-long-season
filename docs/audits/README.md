@@ -16,6 +16,10 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_L6_19_FIRST_DIVISION_CEILING_TAIL.md` - **`REFINE`;
+  candidate removed.** A bounded five-star tail barely changes feasibility and
+  reduces generated leaders; prospect-class provenance is the missing split.
+
 - `PHASE_81A_CHECKPOINT_L6_18_CEILING_DISTANCE.md` - **`MIXED`; global uplift
   rejected.** First Division alone has a majority more than two ability points
   below local leader floors; Third Division is already majority at or above.

@@ -2,7 +2,7 @@
 
 ## Status
 
-Planned.
+Done - `REFINE`; candidate rejected and completely removed.
 
 ## User-Facing Reason
 
@@ -58,6 +58,9 @@ do not move after output.
 ## Expected Files
 
 - `packages/content/src/generators/player-potential-rarity.ts` and focused tests;
+- `packages/content/src/generators/career-intake-players.test.ts`: the existing
+  real annual-intake reachability cohort owns the superseded `4.5` maximum and
+  must prove both the retained ordinary tail and the new rare edge;
 - `apps/cli/src/commands/simulation-report/succession-priority-attribution.ts`
   and test;
 - `apps/cli/src/commands/simulation-report/career-sections.ts`;
@@ -89,3 +92,25 @@ git diff --check
 
 The simulation runs alone. Candidate-only analysis seams carry an explicit
 closeout owner and are removed in this step after the audit is written.
+
+## Outcome
+
+The final reread exited `1` with SHA-256
+`e1b01f9d34a456c60b1d5b3944c6da9187f82cd084c279985dd646b00d971422`.
+The candidate reduced First-Division over-two shortfall only `0.0107`, reduced
+at-or-above supply by `0.0161`, worsened mature below-leader-quality share by
+`0.0082`, and reduced career-generated leader share `0.2595 -> 0.2310`.
+Leader improvement occurred in only `1/7` worlds. Third-Division distance also
+regressed beyond its frozen guardrail. No new integrated failure appeared and
+all facts reconciled, so this is a product rejection rather than an invalid
+instrument.
+
+The first reader used all represented players as the mature-quality
+denominator. L6.15B owns non-leaders, so the reader was corrected before the
+final artifact to exclude `season_ten_leader`; `0.7723` then reproduced the
+frozen current value exactly. The correction did not change the verdict.
+
+Every candidate-only profile, label, evaluator, test and content change was
+removed. L6.20 must observe the generation-time prospect class of accepted
+academy players and join that fact to season-ten conversion before another
+ceiling distribution can be proposed.
