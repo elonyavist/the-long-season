@@ -2,7 +2,9 @@
 
 ## Status
 
-Planned and active. Cached observation only; no gameplay correction.
+Done — `STOP / RETHINK: outcome_conditioned_comparator` on 2026-08-12. The
+instrument and its uncommitted report code were removed; no product conclusion
+was adopted.
 
 ## User-Facing Reason
 
@@ -51,6 +53,11 @@ combines them into one product rule. A later correction can open only for a
 lane with a unique owner or a measured shared pair; player origin remains
 inadmissible in gameplay.
 
+Overall output is `OWNER_IDENTIFIED` when both lanes are actionable,
+`PARTIAL_OWNER` when exactly one is actionable, `MIXED` when neither is, and
+`STOP / RETHINK` on any structural failure. These labels summarize the two
+lane decisions; they do not replace them.
+
 ## Expected Files
 
 - `apps/cli/src/commands/simulation-report/succession-priority-attribution.ts`
@@ -68,3 +75,24 @@ new report entrypoint.
 Focused tests, typecheck, two byte-identical cache-only report builds with
 exactly seven workers, `git diff --check`, graphify update and `pnpm check`
 alone.
+
+## Outcome
+
+The first cache build reconciled and produced a superficially decisive result:
+scorer quality/selection overlap `34/65`, and creator conversion `176/227` with
+the largest marginal in six worlds. Artifact SHA-256:
+`63218313885733ab1e34ace64a5f38ece6dfb6f525e2f39e6e88d2fe8793d58b`.
+
+Production inspection invalidated that result before any gameplay change. The
+comparator median was built from the top-ten scorer/assist rows, then the same
+goals/assists were used to claim those rows converted better. This conditions
+the comparator on the outcome being explained. For creator rows the problem is
+stronger: assist eligibility is drawn before actors, and an eligible creator
+receives the assist only if the teammate's shot becomes a goal. The creator has
+no individual conversion edge after nomination. Calling this a creator owner
+would assign teammate finishing and top-ten selection bias to the wrong player.
+
+The report code and profile were removed rather than retained as a callable
+false owner. L6.26 uses no leader-derived comparator: it ranks quality,
+opportunities, opportunity rates and leave-one-out club-conditioned expected
+output before comparing any of those lanes with the actual top ten.

@@ -16,6 +16,10 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_L6_25_OUTCOME_CONDITIONING_STOP.md` — **`STOP /
+  RETHINK`.** Top-ten conversion was used to explain top-ten membership; the
+  circular comparator and its report code were removed.
+
 - `PHASE_81A_CHECKPOINT_L6_24_GENERATED_LEADER_LANE_CONVERSION.md` —
   **`MIXED`.** Scorer failures are `72.31%` quality-depth; creator failures
   split among quality, minutes and conversion, requiring an overlap reader.
