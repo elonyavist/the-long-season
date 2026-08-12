@@ -924,6 +924,321 @@ function lifecycleDivergenceReason(
   return "mixed_below_floor";
 }
 
+export const GENERATED_LEADER_LANES = ["scorer", "creator"] as const;
+export type GeneratedLeaderLane = typeof GENERATED_LEADER_LANES[number];
+export const GENERATED_LEADER_LANE_STAGES = [
+  "quality_depth",
+  "selection_volume",
+  "actor_access",
+  "occasion_conversion",
+  "rank_cutoff",
+] as const;
+export type GeneratedLeaderLaneStage = typeof GENERATED_LEADER_LANE_STAGES[number];
+
+export interface GeneratedLeaderLaneWorldFacts {
+  readonly worldSeed: string;
+  readonly competitionCount: number;
+  readonly leaderLaneSlotCount: number;
+  readonly generatedLeaderLaneCount: number;
+  readonly qualityReadyNonLeaderLaneCount: number;
+  readonly counts: Readonly<Record<GeneratedLeaderLaneStage, number>>;
+  readonly laneCounts: readonly {
+    readonly lane: GeneratedLeaderLane;
+    readonly generatedLeaderCount: number;
+    readonly qualityReadyNonLeaderCount: number;
+    readonly counts: Readonly<Record<GeneratedLeaderLaneStage, number>>;
+  }[];
+  readonly competitionCounts: readonly {
+    readonly competitionId: string;
+    readonly qualityReadyNonLeaderCount: number;
+    readonly counts: Readonly<Record<GeneratedLeaderLaneStage, number>>;
+  }[];
+  readonly reconciliationFailureCount: number;
+  readonly unclassifiableCount: number;
+}
+
+/**
+ * Decomposes mature generated players against the real leader lane they could enter.
+ *
+ * One player may contribute one scorer and one creator observation because the
+ * product gate itself contains ten slots in each table. No player origin enters
+ * a threshold; origin only selects the already-frozen mature generated cohort.
+ */
+export function generatedLeaderLaneWorldFacts(input: LeaderConversionWorldInput):
+GeneratedLeaderLaneWorldFacts {
+  const seasonTen = input.playerSeasons.filter(({ seasonNumber }) => seasonNumber === 10);
+  const originByPlayerId = new Map<string, (typeof input.playerOrigins)[number]>();
+  let reconciliationFailureCount = 0;
+  for (const origin of input.playerOrigins) {
+    if (originByPlayerId.has(origin.playerId)) reconciliationFailureCount += 1;
+    originByPlayerId.set(origin.playerId, origin);
+  }
+  const seenPlayerKeys = new Set<string>();
+  for (const player of seasonTen) {
+    const key = `${player.competitionId}|${player.playerId}`;
+    if (seenPlayerKeys.has(key)) reconciliationFailureCount += 1;
+    seenPlayerKeys.add(key);
+  }
+
+  const counts = emptyGeneratedLeaderLaneCounts();
+  const laneCounts = new Map<GeneratedLeaderLane, {
+    generatedLeaderCount: number;
+    qualityReadyNonLeaderCount: number;
+    counts: Record<GeneratedLeaderLaneStage, number>;
+  }>(GENERATED_LEADER_LANES.map((lane) => [lane, {
+    generatedLeaderCount: 0,
+    qualityReadyNonLeaderCount: 0,
+    counts: emptyGeneratedLeaderLaneCounts(),
+  }]));
+  const competitionCounts = new Map<string, {
+    qualityReadyNonLeaderCount: number;
+    counts: Record<GeneratedLeaderLaneStage, number>;
+  }>();
+  const competitionIds = [...new Set(seasonTen.map(({ competitionId }) => competitionId))].sort();
+  let leaderLaneSlotCount = 0;
+  let generatedLeaderLaneCount = 0;
+  let qualityReadyNonLeaderLaneCount = 0;
+  let unclassifiableCount = 0;
+
+  for (const competitionId of competitionIds) {
+    const competitionRows = seasonTen.filter((row) => row.competitionId === competitionId);
+    const competition = {
+      qualityReadyNonLeaderCount: 0,
+      counts: emptyGeneratedLeaderLaneCounts(),
+    };
+    competitionCounts.set(competitionId, competition);
+    for (const lane of GENERATED_LEADER_LANES) {
+      const key = lane === "scorer" ? "goals" as const : "assists" as const;
+      const leaders = topTenPlayerSeasonFacts(competitionRows, key);
+      leaderLaneSlotCount += leaders.length;
+      const leaderIds = new Set(leaders.map(({ playerId }) => playerId));
+      const leadersByRole = groupPlayerSeasonsByRole(leaders);
+      const laneSummary = laneCounts.get(lane)!;
+
+      for (const player of competitionRows) {
+        const origin = originByPlayerId.get(player.playerId);
+        if (origin === undefined) {
+          reconciliationFailureCount += 1;
+          continue;
+        }
+        if (
+          !isCareerGeneratedOrigin(origin.origin)
+          || (input.cohort === "mature_by_season_six" && origin.generatedSeasonNumber > 6)
+        ) continue;
+        const roleLeaders = leadersByRole.get(player.role);
+        if (roleLeaders === undefined) continue;
+        if (leaderIds.has(player.playerId)) {
+          generatedLeaderLaneCount += 1;
+          laneSummary.generatedLeaderCount += 1;
+          continue;
+        }
+        const minimumLeaderAbility = Math.min(...roleLeaders.map(({ currentAbility }) =>
+          currentAbility));
+        if (player.currentAbility < minimumLeaderAbility) continue;
+
+        const stage = generatedLeaderLaneStage(player, roleLeaders, lane);
+        if (stage === "not_observed") {
+          unclassifiableCount += 1;
+          continue;
+        }
+        qualityReadyNonLeaderLaneCount += 1;
+        laneSummary.qualityReadyNonLeaderCount += 1;
+        competition.qualityReadyNonLeaderCount += 1;
+        counts[stage] += 1;
+        laneSummary.counts[stage] += 1;
+        competition.counts[stage] += 1;
+      }
+    }
+  }
+
+  return {
+    worldSeed: input.worldSeed,
+    competitionCount: competitionIds.length,
+    leaderLaneSlotCount,
+    generatedLeaderLaneCount,
+    qualityReadyNonLeaderLaneCount,
+    counts,
+    laneCounts: GENERATED_LEADER_LANES.map((lane) => ({ lane, ...laneCounts.get(lane)! })),
+    competitionCounts: [...competitionCounts.entries()].map(([competitionId, value]) => ({
+      competitionId,
+      ...value,
+    })),
+    reconciliationFailureCount,
+    unclassifiableCount,
+  };
+}
+
+/** Applies the preregistered L6.24 majority-and-world-coherence owner rule. */
+export function evaluateGeneratedLeaderLaneConversion(input: {
+  readonly worlds: readonly GeneratedLeaderLaneWorldFacts[];
+  readonly seasonCount: number;
+}) {
+  const counts = combineGeneratedLeaderLaneCounts(input.worlds.map(({ counts }) => counts));
+  const qualityReadyNonLeaderLaneCount = input.worlds.reduce(
+    (total, world) => total + world.qualityReadyNonLeaderLaneCount,
+    0,
+  );
+  const competitionCount = input.worlds.reduce(
+    (total, world) => total + world.competitionCount,
+    0,
+  );
+  const leaderLaneSlotCount = input.worlds.reduce(
+    (total, world) => total + world.leaderLaneSlotCount,
+    0,
+  );
+  const reconciliationFailureCount = input.worlds.reduce(
+    (total, world) => total + world.reconciliationFailureCount,
+    0,
+  );
+  const unclassifiableCount = input.worlds.reduce(
+    (total, world) => total + world.unclassifiableCount,
+    0,
+  );
+  const unreachableStages = GENERATED_LEADER_LANE_STAGES.filter((stage) => counts[stage] === 0);
+  const unreachableLanes = GENERATED_LEADER_LANES.filter((lane) =>
+    input.worlds.reduce((total, world) => total +
+      (world.laneCounts.find((row) => row.lane === lane)?.qualityReadyNonLeaderCount ?? 0), 0) === 0
+  );
+  const dominantStage = GENERATED_LEADER_LANE_STAGES.reduce((best, stage) =>
+    counts[stage] > counts[best] ? stage : best
+  );
+  const dominantShare = qualityReadyNonLeaderLaneCount === 0
+    ? "not_observed" as const
+    : counts[dominantStage] / qualityReadyNonLeaderLaneCount;
+  const coherenceCount = input.worlds.filter((world) =>
+    GENERATED_LEADER_LANE_STAGES.every((stage) => world.counts[dominantStage] >= world.counts[stage])
+  ).length;
+  const structuralFailure = input.worlds.length !== 7
+    || input.seasonCount !== 10
+    || competitionCount !== 21
+    || leaderLaneSlotCount !== 420
+    || reconciliationFailureCount > 0
+    || unclassifiableCount > 0
+    || qualityReadyNonLeaderLaneCount === 0
+    || unreachableStages.length > 0
+    || unreachableLanes.length > 0;
+  const identified = !structuralFailure
+    && dominantShare !== "not_observed"
+    && dominantShare >= 0.50
+    && coherenceCount >= 5;
+  return {
+    decision: structuralFailure
+      ? "STOP_RETHINK" as const
+      : identified
+        ? "OWNER_IDENTIFIED" as const
+        : "MIXED" as const,
+    owner: structuralFailure
+      ? "structural_reconciliation" as const
+      : identified
+        ? dominantStage
+        : "mixed" as const,
+    counts,
+    qualityReadyNonLeaderLaneCount,
+    generatedLeaderLaneCount: input.worlds.reduce(
+      (total, world) => total + world.generatedLeaderLaneCount,
+      0,
+    ),
+    competitionCount,
+    leaderLaneSlotCount,
+    dominantStage,
+    dominantShare,
+    coherenceCount,
+    unreachableStages,
+    unreachableLanes,
+    reconciliationFailureCount,
+    unclassifiableCount,
+    worlds: input.worlds,
+  };
+}
+
+function generatedLeaderLaneStage(
+  player: OwnerAttributionPlayerSeasonFact,
+  leaders: readonly OwnerAttributionPlayerSeasonFact[],
+  lane: GeneratedLeaderLane,
+): GeneratedLeaderLaneStage | "not_observed" {
+  const leaderCurrent = medianNumber(leaders.map(({ currentAbility }) => currentAbility));
+  const leaderMinutes = medianNumber(leaders.map(({ minutes }) => minutes));
+  if (leaderCurrent - player.currentAbility >= 0.50) return "quality_depth";
+  if (leaderMinutes - player.minutes >= 450) return "selection_volume";
+
+  const playerAccess = perNineHundred(lane === "scorer" ? player.shots : player.creatorNominations,
+    player.minutes);
+  const leaderAccessValues = leaders.flatMap((leader) => {
+    const value = perNineHundred(
+      lane === "scorer" ? leader.shots : leader.creatorNominations,
+      leader.minutes,
+    );
+    return value === "not_observed" ? [] : [value];
+  });
+  if (playerAccess === "not_observed" || leaderAccessValues.length !== leaders.length) {
+    return "not_observed";
+  }
+  const leaderAccess = medianNumber(leaderAccessValues);
+  if (leaderAccess === 0) return "not_observed";
+  if (playerAccess < leaderAccess * 0.80) return "actor_access";
+
+  const playerOpportunities = lane === "scorer" ? player.shots : player.creatorNominations;
+  const playerOutputs = lane === "scorer" ? player.goals : player.assists;
+  const playerConversion = observedShare(playerOutputs, playerOpportunities);
+  const leaderConversions = leaders.flatMap((leader) => {
+    const opportunities = lane === "scorer" ? leader.shots : leader.creatorNominations;
+    const outputs = lane === "scorer" ? leader.goals : leader.assists;
+    const value = observedShare(outputs, opportunities);
+    return value === "not_observed" ? [] : [value];
+  });
+  if (playerConversion === "not_observed" || leaderConversions.length === 0) {
+    return "not_observed";
+  }
+  if (playerConversion < medianNumber(leaderConversions) * 0.80) {
+    return "occasion_conversion";
+  }
+  return "rank_cutoff";
+}
+
+function groupPlayerSeasonsByRole(
+  rows: readonly OwnerAttributionPlayerSeasonFact[],
+): ReadonlyMap<OwnerAttributionPlayerSeasonFact["role"], readonly OwnerAttributionPlayerSeasonFact[]> {
+  const groups = new Map<
+    OwnerAttributionPlayerSeasonFact["role"],
+    OwnerAttributionPlayerSeasonFact[]
+  >();
+  for (const row of rows) groups.set(row.role, [...(groups.get(row.role) ?? []), row]);
+  return groups;
+}
+
+function medianNumber(values: readonly number[]): number {
+  if (values.length === 0) throw new Error("Median requires at least one value");
+  const ordered = [...values].sort((left, right) => left - right);
+  const middle = Math.floor(ordered.length / 2);
+  return ordered.length % 2 === 1
+    ? ordered[middle]!
+    : (ordered[middle - 1]! + ordered[middle]!) / 2;
+}
+
+function perNineHundred(count: number, minutes: number): number | "not_observed" {
+  return minutes === 0 ? "not_observed" : count * 900 / minutes;
+}
+
+function emptyGeneratedLeaderLaneCounts(): Record<GeneratedLeaderLaneStage, number> {
+  return {
+    quality_depth: 0,
+    selection_volume: 0,
+    actor_access: 0,
+    occasion_conversion: 0,
+    rank_cutoff: 0,
+  };
+}
+
+function combineGeneratedLeaderLaneCounts(
+  rows: readonly Readonly<Record<GeneratedLeaderLaneStage, number>>[],
+): Record<GeneratedLeaderLaneStage, number> {
+  const combined = emptyGeneratedLeaderLaneCounts();
+  for (const row of rows) {
+    for (const stage of GENERATED_LEADER_LANE_STAGES) combined[stage] += row[stage];
+  }
+  return combined;
+}
+
 function uniqueLifecyclePlayers(
   players: readonly GeneratedPlayerLifecycleFact[],
 ): ReadonlyMap<string, GeneratedPlayerLifecycleFact> {

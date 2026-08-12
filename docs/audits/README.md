@@ -16,6 +16,10 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_L6_24_GENERATED_LEADER_LANE_CONVERSION.md` —
+  **`MIXED`.** Scorer failures are `72.31%` quality-depth; creator failures
+  split among quality, minutes and conversion, requiring an overlap reader.
+
 - `PHASE_81A_CHECKPOINT_L6_23_GENERATED_PLAYER_LIFECYCLE.md` — **`MIXED`.**
   The rejected combined arm changes `190` authored classes but produces `59`
   leader losses and `54` gains; no lifecycle reason owns half of the losses.

@@ -109,6 +109,7 @@ import {
   deriveSuccessionDownstreamPlayerOutcome,
   academyProspectClassWorldFacts,
   evaluateAcademyProspectClassConversion,
+  evaluateGeneratedLeaderLaneConversion,
   evaluateGeneratedPlayerLifecycleAttribution,
   evaluateLeaderConversionFunnel,
   evaluateLeaderCeilingDistance,
@@ -121,6 +122,7 @@ import {
   SUCCESSION_GROWTH_FEASIBILITY_STAGES,
   leaderConversionWorldFacts,
   leaderConversionPlayerFacts,
+  generatedLeaderLaneWorldFacts,
   leaderCeilingDistanceWorldFacts,
   leaderQualityFeasibilityWorldFacts,
   successionGrowthFeasibilityStage,
@@ -180,7 +182,8 @@ export type CareerCheckpointKind =
   | "leader_quality_feasibility_l6_16"
   | "leader_ceiling_distance_l6_18"
   | "academy_prospect_class_l6_20"
-  | "generated_player_lifecycle_l6_23";
+  | "generated_player_lifecycle_l6_23"
+  | "generated_leader_lane_l6_24";
 
 /** Versioned readers sharing the one product-versus-legacy contest producer. */
 export type StrengthContestMode = "canary" | "full" | "retry_canary" | "retry_full";
@@ -231,6 +234,7 @@ const CHECKPOINT_OBSERVES_GENERATIONAL_SUCCESSION = {
   leader_ceiling_distance_l6_18: true,
   academy_prospect_class_l6_20: true,
   generated_player_lifecycle_l6_23: true,
+  generated_leader_lane_l6_24: true,
 } as const satisfies Readonly<Record<CareerCheckpointKind, boolean>>;
 
 /** Keeps observer and checkpoint-section routing on one exhaustive policy. */
@@ -1245,7 +1249,8 @@ export async function createCareerSectionsFacts(input: {
             || input.leagueDiversityProfile?.checkpointKind === "succession_affordability_l6_9c"
             || input.leagueDiversityProfile?.checkpointKind === "succession_affordability_l6_9d"
             || input.leagueDiversityProfile?.checkpointKind === "academy_prospect_class_l6_20"
-            || input.leagueDiversityProfile?.checkpointKind === "generated_player_lifecycle_l6_23",
+            || input.leagueDiversityProfile?.checkpointKind === "generated_player_lifecycle_l6_23"
+            || input.leagueDiversityProfile?.checkpointKind === "generated_leader_lane_l6_24",
           collectAcademyProspectClasses:
             input.leagueDiversityProfile?.checkpointKind === "academy_prospect_class_l6_20"
             || input.leagueDiversityProfile?.checkpointKind === "generated_player_lifecycle_l6_23",
@@ -1266,7 +1271,8 @@ export async function createCareerSectionsFacts(input: {
             || input.leagueDiversityProfile?.checkpointKind === "succession_affordability_l6_9c"
             || input.leagueDiversityProfile?.checkpointKind === "succession_affordability_l6_9d"
             || input.leagueDiversityProfile?.checkpointKind === "academy_prospect_class_l6_20"
-            || input.leagueDiversityProfile?.checkpointKind === "generated_player_lifecycle_l6_23",
+            || input.leagueDiversityProfile?.checkpointKind === "generated_player_lifecycle_l6_23"
+            || input.leagueDiversityProfile?.checkpointKind === "generated_leader_lane_l6_24",
           standingsHierarchy:
             input.leagueDiversityProfile?.checkpointKind === "standings_hierarchy_l5_2"
             || input.leagueDiversityProfile?.checkpointKind === "integrated_player_world_l5_4"
@@ -1446,6 +1452,8 @@ export async function createCareerSectionsFacts(input: {
           requiredGeneratedLifecycleComparison(generatedLifecycleComparison),
           input.seasonCount,
         )
+    : input.leagueDiversityProfile.checkpointKind === "generated_leader_lane_l6_24"
+      ? evaluateGeneratedLeaderLaneCheckpoint(worlds, input.seasonCount)
     : input.leagueDiversityProfile.checkpointKind === "strength_contest_l6_1d"
       ? evaluateStrengthContestCheckpoint(
           worlds.map(requiredOwnerAttributionFacts),
@@ -3590,6 +3598,25 @@ function evaluateGeneratedPlayerLifecycleCheckpoint(
   return evaluateGeneratedPlayerLifecycleAttribution({
     current: currentWorlds.map(generatedPlayerLifecycleWorldFacts),
     combined: combinedWorlds.map(generatedPlayerLifecycleWorldFacts),
+    seasonCount,
+  });
+}
+
+function evaluateGeneratedLeaderLaneCheckpoint(
+  worlds: readonly CareerWorldProjection[],
+  seasonCount: number,
+) {
+  return evaluateGeneratedLeaderLaneConversion({
+    worlds: worlds.map((world) => {
+      const owner = requiredOwnerAttributionFacts(world);
+      const architecture = requiredRenewalArchitectureFacts(world);
+      return generatedLeaderLaneWorldFacts({
+        worldSeed: world.seed,
+        playerSeasons: owner.playerSeasons,
+        playerOrigins: architecture.playerOrigins,
+        cohort: "mature_by_season_six",
+      });
+    }),
     seasonCount,
   });
 }

@@ -23,10 +23,10 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **L6.24 active:** L6.23 is `MIXED`: `190` class changes produce
-  `59` leader losses and `54` gains; quality-not-leadership and below-floor
-  ambiguity each own `22`. L6.24 decomposes the current quality-ready cohort
-  into quality, minutes, actor access, execution and leaderboard cutoff.
+- Phase 81A **L6.25 active:** L6.24 is `MIXED` on `292` quality-ready lane
+  rows. Scorers are `47/65` quality-depth; creators split `68/66/60` across
+  quality/minutes/conversion. L6.25 measures independent overlapping deficits
+  per lane before any population or match-output correction.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;
   conversion `0.7260` and ordinary assisted share `0.7540` remain healthy.
 - Phase 81A **L6.3G `REFINE`:** `8000` yields `1.4692/1.4645` direct-free-kick

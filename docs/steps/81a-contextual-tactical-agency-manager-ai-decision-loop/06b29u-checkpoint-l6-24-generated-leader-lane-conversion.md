@@ -2,7 +2,7 @@
 
 ## Status
 
-Planned and active. Cached observation only; no gameplay correction.
+Done — `MIXED` on 2026-08-12. Cached observation only; no gameplay correction.
 
 ## User-Facing Reason
 
@@ -56,8 +56,8 @@ before output; no threshold moves after the cache is read.
 observations and be the largest stage in `>=5/7` worlds. `MIXED` applies when
 the population reconciles but no stage meets both conditions. Fewer than seven
 worlds, any origin/player/leader join mismatch, an unreachable scorer or
-creator lane, fewer than 21 competition observations, or an unclassifiable
-denominator is `STOP / RETHINK`.
+creator lane, any unreachable terminal stage, fewer than 21 competition
+observations, or an unclassifiable denominator is `STOP / RETHINK`.
 
 The owner maps to exactly one next question:
 
@@ -87,3 +87,24 @@ new report entrypoint.
 The profile is locked to the exact L6.20 cache and seven-worker metadata.
 Required: focused unit tests, typecheck, two byte-identical cache report builds,
 `git diff --check`, graphify update and `pnpm check` alone.
+
+## Outcome
+
+Both cache-only builds exited `1` with the intended `MIXED` result and were
+byte-identical at SHA-256
+`5a0e0253416063799a95e49beda99eb87f4ac39e1d6d7b3a8d08f182c301b0ac`.
+All seven worlds, 21 competitions and 420 leader-lane slots reconciled. Both
+lanes and all five terminal stages were reachable; nothing was passed by
+absence.
+
+Across `292` quality-ready non-leader lane observations, quality depth is the
+largest terminal stage at `115` (`0.3938`) and is largest in five worlds, but it
+does not reach the frozen `0.50` owner share. Selection owns `74`, conversion
+`64`, actor access `35`, and rank cutoff `4`.
+
+The pooled result hides a football distinction rather than resolving it:
+scorers are quality-dominated (`47/65 = 0.7231`), while creators split between
+quality (`68/227`), selection (`66/227`) and conversion (`60/227`). L6.25 keeps
+the same thresholds but measures overlapping rather than first-terminal
+deficits independently for scorer and creator lanes. No current result is
+reclassified retroactively.

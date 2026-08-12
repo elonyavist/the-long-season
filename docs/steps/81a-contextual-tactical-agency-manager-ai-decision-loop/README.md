@@ -304,7 +304,8 @@ contexts; it never owns the analytic diversity gate.
 | 06B29R | [bounded top-flight interesting intake](06b29r-bounded-top-flight-interesting-intake.md) | yes | Done: rejected and removed |
 | 06B29S | [factorial top-flight intake and ceiling interaction](06b29s-checkpoint-l6-22-factorial-top-flight-intake-ceiling-interaction.md) | yes | Done: `STOP / RETHINK`, removed |
 | 06B29T | [paired generated-player lifecycle attribution](06b29t-checkpoint-l6-23-paired-generated-player-lifecycle-attribution.md) | no | Done: `MIXED` |
-| 06B29U | [generated leader-lane conversion](06b29u-checkpoint-l6-24-generated-leader-lane-conversion.md) | no | Active: cached attribution |
+| 06B29U | [generated leader-lane conversion](06b29u-checkpoint-l6-24-generated-leader-lane-conversion.md) | no | Done: `MIXED` |
+| 06B29V | [overlapping leader-lane deficits](06b29v-checkpoint-l6-25-overlapping-leader-lane-deficits.md) | no | Active: cached attribution |
 | 06C | [Checkpoint B2 conditioned tactical ceiling](06c-checkpoint-b2-conditioned-tactical-ceiling.md) | no | GO authorizes 07 |
 | 07 | [player task execution](07-player-task-execution.md) | yes | Step 08 |
 | 08 | [squad identity and lateral execution](08-squad-identity-and-lateral-execution.md) | yes | Step 09 |

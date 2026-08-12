@@ -5,6 +5,7 @@ import {
   academyProspectClassWorldFacts,
   deriveSuccessionDownstreamPlayerOutcome,
   evaluateAcademyProspectClassConversion,
+  evaluateGeneratedLeaderLaneConversion,
   evaluateGeneratedPlayerLifecycleAttribution,
   evaluateLeaderConversionFunnel,
   evaluateLeaderCeilingDistance,
@@ -19,6 +20,7 @@ import {
   successionGrowthFeasibilityStage,
   type SuccessionPriorityArmSummary,
   type GeneratedPlayerLifecycleFact,
+  type GeneratedLeaderLaneWorldFacts,
 } from "./succession-priority-attribution.ts";
 
 test("bounded succession passes only with paired renewal and guardrails", () => {
@@ -621,6 +623,43 @@ test("paired lifecycle attribution keeps acceptance divergence and mixed outcome
   }).decision, "STOP_RETHINK");
 });
 
+test("generated leader-lane conversion identifies only a reachable coherent majority", () => {
+  const worlds = Array.from({ length: 7 }, (_, index) => leaderLaneWorld({
+    worldSeed: `lane-world-${index + 1}`,
+    counts: {
+      quality_depth: 6,
+      selection_volume: 1,
+      actor_access: 1,
+      occasion_conversion: 1,
+      rank_cutoff: 1,
+    },
+  }));
+  const result = evaluateGeneratedLeaderLaneConversion({ worlds, seasonCount: 10 });
+
+  assert.equal(result.decision, "OWNER_IDENTIFIED");
+  assert.equal(result.owner, "quality_depth");
+  assert.equal(result.dominantShare, 0.6);
+  assert.equal(result.coherenceCount, 7);
+  assert.deepEqual(result.unreachableStages, []);
+});
+
+test("generated leader-lane conversion stops on an unreachable real branch", () => {
+  const worlds = Array.from({ length: 7 }, (_, index) => leaderLaneWorld({
+    worldSeed: `lane-world-${index + 1}`,
+    counts: {
+      quality_depth: 6,
+      selection_volume: 1,
+      actor_access: 1,
+      occasion_conversion: 1,
+      rank_cutoff: 0,
+    },
+  }));
+
+  const result = evaluateGeneratedLeaderLaneConversion({ worlds, seasonCount: 10 });
+  assert.equal(result.decision, "STOP_RETHINK");
+  assert.deepEqual(result.unreachableStages, ["rank_cutoff"]);
+});
+
 function arm(
   local: number,
   generated: number,
@@ -649,6 +688,42 @@ function lifecycleWorlds(input: {
     players: [lifecyclePlayer(input)],
     reconciliationFailureCount: 0,
   }));
+}
+
+function leaderLaneWorld(input: {
+  readonly worldSeed: string;
+  readonly counts: GeneratedLeaderLaneWorldFacts["counts"];
+}): GeneratedLeaderLaneWorldFacts {
+  const observationCount = Object.values(input.counts).reduce((total, count) => total + count, 0);
+  return {
+    worldSeed: input.worldSeed,
+    competitionCount: 3,
+    leaderLaneSlotCount: 60,
+    generatedLeaderLaneCount: 10,
+    qualityReadyNonLeaderLaneCount: observationCount,
+    counts: input.counts,
+    laneCounts: [
+      {
+        lane: "scorer",
+        generatedLeaderCount: 5,
+        qualityReadyNonLeaderCount: observationCount,
+        counts: input.counts,
+      },
+      {
+        lane: "creator",
+        generatedLeaderCount: 5,
+        qualityReadyNonLeaderCount: observationCount,
+        counts: input.counts,
+      },
+    ],
+    competitionCounts: [{
+      competitionId: "competition:first",
+      qualityReadyNonLeaderCount: observationCount,
+      counts: input.counts,
+    }],
+    reconciliationFailureCount: 0,
+    unclassifiableCount: 0,
+  };
 }
 
 function lifecyclePlayer(input: {
