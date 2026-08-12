@@ -301,7 +301,8 @@ contexts; it never owns the analytic diversity gate.
 | 06B29O | [Checkpoint L6.18 ceiling distance](06b29o-checkpoint-l6-18-cached-ceiling-distance.md) | no | Done: `MIXED`, global uplift rejected |
 | 06B29P | [First-Division academy ceiling tail](06b29p-first-division-academy-ceiling-tail.md) | yes | Done: rejected and removed |
 | 06B29Q | [Checkpoint L6.20 prospect-class conversion](06b29q-checkpoint-l6-20-academy-prospect-class-conversion.md) | no | Done: routine transition owner |
-| 06B29R | [bounded top-flight interesting intake](06b29r-bounded-top-flight-interesting-intake.md) | yes | Paired candidate |
+| 06B29R | [bounded top-flight interesting intake](06b29r-bounded-top-flight-interesting-intake.md) | yes | Done: rejected and removed |
+| 06B29S | [factorial top-flight intake and ceiling interaction](06b29s-checkpoint-l6-22-factorial-top-flight-intake-ceiling-interaction.md) | yes | Active paired 2 x 2 |
 | 06C | [Checkpoint B2 conditioned tactical ceiling](06c-checkpoint-b2-conditioned-tactical-ceiling.md) | no | GO authorizes 07 |
 | 07 | [player task execution](07-player-task-execution.md) | yes | Step 08 |
 | 08 | [squad identity and lateral execution](08-squad-identity-and-lateral-execution.md) | yes | Step 09 |

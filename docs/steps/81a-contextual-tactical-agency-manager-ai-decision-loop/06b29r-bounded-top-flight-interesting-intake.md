@@ -2,7 +2,7 @@
 
 ## Status
 
-Planned.
+Done — `REFINE` on 2026-08-12. The candidate was removed completely.
 
 ## User-Facing Reason
 
@@ -76,3 +76,35 @@ pnpm cli simulation-report \
   --report-output=simulation-out/phase81a-top-flight-interesting-intake-l6-21-7x10.json
 git diff --check
 ```
+
+## Outcome
+
+The paired `7 x 10` completed with exactly seven workers and zero
+reconciliation failures. The bounded transition changed only First Division:
+`189` routine prospects became interesting while Second and Third Division
+remained byte-identical and generated volume held. It did not create the
+required downstream renewal:
+
+| Metric | Observed | GO |
+| --- | ---: | ---: |
+| Routine ceiling-failure improvement | `0.0371` | `>=0.10` |
+| Mature below-leader-quality improvement | `0.0402`, `3/7` worlds | `>=0.04`, `5/7` |
+| Stored-ceiling-below-leader improvement | `0.0134`, `0/7` worlds | `>=0.06`, `5/7` |
+| Generated-leader share delta | `+0.0024`, `3/7` worlds | `>=0.03`, `5/7` |
+| Candidate generated-leader share | `0.2738` | `>=0.28` |
+| First-Division interesting leaders | `17 -> 16` | `+8` |
+
+No new integrated failure appeared. An early evaluator revision tried to reuse
+an uncollected owner-table view for standings; the final report instead reads
+the canonical standings section and compares champion points pairwise. The
+instrument correction did not change any renewal result or the `REFINE`
+decision.
+
+The result rejects frequency alone, not the diagnosis. L6.19 rejected ceiling
+tail alone on a different cohort. Step 06B29S therefore measures both factors
+on the same seven worlds and accepts the combined policy only if the interaction
+produces the already-frozen renewal outcome. No L6.21 production, profile, i18n
+or evaluator code survives this step.
+
+Evidence:
+`docs/audits/PHASE_81A_CHECKPOINT_L6_21_TOP_FLIGHT_INTERESTING_INTAKE.md`.

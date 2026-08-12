@@ -23,10 +23,10 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **L6.21 active:** L6.20 identifies routine-to-interesting intake:
-  routine owns `73.96%` of top-flight ceiling failures and converts only `4/375`
-  represented players into leaders. A paired `+0.12` annual top-flight
-  interesting chance opens; volume, higher classes and lower tiers stay fixed.
+- Phase 81A **L6.22 active:** L6.21 rejects frequency alone: moving `189`
+  top-flight prospects from routine to interesting changes generated-leader
+  share by only `+0.0024` and interesting leaders `17 -> 16`. L6.22 measures the
+  preregistered frequency x ceiling interaction on the same seven worlds.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;
   conversion `0.7260` and ordinary assisted share `0.7540` remain healthy.
 - Phase 81A **L6.3G `REFINE`:** `8000` yields `1.4692/1.4645` direct-free-kick
