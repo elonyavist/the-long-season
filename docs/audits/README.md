@@ -16,6 +16,10 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_L6_22_ACADEMY_INTAKE_FACTORIAL.md` - **`STOP /
+  RETHINK`; both factors removed.** Frequency and ceiling have a `-0.0333`
+  leader-share interaction; combined leader share falls `0.2714 -> 0.2476`.
+
 - `PHASE_81A_CHECKPOINT_L6_21_TOP_FLIGHT_INTERESTING_INTAKE.md` - **`REFINE`;
   candidate removed.** Moving `189` top-flight prospects from routine to
   interesting changes generated-leader share by only `+0.0024` and produces one
