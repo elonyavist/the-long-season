@@ -2,7 +2,8 @@
 
 ## Status
 
-Planned and active. Product candidate plus paired checkpoint.
+Done: `REFINE`; candidate rejected and removed. No product code, provider seam,
+profile, test helper, i18n label or analysis oracle survives this step.
 
 ## User-Facing Reason
 
@@ -39,6 +40,16 @@ current ability, age, prospect-class count, serious/rare allocation or
 six-star stock. It adds no origin-aware lineup, minutes, market, growth, aging
 or match rule. CLI and web keep using the same content provider.
 
+### Pre-Measurement Construction Correction
+
+The first candidate execution stopped before producing any report: a six-star
+donor made the requested routine interval exactly `16.999..16.999` for a full
+back, leaving no interior room for the constructive allocator. No checkpoint
+outcome existed. The below-six bound now reserves an explicit `0.02` role-
+ability margin and the candidate cache advances from facts v1 to v2; the failed
+cache remains an ignored diagnostic and is never reused or deleted. This does
+not move a decision target or read simulation output.
+
 ## Frozen Paired Checkpoint
 
 - current arm: immutable L6.20 cache;
@@ -68,6 +79,27 @@ RETHINK`; a clean run missing either material transition is `REFINE` and the
 candidate is removed. Targets are frozen before implementation and are not a
 promise that every exiting star produces another star or that every club owns
 its replacement.
+
+## Outcome
+
+The candidate was reachable and structurally clean, but ineffective. It paired
+`1,358` of `1,499` real exit donors with `7,092` routine candidates, leaving
+`141` donors and `5,734` candidates unmatched, with zero floor, role, division
+or reconciliation violations.
+
+The fresh paired control reproduced L6.27 exactly. The candidate then moved the
+stationary-ready share only `0.2189 -> 0.2211` (`+0.0022`, target `+0.10`) and
+worsened the ceiling-supply share `0.9232 -> 0.9247` instead of reducing it by
+`0.10`. Generated-leader share remained inside its guardrail at `0.2595`, but
+that cannot rescue a candidate which misses both intended transitions.
+
+Control SHA-256: `e46e5be5dcdb8f65ea102b57bbf19c3229d287d7c89ba74499afdc6137ee2c26`.
+Candidate SHA-256: `d84162bfef8583ab3db4e57787925ee3ee9430f76cbaf57c4ddc35053e6baa29`.
+Both arms inherited the same integrated failures, so none was caused by the
+candidate. The result closes exit-linked inheritance: actual leavers are not a
+representative target distribution for future senior quality. L6.29 measures
+the annual cohort's stationary ceiling deficit directly before another product
+rule is considered.
 
 ## Expected Files
 

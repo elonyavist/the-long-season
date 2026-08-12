@@ -16,6 +16,10 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_L6_28_EXIT_LINKED_STATIONARY_CEILING.md` — **`REFINE`;
+  candidate removed.** `1,358` valid exit-linked pairings move stationary-ready
+  share only `+0.0022` and slightly worsen the ceiling-supply gap.
+
 - `PHASE_81A_CHECKPOINT_L6_27_AGE_CONDITIONED_POPULATION_STATIONARITY.md` —
   **`OWNER_IDENTIFIED: ceiling_supply`.** `853/924` non-ready like-aged
   generated players have an insufficient stored ceiling, coherent in `7/7`.
