@@ -317,7 +317,7 @@ export interface LeaderConversionWorldFacts {
  * called quality-ready when it reaches any real leader of the same role, not
  * an invented global rating threshold that would punish defensive roles.
  */
-export function leaderConversionWorldFacts(input: {
+export interface LeaderConversionWorldInput {
   readonly worldSeed: string;
   readonly playerSeasons: readonly OwnerAttributionPlayerSeasonFact[];
   readonly playerOrigins: readonly {
@@ -326,7 +326,25 @@ export function leaderConversionWorldFacts(input: {
     readonly generatedSeasonNumber: number;
   }[];
   readonly cohort: "all_generated" | "mature_by_season_six";
-}): LeaderConversionWorldFacts {
+}
+
+export function leaderConversionWorldFacts(
+  input: LeaderConversionWorldInput,
+): LeaderConversionWorldFacts {
+  return deriveLeaderConversionWorld(input).facts;
+}
+
+interface BelowLeaderQualityFact {
+  readonly origin: Extract<GenerationalOrigin, "annual_academy_intake" | "annual_senior_intake">;
+  readonly currentAbility: number;
+  readonly potentialRoom: number;
+  readonly qualityFloor: number;
+}
+
+function deriveLeaderConversionWorld(input: LeaderConversionWorldInput): {
+  readonly facts: LeaderConversionWorldFacts;
+  readonly belowLeaderQuality: readonly BelowLeaderQualityFact[];
+} {
   const seasonTen = input.playerSeasons.filter(({ seasonNumber }) => seasonNumber === 10);
   const competitionIds = [...new Set(seasonTen.map(({ competitionId }) => competitionId))].sort();
   const originByPlayerId = new Map<string, (typeof input.playerOrigins)[number]>();
@@ -344,6 +362,7 @@ export function leaderConversionWorldFacts(input: {
   let unrepresentedRolePlayerCount = 0;
   let recentGeneratedExcludedCount = 0;
   const observedPlayerKeys = new Set<string>();
+  const belowLeaderQuality: BelowLeaderQualityFact[] = [];
 
   for (const competitionId of competitionIds) {
     const rows = seasonTen.filter((row) => row.competitionId === competitionId);
@@ -396,22 +415,43 @@ export function leaderConversionWorldFacts(input: {
             ? "quality_ready_below_900_minutes"
             : "quality_and_minutes_ready_not_leader";
       counts[stage] += 1;
+      if (stage === "below_role_leader_quality") {
+        if (
+          originFact.origin !== "annual_academy_intake"
+          && originFact.origin !== "annual_senior_intake"
+        ) {
+          reconciliationFailureCount += 1;
+        } else {
+          belowLeaderQuality.push({
+            origin: originFact.origin,
+            currentAbility: player.currentAbility,
+            potentialRoom: player.potentialRoom,
+            qualityFloor,
+          });
+        }
+      }
     }
   }
 
   reconciliationFailureCount += Number(
     representedRolePlayerCount + unrepresentedRolePlayerCount !== generatedPlayerCount,
   );
+  reconciliationFailureCount += Number(
+    belowLeaderQuality.length !== counts.below_role_leader_quality,
+  );
   return {
-    worldSeed: input.worldSeed,
-    competitionCount: competitionIds.length,
-    leaderSlotCount,
-    generatedPlayerCount,
-    representedRolePlayerCount,
-    unrepresentedRolePlayerCount,
-    recentGeneratedExcludedCount,
-    counts,
-    reconciliationFailureCount,
+    facts: {
+      worldSeed: input.worldSeed,
+      competitionCount: competitionIds.length,
+      leaderSlotCount,
+      generatedPlayerCount,
+      representedRolePlayerCount,
+      unrepresentedRolePlayerCount,
+      recentGeneratedExcludedCount,
+      counts,
+      reconciliationFailureCount,
+    },
+    belowLeaderQuality,
   };
 }
 
@@ -486,6 +526,174 @@ export function evaluateLeaderConversionFunnel(input: {
     unreachableStages,
     reconciliationFailureCount,
     worlds: input.worlds,
+  };
+}
+
+export const LEADER_QUALITY_FEASIBILITY_STAGES = [
+  "stored_ceiling_below_leader_quality",
+  "sufficient_ceiling_not_realized",
+] as const;
+export type LeaderQualityFeasibilityStage =
+  typeof LEADER_QUALITY_FEASIBILITY_STAGES[number];
+
+export interface LeaderQualityFeasibilityWorldFacts {
+  readonly worldSeed: string;
+  readonly competitionCount: number;
+  readonly leaderSlotCount: number;
+  readonly sourceBelowQualityCount: number;
+  readonly counts: Readonly<Record<LeaderQualityFeasibilityStage, number>>;
+  readonly countsByOrigin: Readonly<Record<
+    "annual_academy_intake" | "annual_senior_intake",
+    Readonly<Record<LeaderQualityFeasibilityStage, number>>
+  >>;
+  readonly currentQualityGapTotal: number;
+  readonly potentialRoomTotal: number;
+  readonly ceilingShortfallTotal: number;
+  readonly reconciliationFailureCount: number;
+}
+
+/** Splits L6.15B quality failures by their already stored ability ceiling. */
+export function leaderQualityFeasibilityWorldFacts(
+  input: Omit<LeaderConversionWorldInput, "cohort">,
+): LeaderQualityFeasibilityWorldFacts {
+  const conversion = deriveLeaderConversionWorld({
+    ...input,
+    cohort: "mature_by_season_six",
+  });
+  const counts = emptyLeaderQualityFeasibilityCounts();
+  const countsByOrigin = {
+    annual_academy_intake: emptyLeaderQualityFeasibilityCounts(),
+    annual_senior_intake: emptyLeaderQualityFeasibilityCounts(),
+  };
+  let currentQualityGapTotal = 0;
+  let potentialRoomTotal = 0;
+  let ceilingShortfallTotal = 0;
+  for (const row of conversion.belowLeaderQuality) {
+    const currentGap = row.qualityFloor - row.currentAbility;
+    const ceilingShortfall = Math.max(0, currentGap - row.potentialRoom);
+    const stage: LeaderQualityFeasibilityStage = ceilingShortfall > 0
+      ? "stored_ceiling_below_leader_quality"
+      : "sufficient_ceiling_not_realized";
+    counts[stage] += 1;
+    countsByOrigin[row.origin][stage] += 1;
+    currentQualityGapTotal += currentGap;
+    potentialRoomTotal += row.potentialRoom;
+    ceilingShortfallTotal += ceilingShortfall;
+  }
+  const sourceBelowQualityCount = conversion.facts.counts.below_role_leader_quality;
+  return {
+    worldSeed: input.worldSeed,
+    competitionCount: conversion.facts.competitionCount,
+    leaderSlotCount: conversion.facts.leaderSlotCount,
+    sourceBelowQualityCount,
+    counts,
+    countsByOrigin,
+    currentQualityGapTotal,
+    potentialRoomTotal,
+    ceilingShortfallTotal,
+    reconciliationFailureCount: conversion.facts.reconciliationFailureCount
+      + Number(sourceBelowQualityCount !== conversion.belowLeaderQuality.length),
+  };
+}
+
+/** Applies the frozen L6.16 ceiling-versus-realization owner rule. */
+export function evaluateLeaderQualityFeasibility(input: {
+  readonly worlds: readonly LeaderQualityFeasibilityWorldFacts[];
+  readonly seasonCount: number;
+  readonly expectedObservationCount: number;
+}) {
+  const counts = Object.fromEntries(
+    LEADER_QUALITY_FEASIBILITY_STAGES.map((stage) => [
+      stage,
+      input.worlds.reduce((total, world) => total + world.counts[stage], 0),
+    ]),
+  ) as Record<LeaderQualityFeasibilityStage, number>;
+  const countsByOrigin = Object.fromEntries(
+    (["annual_academy_intake", "annual_senior_intake"] as const).map((origin) => [
+      origin,
+      Object.fromEntries(LEADER_QUALITY_FEASIBILITY_STAGES.map((stage) => [
+        stage,
+        input.worlds.reduce(
+          (total, world) => total + world.countsByOrigin[origin][stage],
+          0,
+        ),
+      ])),
+    ]),
+  ) as LeaderQualityFeasibilityWorldFacts["countsByOrigin"];
+  const observationCount = LEADER_QUALITY_FEASIBILITY_STAGES.reduce(
+    (total, stage) => total + counts[stage],
+    0,
+  );
+  const competitionCount = input.worlds.reduce(
+    (total, world) => total + world.competitionCount,
+    0,
+  );
+  const leaderSlotCount = input.worlds.reduce(
+    (total, world) => total + world.leaderSlotCount,
+    0,
+  );
+  const sourceBelowQualityCount = input.worlds.reduce(
+    (total, world) => total + world.sourceBelowQualityCount,
+    0,
+  );
+  const reconciliationFailureCount = input.worlds.reduce(
+    (total, world) => total + world.reconciliationFailureCount,
+    0,
+  );
+  const unreachableStages = LEADER_QUALITY_FEASIBILITY_STAGES.filter(
+    (stage) => counts[stage] === 0,
+  );
+  const structuralFailure = input.worlds.length !== 7
+    || input.seasonCount !== 10
+    || competitionCount !== 21
+    || leaderSlotCount !== 420
+    || sourceBelowQualityCount !== input.expectedObservationCount
+    || observationCount !== input.expectedObservationCount
+    || reconciliationFailureCount > 0
+    || unreachableStages.length > 0;
+  const dominantStage = LEADER_QUALITY_FEASIBILITY_STAGES.reduce((best, stage) =>
+    counts[stage] > counts[best] ? stage : best
+  );
+  const dominantShare = observationCount === 0
+    ? "not_observed" as const
+    : counts[dominantStage] / observationCount;
+  const sum = (key: "currentQualityGapTotal" | "potentialRoomTotal" | "ceilingShortfallTotal") =>
+    input.worlds.reduce((total, world) => total + world[key], 0);
+  return {
+    decision: structuralFailure
+      ? "STOP_RETHINK" as const
+      : dominantShare !== "not_observed" && dominantShare >= 0.50
+        ? "OWNER_IDENTIFIED" as const
+        : "MIXED" as const,
+    owner: structuralFailure
+      ? "structural_reconciliation" as const
+      : dominantStage === "stored_ceiling_below_leader_quality"
+        ? "generated_ceiling_supply" as const
+        : "development_realization" as const,
+    counts,
+    countsByOrigin,
+    observationCount,
+    competitionCount,
+    leaderSlotCount,
+    dominantStage,
+    dominantShare,
+    summaries: observationCount === 0
+      ? "not_observed" as const
+      : {
+          currentQualityGapMean: sum("currentQualityGapTotal") / observationCount,
+          potentialRoomMean: sum("potentialRoomTotal") / observationCount,
+          ceilingShortfallMean: sum("ceilingShortfallTotal") / observationCount,
+        },
+    unreachableStages,
+    reconciliationFailureCount,
+    worlds: input.worlds,
+  };
+}
+
+function emptyLeaderQualityFeasibilityCounts(): Record<LeaderQualityFeasibilityStage, number> {
+  return {
+    stored_ceiling_below_leader_quality: 0,
+    sufficient_ceiling_not_realized: 0,
   };
 }
 

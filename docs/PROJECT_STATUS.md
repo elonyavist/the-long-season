@@ -23,10 +23,10 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **L6.15B owner identified:** the canonical mature cohort confirms
-  `1,116/1,445` (`77.23%`) generated non-leaders below role-local leader
-  quality; only `73` lack material minutes. Next split is stored ceiling versus
-  unrealized potential on those exact 1,116 rows.
+- Phase 81A **L6.16 owner identified:** `1,030/1,116` (`92.29%`) mature
+  generated quality failures cannot reach the role-local leader floor even at
+  stored ceiling; all are annual academy intake. Only a bounded academy-ceiling
+  candidate opens; global growth and senior generation stay closed.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;
   conversion `0.7260` and ordinary assisted share `0.7540` remain healthy.
 - Phase 81A **L6.3G `REFINE`:** `8000` yields `1.4692/1.4645` direct-free-kick

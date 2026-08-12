@@ -4,11 +4,13 @@ import { test } from "vitest";
 import {
   deriveSuccessionDownstreamPlayerOutcome,
   evaluateLeaderConversionFunnel,
+  evaluateLeaderQualityFeasibility,
   evaluateSuccessionGrowthFeasibility,
   evaluateSuccessionPriorityComparison,
   evaluateSuccessionTargetAttribution,
   evaluateSuccessionDownstreamFunnel,
   leaderConversionWorldFacts,
+  leaderQualityFeasibilityWorldFacts,
   successionGrowthFeasibilityStage,
   type SuccessionPriorityArmSummary,
 } from "./succession-priority-attribution.ts";
@@ -344,6 +346,89 @@ test("mature leader conversion excludes only players generated after season six"
   assert.equal(facts.counts.below_role_leader_quality, 1);
 });
 
+test("leader quality feasibility treats equality as a reachable stored ceiling", () => {
+  const opening = Array.from({ length: 10 }, (_, index) => playerSeason({
+    playerId: `opening-${index}`,
+    currentAbility: 12,
+    minutes: 2_000,
+    goals: 20 - index,
+    assists: 10 - index,
+  }));
+  const rows = [
+    ...opening,
+    playerSeason({
+      playerId: "ceiling-below",
+      currentAbility: 11,
+      potentialRoom: 0.5,
+      minutes: 2_000,
+    }),
+    playerSeason({
+      playerId: "ceiling-equal",
+      currentAbility: 11.5,
+      potentialRoom: 0.5,
+      minutes: 2_000,
+    }),
+  ];
+  const facts = leaderQualityFeasibilityWorldFacts({
+    worldSeed: "world-1",
+    playerSeasons: rows,
+    playerOrigins: rows.map(({ playerId }) => ({
+      playerId,
+      origin: playerId.startsWith("opening-")
+        ? "opening_senior" as const
+        : "annual_academy_intake" as const,
+      generatedSeasonNumber: playerId.startsWith("opening-") ? 0 : 6,
+    })),
+  });
+
+  assert.deepEqual(facts.counts, {
+    stored_ceiling_below_leader_quality: 1,
+    sufficient_ceiling_not_realized: 1,
+  });
+  assert.equal(facts.sourceBelowQualityCount, 2);
+  assert.equal(facts.ceilingShortfallTotal, 0.5);
+});
+
+test("leader quality feasibility identifies a reconciled majority and rejects drift", () => {
+  const worlds = Array.from({ length: 7 }, (_, index) => ({
+    worldSeed: `world-${index + 1}`,
+    competitionCount: 3,
+    leaderSlotCount: 60,
+    sourceBelowQualityCount: 10,
+    counts: {
+      stored_ceiling_below_leader_quality: 6,
+      sufficient_ceiling_not_realized: 4,
+    },
+    countsByOrigin: {
+      annual_academy_intake: {
+        stored_ceiling_below_leader_quality: 4,
+        sufficient_ceiling_not_realized: 3,
+      },
+      annual_senior_intake: {
+        stored_ceiling_below_leader_quality: 2,
+        sufficient_ceiling_not_realized: 1,
+      },
+    },
+    currentQualityGapTotal: 20,
+    potentialRoomTotal: 5,
+    ceilingShortfallTotal: 15,
+    reconciliationFailureCount: 0,
+  }));
+  const result = evaluateLeaderQualityFeasibility({
+    worlds,
+    seasonCount: 10,
+    expectedObservationCount: 70,
+  });
+
+  assert.equal(result.decision, "OWNER_IDENTIFIED");
+  assert.equal(result.owner, "generated_ceiling_supply");
+  assert.equal(evaluateLeaderQualityFeasibility({
+    worlds,
+    seasonCount: 10,
+    expectedObservationCount: 69,
+  }).decision, "STOP_RETHINK");
+});
+
 function arm(
   local: number,
   generated: number,
@@ -425,6 +510,7 @@ function playerSeason(input: {
   readonly playerId: string;
   readonly role?: "striker" | "goalkeeper";
   readonly currentAbility: number;
+  readonly potentialRoom?: number;
   readonly minutes: number;
   readonly goals?: number;
   readonly assists?: number;
@@ -437,7 +523,7 @@ function playerSeason(input: {
     age: 24,
     role: input.role ?? "striker",
     currentAbility: input.currentAbility,
-    potentialRoom: 0,
+    potentialRoom: input.potentialRoom ?? 0,
     appearances: input.minutes === 0 ? 0 : 1,
     starts: input.minutes >= 90 ? 1 : 0,
     minutes: input.minutes,

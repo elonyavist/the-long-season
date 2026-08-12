@@ -16,9 +16,15 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_L6_16_LEADER_QUALITY_FEASIBILITY.md` -
+  **OWNER_IDENTIFIED: generated_ceiling_supply.** `1,030/1,116` mature quality
+  failures cannot reach their role-local leader floor even at stored ceiling;
+  every row is annual academy intake.
+
 - `PHASE_81A_CHECKPOINT_L6_15B_MATURE_LEADER_CONVERSION.md` -
   **OWNER_IDENTIFIED: leader_quality_supply.** The canonical mature cohort
-  confirms `1,116/1,445` non-leaders below role-local leader quality.
+  confirms `1,116/1,445` non-leaders below role-local leader quality; L6.16
+  supersedes its unresolved ceiling/development split.
 
 - `PHASE_81A_CHECKPOINT_L6_15_LEADER_CONVERSION.md` - **OWNER_IDENTIFIED:
   leader_quality_supply.** `1,130/1,465` generated non-leaders in represented
