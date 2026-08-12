@@ -4,12 +4,14 @@ import { test } from "vitest";
 import {
   deriveSuccessionDownstreamPlayerOutcome,
   evaluateLeaderConversionFunnel,
+  evaluateLeaderCeilingDistance,
   evaluateLeaderQualityFeasibility,
   evaluateSuccessionGrowthFeasibility,
   evaluateSuccessionPriorityComparison,
   evaluateSuccessionTargetAttribution,
   evaluateSuccessionDownstreamFunnel,
   leaderConversionWorldFacts,
+  leaderCeilingDistanceWorldFacts,
   leaderQualityFeasibilityWorldFacts,
   successionGrowthFeasibilityStage,
   type SuccessionPriorityArmSummary,
@@ -426,6 +428,85 @@ test("leader quality feasibility identifies a reconciled majority and rejects dr
     worlds,
     seasonCount: 10,
     expectedObservationCount: 69,
+  }).decision, "STOP_RETHINK");
+});
+
+test("leader ceiling distance derives every frozen boundary from canonical players", () => {
+  const facts = leaderCeilingDistanceWorldFacts({
+    worldSeed: "distance-world",
+    playerSeasons: [
+      ...Array.from({ length: 10 }, (_, index) => playerSeason({
+        playerId: `opening-${index}`,
+        currentAbility: 15,
+        minutes: 2_000,
+        goals: 20 - index,
+        assists: 10 - index,
+      })),
+      playerSeason({ playerId: "at", currentAbility: 15, potentialRoom: 0, minutes: 0 }),
+      playerSeason({ playerId: "half", currentAbility: 14.5, potentialRoom: 0, minutes: 0 }),
+      playerSeason({ playerId: "one", currentAbility: 14, potentialRoom: 0, minutes: 0 }),
+      playerSeason({ playerId: "two", currentAbility: 13, potentialRoom: 0, minutes: 0 }),
+      playerSeason({ playerId: "over", currentAbility: 12.9, potentialRoom: 0, minutes: 0 }),
+    ],
+    playerOrigins: [
+      ...Array.from({ length: 10 }, (_, index) => ({
+        playerId: `opening-${index}`,
+        origin: "opening_senior" as const,
+        generatedSeasonNumber: 0,
+      })),
+      ...["at", "half", "one", "two", "over"].map((playerId) => ({
+        playerId,
+        origin: "annual_academy_intake" as const,
+        generatedSeasonNumber: 6,
+      })),
+    ],
+  });
+
+  assert.deepEqual(facts.counts, {
+    at_or_above: 1,
+    within_0_5: 1,
+    within_1_0: 1,
+    within_2_0: 1,
+    over_2_0: 1,
+  });
+  assert.equal(facts.reconciliationFailureCount, 0);
+});
+
+test("leader ceiling distance identifies level only on a reconciled majority", () => {
+  const worlds = Array.from({ length: 7 }, (_, index) => ({
+    worldSeed: `world-${index + 1}`,
+    competitionCount: 3,
+    representedPlayerCount: 10,
+    counts: {
+      at_or_above: 1,
+      within_0_5: 1,
+      within_1_0: 1,
+      within_2_0: 1,
+      over_2_0: 6,
+    },
+    groups: [{
+      competitionId: "competition:one",
+      role: "striker" as const,
+      playerCount: 10,
+      counts: {
+        at_or_above: 1,
+        within_0_5: 1,
+        within_1_0: 1,
+        within_2_0: 1,
+        over_2_0: 6,
+      },
+      positiveShortfallTotal: 20,
+      positiveShortfallMaximum: 4,
+    }],
+    reconciliationFailureCount: 0,
+  }));
+  const result = evaluateLeaderCeilingDistance({ worlds, seasonCount: 10 });
+
+  assert.equal(result.decision, "OWNER_IDENTIFIED");
+  assert.equal(result.owner, "ceiling_band_level");
+  assert.equal(evaluateLeaderCeilingDistance({
+    worlds: [{ ...worlds[0]!, reconciliationFailureCount: 1 }, ...worlds.slice(1)],
+    seasonCount: 10,
   }).decision, "STOP_RETHINK");
 });
 

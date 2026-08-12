@@ -107,6 +107,7 @@ import {
 import {
   deriveSuccessionDownstreamPlayerOutcome,
   evaluateLeaderConversionFunnel,
+  evaluateLeaderCeilingDistance,
   evaluateLeaderQualityFeasibility,
   evaluateSuccessionGrowthFeasibility,
   evaluateSuccessionPriorityComparison,
@@ -115,6 +116,7 @@ import {
   SUCCESSION_DOWNSTREAM_STAGES,
   SUCCESSION_GROWTH_FEASIBILITY_STAGES,
   leaderConversionWorldFacts,
+  leaderCeilingDistanceWorldFacts,
   leaderQualityFeasibilityWorldFacts,
   successionGrowthFeasibilityStage,
 } from "./succession-priority-attribution.ts";
@@ -169,7 +171,8 @@ export type CareerCheckpointKind =
   | "succession_growth_feasibility_l6_13"
   | "leader_conversion_l6_15"
   | "mature_leader_conversion_l6_15b"
-  | "leader_quality_feasibility_l6_16";
+  | "leader_quality_feasibility_l6_16"
+  | "leader_ceiling_distance_l6_18";
 
 /** Versioned readers sharing the one product-versus-legacy contest producer. */
 export type StrengthContestMode = "canary" | "full" | "retry_canary" | "retry_full";
@@ -217,6 +220,7 @@ const CHECKPOINT_OBSERVES_GENERATIONAL_SUCCESSION = {
   leader_conversion_l6_15: true,
   mature_leader_conversion_l6_15b: true,
   leader_quality_feasibility_l6_16: true,
+  leader_ceiling_distance_l6_18: true,
 } as const satisfies Readonly<Record<CareerCheckpointKind, boolean>>;
 
 /** Keeps observer and checkpoint-section routing on one exhaustive policy. */
@@ -1382,6 +1386,8 @@ export async function createCareerSectionsFacts(input: {
       ? evaluateLeaderConversionCheckpoint(worlds, input.seasonCount, "mature_by_season_six")
     : input.leagueDiversityProfile.checkpointKind === "leader_quality_feasibility_l6_16"
       ? evaluateLeaderQualityFeasibilityCheckpoint(worlds, input.seasonCount)
+    : input.leagueDiversityProfile.checkpointKind === "leader_ceiling_distance_l6_18"
+      ? evaluateLeaderCeilingDistanceCheckpoint(worlds, input.seasonCount)
     : input.leagueDiversityProfile.checkpointKind === "strength_contest_l6_1d"
       ? evaluateStrengthContestCheckpoint(
           worlds.map(requiredOwnerAttributionFacts),
@@ -3440,6 +3446,24 @@ function evaluateLeaderQualityFeasibilityCheckpoint(
     }),
     seasonCount,
     expectedObservationCount: 1_116,
+  });
+}
+
+function evaluateLeaderCeilingDistanceCheckpoint(
+  worlds: readonly CareerWorldProjection[],
+  seasonCount: number,
+) {
+  return evaluateLeaderCeilingDistance({
+    worlds: worlds.map((world) => {
+      const owner = requiredOwnerAttributionFacts(world);
+      const architecture = requiredRenewalArchitectureFacts(world);
+      return leaderCeilingDistanceWorldFacts({
+        worldSeed: world.seed,
+        playerSeasons: owner.playerSeasons,
+        playerOrigins: architecture.playerOrigins,
+      });
+    }),
+    seasonCount,
   });
 }
 

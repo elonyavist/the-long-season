@@ -16,6 +16,10 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_L6_18_CEILING_DISTANCE.md` - **`MIXED`; global uplift
+  rejected.** First Division alone has a majority more than two ability points
+  below local leader floors; Third Division is already majority at or above.
+
 - `PHASE_81A_CHECKPOINT_L6_17_ACADEMY_CEILING_CANDIDATE.md` - **`REFINE`;
   candidate removed.** Doubling serious-prospect frequency barely moves ceiling
   insufficiency, worsens mature quality supply and lowers generated leaders.

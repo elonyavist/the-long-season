@@ -102,6 +102,7 @@ export const SIMULATION_REPORT_PROFILE_IDS = [
   "phase81a-leader-conversion-l6-15-cached",
   "phase81a-mature-leader-conversion-l6-15b-cached",
   "phase81a-leader-quality-feasibility-l6-16-cached",
+  "phase81a-ceiling-distance-l6-18-cached",
   "phase81a-renewal-ablation-l6-1-control-7x10",
   "phase81a-renewal-ablation-l6-1-market-7x10",
   "phase81a-renewal-ablation-l6-1-blueprint-7x10",
@@ -165,6 +166,7 @@ const CAREER_PROFILE_CHECKPOINT_KIND = {
   "phase81a-leader-conversion-l6-15-cached": "leader_conversion_l6_15",
   "phase81a-mature-leader-conversion-l6-15b-cached": "mature_leader_conversion_l6_15b",
   "phase81a-leader-quality-feasibility-l6-16-cached": "leader_quality_feasibility_l6_16",
+  "phase81a-ceiling-distance-l6-18-cached": "leader_ceiling_distance_l6_18",
   "phase81a-renewal-ablation-l6-1-control-7x10": "renewal_ablation_l6_1",
   "phase81a-renewal-ablation-l6-1-market-7x10": "renewal_ablation_l6_1",
   "phase81a-renewal-ablation-l6-1-blueprint-7x10": "renewal_ablation_l6_1",
@@ -223,6 +225,7 @@ const CAREER_PROFILE_CACHE_SUFFIX = {
   "phase81a-leader-conversion-l6-15-cached": "-facts-v1",
   "phase81a-mature-leader-conversion-l6-15b-cached": "-facts-v1",
   "phase81a-leader-quality-feasibility-l6-16-cached": "-facts-v1",
+  "phase81a-ceiling-distance-l6-18-cached": "-facts-v1",
   "phase81a-renewal-ablation-l6-1-control-7x10": "-facts-v2",
   "phase81a-renewal-ablation-l6-1-market-7x10": "-facts-v2",
   "phase81a-renewal-ablation-l6-1-blueprint-7x10": "-facts-v2",
@@ -726,6 +729,21 @@ export const SIMULATION_REPORT_PROFILES = {
     measurementRequest: {
       mode: "profile",
       profileId: "phase81a-leader-quality-feasibility-l6-16-cached",
+      worldCount: 7,
+      seasonCount: 10,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-renewal-baseline-l6-4-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-ceiling-distance-l6-18-cached": {
+    id: "phase81a-ceiling-distance-l6-18-cached",
+    titleKey: "simulationReport.profile.phase81aCeilingDistanceL6_18.title",
+    descriptionKey: "simulationReport.profile.phase81aCeilingDistanceL6_18.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-ceiling-distance-l6-18-cached",
       worldCount: 7,
       seasonCount: 10,
       includedSectionIds: CAREER_SECTION_IDS,
@@ -1519,6 +1537,11 @@ const READ_ONLY_CAREER_PROFILE_CACHES: Readonly<Partial<Record<
   "phase81a-leader-quality-feasibility-l6-16-cached": {
     profileId: "phase81a-renewal-baseline-l6-4-7x10",
     directory: "saves/long-run-checkpoints/phase81a-renewal-baseline-l6-4-7x10-facts-v1",
+  },
+  "phase81a-ceiling-distance-l6-18-cached": {
+    profileId: "phase81a-academy-ceiling-current-l6-17-7x10",
+    directory:
+      "saves/long-run-checkpoints/phase81a-academy-ceiling-current-l6-17-7x10-facts-v1",
   },
 };
 

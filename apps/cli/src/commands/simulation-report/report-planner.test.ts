@@ -825,6 +825,21 @@ describe("simulation-report planner", () => {
       .toThrow(/refuses measurement overrides/);
   });
 
+  it("freezes L6.18 to the fresh current-policy cache written before its buckets", () => {
+    const profileId = "phase81a-ceiling-distance-l6-18-cached";
+    const plan = createSimulationReportPlan({ profileId, workerCount: 7 });
+
+    expect(plan.measurementRequest).toMatchObject({
+      profileId,
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-renewal-baseline-l6-4-v1",
+    });
+    expect(() => createSimulationReportPlan({ profileId, workerCount: 6 }))
+      .toThrow(/refuses measurement overrides/);
+  });
+
 
   it("plans no audit work when a custom request lacks the locked shape population", () => {
     const plan = createSimulationReportPlan({

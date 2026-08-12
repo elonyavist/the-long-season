@@ -335,15 +335,23 @@ export function leaderConversionWorldFacts(
 }
 
 interface BelowLeaderQualityFact {
+  readonly playerId: string;
+  readonly competitionId: string;
+  readonly role: OwnerAttributionPlayerSeasonFact["role"];
   readonly origin: Extract<GenerationalOrigin, "annual_academy_intake" | "annual_senior_intake">;
   readonly currentAbility: number;
   readonly potentialRoom: number;
   readonly qualityFloor: number;
 }
 
+interface RepresentedGeneratedPlayerFact extends BelowLeaderQualityFact {
+  readonly stage: LeaderConversionStage;
+}
+
 function deriveLeaderConversionWorld(input: LeaderConversionWorldInput): {
   readonly facts: LeaderConversionWorldFacts;
   readonly belowLeaderQuality: readonly BelowLeaderQualityFact[];
+  readonly representedPlayers: readonly RepresentedGeneratedPlayerFact[];
 } {
   const seasonTen = input.playerSeasons.filter(({ seasonNumber }) => seasonNumber === 10);
   const competitionIds = [...new Set(seasonTen.map(({ competitionId }) => competitionId))].sort();
@@ -363,6 +371,7 @@ function deriveLeaderConversionWorld(input: LeaderConversionWorldInput): {
   let recentGeneratedExcludedCount = 0;
   const observedPlayerKeys = new Set<string>();
   const belowLeaderQuality: BelowLeaderQualityFact[] = [];
+  const representedPlayers: RepresentedGeneratedPlayerFact[] = [];
 
   for (const competitionId of competitionIds) {
     const rows = seasonTen.filter((row) => row.competitionId === competitionId);
@@ -415,20 +424,30 @@ function deriveLeaderConversionWorld(input: LeaderConversionWorldInput): {
             ? "quality_ready_below_900_minutes"
             : "quality_and_minutes_ready_not_leader";
       counts[stage] += 1;
+      const representedPlayer = {
+        playerId: player.playerId,
+        competitionId,
+        role: player.role,
+        origin: originFact.origin,
+        currentAbility: player.currentAbility,
+        potentialRoom: player.potentialRoom,
+        qualityFloor,
+        stage,
+      } as const;
+      if (
+        representedPlayer.origin !== "annual_academy_intake"
+        && representedPlayer.origin !== "annual_senior_intake"
+      ) {
+        reconciliationFailureCount += 1;
+        continue;
+      }
+      const generatedPlayer: RepresentedGeneratedPlayerFact = {
+        ...representedPlayer,
+        origin: representedPlayer.origin,
+      };
+      representedPlayers.push(generatedPlayer);
       if (stage === "below_role_leader_quality") {
-        if (
-          originFact.origin !== "annual_academy_intake"
-          && originFact.origin !== "annual_senior_intake"
-        ) {
-          reconciliationFailureCount += 1;
-        } else {
-          belowLeaderQuality.push({
-            origin: originFact.origin,
-            currentAbility: player.currentAbility,
-            potentialRoom: player.potentialRoom,
-            qualityFloor,
-          });
-        }
+        belowLeaderQuality.push(generatedPlayer);
       }
     }
   }
@@ -452,6 +471,7 @@ function deriveLeaderConversionWorld(input: LeaderConversionWorldInput): {
       reconciliationFailureCount,
     },
     belowLeaderQuality,
+    representedPlayers,
   };
 }
 
@@ -535,6 +555,211 @@ export const LEADER_QUALITY_FEASIBILITY_STAGES = [
 ] as const;
 export type LeaderQualityFeasibilityStage =
   typeof LEADER_QUALITY_FEASIBILITY_STAGES[number];
+
+export const LEADER_CEILING_DISTANCE_BUCKETS = [
+  "at_or_above",
+  "within_0_5",
+  "within_1_0",
+  "within_2_0",
+  "over_2_0",
+] as const;
+export type LeaderCeilingDistanceBucket =
+  typeof LEADER_CEILING_DISTANCE_BUCKETS[number];
+
+export interface LeaderCeilingDistanceWorldFacts {
+  readonly worldSeed: string;
+  readonly competitionCount: number;
+  readonly representedPlayerCount: number;
+  readonly counts: Readonly<Record<LeaderCeilingDistanceBucket, number>>;
+  readonly groups: readonly {
+    readonly competitionId: string;
+    readonly role: OwnerAttributionPlayerSeasonFact["role"];
+    readonly playerCount: number;
+    readonly counts: Readonly<Record<LeaderCeilingDistanceBucket, number>>;
+    readonly positiveShortfallTotal: number;
+    readonly positiveShortfallMaximum: number | "not_observed";
+  }[];
+  readonly reconciliationFailureCount: number;
+}
+
+/** Reuses the leader conversion join to measure stored-ceiling distance. */
+export function leaderCeilingDistanceWorldFacts(
+  input: Omit<LeaderConversionWorldInput, "cohort">,
+): LeaderCeilingDistanceWorldFacts {
+  const conversion = deriveLeaderConversionWorld({
+    ...input,
+    cohort: "mature_by_season_six",
+  });
+  const counts = emptyLeaderCeilingDistanceCounts();
+  const groups = new Map<string, {
+    competitionId: string;
+    role: OwnerAttributionPlayerSeasonFact["role"];
+    playerCount: number;
+    counts: Record<LeaderCeilingDistanceBucket, number>;
+    positiveShortfallTotal: number;
+    positiveShortfallMaximum: number | "not_observed";
+  }>();
+  for (const player of conversion.representedPlayers) {
+    const shortfall = player.qualityFloor
+      - (player.currentAbility + player.potentialRoom);
+    const bucket = leaderCeilingDistanceBucket(shortfall);
+    counts[bucket] += 1;
+    const key = `${player.competitionId}|${player.role}`;
+    const group = groups.get(key) ?? {
+      competitionId: player.competitionId,
+      role: player.role,
+      playerCount: 0,
+      counts: emptyLeaderCeilingDistanceCounts(),
+      positiveShortfallTotal: 0,
+      positiveShortfallMaximum: "not_observed" as const,
+    };
+    group.playerCount += 1;
+    group.counts[bucket] += 1;
+    if (shortfall > 0) {
+      group.positiveShortfallTotal += shortfall;
+      group.positiveShortfallMaximum = group.positiveShortfallMaximum === "not_observed"
+        ? shortfall
+        : Math.max(group.positiveShortfallMaximum, shortfall);
+    }
+    groups.set(key, group);
+  }
+  const competitionCount = new Set(
+    conversion.representedPlayers.map(({ competitionId }) => competitionId),
+  ).size;
+  const representedPlayerCount = LEADER_CEILING_DISTANCE_BUCKETS.reduce(
+    (total, bucket) => total + counts[bucket],
+    0,
+  );
+  return {
+    worldSeed: input.worldSeed,
+    competitionCount,
+    representedPlayerCount,
+    counts,
+    groups: [...groups.values()].sort((left, right) =>
+      left.competitionId.localeCompare(right.competitionId)
+        || left.role.localeCompare(right.role)
+    ),
+    reconciliationFailureCount: conversion.facts.reconciliationFailureCount
+      + Number(representedPlayerCount !== conversion.facts.representedRolePlayerCount),
+  };
+}
+
+/** Applies the frozen L6.18 ceiling-distance owner rule. */
+export function evaluateLeaderCeilingDistance(input: {
+  readonly worlds: readonly LeaderCeilingDistanceWorldFacts[];
+  readonly seasonCount: number;
+}) {
+  const counts = Object.fromEntries(LEADER_CEILING_DISTANCE_BUCKETS.map((bucket) => [
+    bucket,
+    input.worlds.reduce((total, world) => total + world.counts[bucket], 0),
+  ])) as Record<LeaderCeilingDistanceBucket, number>;
+  const observationCount = LEADER_CEILING_DISTANCE_BUCKETS.reduce(
+    (total, bucket) => total + counts[bucket],
+    0,
+  );
+  const competitionCount = input.worlds.reduce(
+    (total, world) => total + world.competitionCount,
+    0,
+  );
+  const reconciliationFailureCount = input.worlds.reduce(
+    (total, world) => total + world.reconciliationFailureCount,
+    0,
+  );
+  const unreachableBuckets = LEADER_CEILING_DISTANCE_BUCKETS.filter(
+    (bucket) => counts[bucket] === 0,
+  );
+  const structuralFailure = input.worlds.length !== 7
+    || input.seasonCount !== 10
+    || competitionCount !== 21
+    || observationCount === 0
+    || reconciliationFailureCount > 0
+    || unreachableBuckets.length > 0;
+  const overTwoShare = observationCount === 0 ? 0 : counts.over_2_0 / observationCount;
+  const positiveBelowTwoCount = counts.within_0_5 + counts.within_1_0 + counts.within_2_0;
+  const positiveBelowTwoShare = observationCount === 0
+    ? 0
+    : positiveBelowTwoCount / observationCount;
+  const groupMap = new Map<string, LeaderCeilingDistanceWorldFacts["groups"][number][]>();
+  for (const world of input.worlds) {
+    for (const group of world.groups) {
+      const key = `${group.competitionId}|${group.role}`;
+      groupMap.set(key, [...(groupMap.get(key) ?? []), group]);
+    }
+  }
+  return {
+    decision: structuralFailure
+      ? "STOP_RETHINK" as const
+      : overTwoShare >= 0.50 || positiveBelowTwoShare >= 0.50
+        ? "OWNER_IDENTIFIED" as const
+        : "MIXED" as const,
+    owner: structuralFailure
+      ? "structural_reconciliation" as const
+      : overTwoShare >= 0.50
+        ? "ceiling_band_level" as const
+        : positiveBelowTwoShare >= 0.50
+          ? "ceiling_band_tail" as const
+          : "mixed" as const,
+    counts,
+    observationCount,
+    competitionCount,
+    overTwoShare,
+    positiveBelowTwoShare,
+    groups: [...groupMap.entries()].map(([key, rows]) => {
+      const first = rows[0]!;
+      const playerCount = rows.reduce((total, row) => total + row.playerCount, 0);
+      const positiveCount = rows.reduce((total, row) => total
+        + row.counts.within_0_5 + row.counts.within_1_0
+        + row.counts.within_2_0 + row.counts.over_2_0, 0);
+      const positiveShortfallTotal = rows.reduce(
+        (total, row) => total + row.positiveShortfallTotal,
+        0,
+      );
+      return {
+        key,
+        competitionId: first.competitionId,
+        role: first.role,
+        playerCount,
+        counts: Object.fromEntries(LEADER_CEILING_DISTANCE_BUCKETS.map((bucket) => [
+          bucket,
+          rows.reduce((total, row) => total + row.counts[bucket], 0),
+        ])) as Record<LeaderCeilingDistanceBucket, number>,
+        positiveShortfallMean: positiveCount === 0
+          ? "not_observed" as const
+          : positiveShortfallTotal / positiveCount,
+        positiveShortfallMaximum: rows.reduce<number | "not_observed">(
+          (maximum, row) => row.positiveShortfallMaximum === "not_observed"
+            ? maximum
+            : maximum === "not_observed"
+              ? row.positiveShortfallMaximum
+              : Math.max(maximum, row.positiveShortfallMaximum),
+          "not_observed",
+        ),
+      };
+    }).sort((left, right) => left.competitionId.localeCompare(right.competitionId)
+      || left.role.localeCompare(right.role)),
+    unreachableBuckets,
+    reconciliationFailureCount,
+    worlds: input.worlds,
+  };
+}
+
+function leaderCeilingDistanceBucket(shortfall: number): LeaderCeilingDistanceBucket {
+  if (shortfall <= 0) return "at_or_above";
+  if (shortfall <= 0.5) return "within_0_5";
+  if (shortfall <= 1) return "within_1_0";
+  if (shortfall <= 2) return "within_2_0";
+  return "over_2_0";
+}
+
+function emptyLeaderCeilingDistanceCounts(): Record<LeaderCeilingDistanceBucket, number> {
+  return {
+    at_or_above: 0,
+    within_0_5: 0,
+    within_1_0: 0,
+    within_2_0: 0,
+    over_2_0: 0,
+  };
+}
 
 export interface LeaderQualityFeasibilityWorldFacts {
   readonly worldSeed: string;

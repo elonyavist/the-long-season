@@ -23,10 +23,10 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **L6.17 `REFINE`, candidate removed:** doubling serious-prospect
-  frequency moves ceiling insufficiency only `-0.0059`, worsens mature quality
-  supply `+0.0269` and lowers generated leaders `-0.0048`. L6.18 measures
-  ceiling distance by division/role; volume, growth and seniors stay closed.
+- Phase 81A **L6.19 active:** L6.18 is `MIXED`: First Division alone has a
+  majority (`0.5278`) over two ability points below local leader quality, while
+  Third Division is already majority at/above. Only a bounded First-Division
+  interesting-prospect ceiling tail opens; all other supply owners stay closed.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;
   conversion `0.7260` and ordinary assisted share `0.7540` remain healthy.
 - Phase 81A **L6.3G `REFINE`:** `8000` yields `1.4692/1.4645` direct-free-kick
