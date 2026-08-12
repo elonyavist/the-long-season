@@ -75,6 +75,12 @@ now record **SHOOTER GO** at `18.45`; the corrected reader finds assists red in
 both current (`7.1614`) and cached pre-06B22B (`7.1914`) facts, so the creator
 question predates the shooter change.
 
+Checkpoint B2 Phase 2 remains `REFINE`. Step 06C5 reconciled its accepted
+replay exactly and identified `minute_effect_materiality`: even the optimistic
+complete response rows reach only about `+0.025/-0.021` against `+/-0.045`.
+Step 06C6 owns the bounded contextual route-quality correction; Step 07 stays
+closed.
+
 This phase is governed by
 [`PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md`](../../audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md).
 That contract owns the thesis, target values, measurement protocol, analytic
@@ -319,7 +325,8 @@ contexts; it never owns the analytic diversity gate.
 | 06C2 | [double-width squad identity separation](06c2-double-width-squad-identity-separation.md) | yes | Done: population `GO` twice |
 | 06C3 | [contextual lateral-route leverage](06c3-contextual-lateral-route-leverage.md) | yes | Done: `6000 bp`, Phase 1 passes twice |
 | 06C4 | [independent counter-move replay](06c4-independent-counter-move-replay.md) | no | Done: `REFINE` |
-| 06C5 | [replay materiality attribution](06c5-replay-materiality-attribution.md) | no | Active: selection vs minute effect |
+| 06C5 | [replay materiality attribution](06c5-replay-materiality-attribution.md) | no | Done: minute-effect owner |
+| 06C6 | [contextual route-quality materiality](06c6-contextual-route-quality-materiality.md) | yes | Active: frozen candidate sweep |
 | 07 | [player task execution](07-player-task-execution.md) | yes | Step 08 |
 | 08 | [squad identity and lateral execution](08-squad-identity-and-lateral-execution.md) | yes | Step 09 |
 | 09 | [Checkpoint C player context](09-checkpoint-c-player-context.md) | no | GO authorizes 10 |

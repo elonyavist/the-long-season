@@ -30,12 +30,14 @@ import {
   summarizeTacticalAgencySquadIdentities,
   summarizeTacticalAgencyStructuralAnalysis,
   summarizeTacticalAgencyConditionedAnalysis,
+  summarizeTacticalAgencyConditionedMateriality,
   summarizeTacticalAgencyConditionedReplay,
   tacticalAgencyReorderInvariantShare,
   TACTICAL_AGENCY_AUDIT_CONTRACT_VERSION,
   TACTICAL_AGENCY_CHECKPOINT_WORKER_COUNT,
   TacticalAgencyAuditError,
   type TacticalAgencyLowBlockResult,
+  type TacticalAgencyConditionedMaterialityContextResult,
   type TacticalAgencyConditionedReplayContextResult,
   type TacticalAgencyPopulationManifest,
   type TacticalAgencySelectionRow,
@@ -660,6 +662,45 @@ test("B2 replay decision is reachable in both directions without moving its targ
   assert.equal(go.counterMoveExposure.value, -0.08);
   assert.deepEqual(go.contextFreeDelta.interval95, [0, 0]);
 });
+
+test("B2 materiality attribution uses only the frozen replay targets", () => {
+  const minuteEffect = summarizeTacticalAgencyConditionedMateriality({
+    declaredContextCount: 1,
+    contexts: [materialityResult({ optimisticCeiling: 0.044, optimisticExposure: -0.044 })],
+  });
+  const asymmetric = summarizeTacticalAgencyConditionedMateriality({
+    declaredContextCount: 1,
+    contexts: [materialityResult({ optimisticCeiling: 0.045, optimisticExposure: -0.044 })],
+  });
+  const selection = summarizeTacticalAgencyConditionedMateriality({
+    declaredContextCount: 1,
+    contexts: [materialityResult({ optimisticCeiling: 0.045, optimisticExposure: -0.045 })],
+  });
+
+  assert.equal(minuteEffect.owner, "minute_effect_materiality");
+  assert.equal(asymmetric.owner, "asymmetric_materiality");
+  assert.equal(selection.owner, "selection_power");
+  assert.equal(selection.acceptedReplay.decision, "REFINE");
+  assert.ok(Math.abs(selection.selectionRegret - 0.035) < Number.EPSILON);
+  assert.ok(Math.abs(selection.exposureRegret - 0.035) < Number.EPSILON);
+});
+
+function materialityResult(input: {
+  readonly optimisticCeiling: number;
+  readonly optimisticExposure: number;
+}): TacticalAgencyConditionedMaterialityContextResult {
+  return {
+    ...replayResult({ ceiling: 0.01, exposure: -0.01, contextFree: 0 }),
+    replayWinShares: [
+      { responseId: "high_pressing|left", winShare: 0.5 + input.optimisticCeiling },
+      { responseId: "low_block|right", winShare: 0.5 + input.optimisticExposure },
+    ],
+    optimisticBestResponseId: "high_pressing|left",
+    optimisticExposedResponseId: "low_block|right",
+    optimisticCounterMoveDeltas: [input.optimisticCeiling, input.optimisticCeiling],
+    optimisticExposureDeltas: [input.optimisticExposure, input.optimisticExposure],
+  };
+}
 
 function replayResult(input: {
   readonly ceiling: number;

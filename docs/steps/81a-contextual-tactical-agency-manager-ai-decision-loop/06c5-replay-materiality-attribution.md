@@ -2,8 +2,9 @@
 
 ## Status
 
-Active. B2 Phase 1 passes twice; Phase 2 records a real but sub-material signal.
-This step changes no gameplay and cannot open Step 07 by itself.
+Done: `OWNER_IDENTIFIED: minute_effect_materiality`. B2 Phase 1 passes twice;
+the full response row is still sub-material. This step changes no gameplay and
+does not open Step 07.
 
 ## Goal
 
@@ -53,14 +54,17 @@ targets alone decide whether the signal exists anywhere in the response row.
 ## Expected Files
 
 - `packages/simulation-tools/src/tactical-agency/tactical-agency-audit.ts` and
-  test;
+  `tactical-agency-audit.test.ts`; the latter owns the frozen attribution
+  decision and reconciliation examples;
 - `packages/simulation-tools/src/index.ts` if new result types cross the public
   boundary;
-- `apps/cli/src/commands/simulation-report/tactical-agency-section.ts` and test;
+- `apps/cli/src/commands/simulation-report/tactical-agency-section.ts`;
 - `apps/cli/src/commands/simulation-report/tactical-agency-structural-worker.ts`;
-- `apps/cli/src/commands/simulation-report/report-registry.ts` and planner test
-  if a distinct canonical profile is required;
-- `packages/i18n/src/labels.ts` only for a new visible profile;
+- `apps/cli/src/commands/simulation-report/report-registry.ts` and
+  `report-planner.test.ts`; the materiality run is a distinct locked profile,
+  and the planner test prevents population or worker drift;
+- `packages/i18n/src/labels.ts`; the canonical profile is visible in the
+  localized command surface;
 - `docs/audits/PHASE_81A_CHECKPOINT_B2_REPLAY_MATERIALITY_ATTRIBUTION.md` **(new)**;
 - `docs/audits/README.md`;
 - `docs/PROJECT_STATUS.md`;
@@ -87,3 +91,22 @@ graphify update .
 The complete replay row reconciles every 06C4 selected and blind reading, both
 seed sets receive one frozen owner, no accepted gate is reinterpreted, and only
 the demonstrated owner receives a later correction step.
+
+## Result
+
+The locked profile completed on seven workers in `83,639.432625 ms`, real exit
+`0`. Every accepted 06C4 selected and blind value reconciles exactly.
+
+| set | optimistic ceiling | optimistic exposure | selection regret | owner |
+|---|---:|---:|---:|---|
+| in-sample | `+0.02441` | `-0.02053` | `0.01958` | minute effect |
+| out-of-sample | `+0.02519` | `-0.02159` | `0.01722` | minute effect |
+
+Both complete response rows remain far inside `+0.045 / -0.045`. Selection
+regret exists, but no selector can choose a material response that the replay
+row does not contain. Step 06C6 may therefore change only the versioned
+minute-effect owner; the selector, target and population remain frozen.
+
+Artifact:
+`simulation-out/phase81a-checkpoint-b2-materiality.json`, SHA-256
+`6cd1592025e910ddab83d5e8507bbf3eb04585c297d46511707bf338b9b47776`.

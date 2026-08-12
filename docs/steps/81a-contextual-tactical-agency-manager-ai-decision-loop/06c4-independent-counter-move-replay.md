@@ -171,3 +171,7 @@ Selection tied at the top in `31/64` sampled contexts under the frozen eight
 seed pairs. That is an attribution question, not permission to increase the
 sample after seeing the result; Step 06C5 must measure whether the full replay
 population contains a `±0.045` upper/lower bound before any correction.
+
+Step 06C5 answered with exact reconciliation: optimistic full rows reach only
+`+0.0244/-0.0205` and `+0.0252/-0.0216`. Minute-effect materiality, not
+response selection, is the first correction owner.

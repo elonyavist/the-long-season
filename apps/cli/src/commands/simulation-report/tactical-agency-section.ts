@@ -9,6 +9,7 @@ import {
   selectTacticalAgencyConditionedReplayContexts,
   summarizeTacticalAgencyConditionedAnalysis,
   summarizeTacticalAgencyConditionedReplay,
+  summarizeTacticalAgencyConditionedMateriality,
   summarizeTacticalAgencyConditionedAttribution,
   summarizeTacticalAgencyStructuralAnalysis,
   type TacticalAgencyAuditReport,
@@ -20,6 +21,8 @@ import {
   type TacticalAgencyConditionedContextRow,
   type TacticalAgencyConditionedReplayMatchupInput,
   type TacticalAgencyConditionedReplaySummary,
+  type TacticalAgencyConditionedMaterialityOwner,
+  type TacticalAgencyConditionedMaterialitySummary,
   type TacticalAgencyRoleSummary,
   type TacticalAgencySelectionRow,
   type TacticalAgencyStructuralAnalysis,
@@ -62,6 +65,7 @@ import {
 } from "./tactical-shape-section.ts";
 import {
   runTacticalAgencyConditionedReplayWorker,
+  runTacticalAgencyConditionedMaterialityWorker,
   runTacticalAgencyConditionedWorker,
   runTacticalAgencyStructuralWorker,
 } from "./tactical-agency-structural-worker.ts";
@@ -266,6 +270,24 @@ export interface TacticalAgencyB2ProfileFacts {
     readonly held: boolean;
   } | { readonly status: "not_run_by_protocol" };
   readonly decision: "GO" | "REFINE" | "STOP_RETHINK";
+  readonly workerCount: number;
+  readonly elapsedMilliseconds: number;
+  readonly calibrationVersions: Readonly<Record<string, string>>;
+  readonly worldSeeds: readonly string[];
+}
+
+/** Observational B2 materiality attribution; never a replacement gate. */
+export interface TacticalAgencyB2MaterialityProfileFacts {
+  readonly sets: readonly {
+    readonly setName: string;
+    readonly worldSeeds: readonly string[];
+    readonly phaseOneDecision: "PASS_PHASE_1" | "REFINE" | "STOP_RETHINK";
+    readonly populationHeld: boolean;
+    readonly attribution: TacticalAgencyConditionedMaterialitySummary | null;
+    readonly replayReconciliationHeld: boolean;
+  }[];
+  readonly owner: TacticalAgencyConditionedMaterialityOwner | "mixed" | "not_evaluated";
+  readonly decision: "OWNER_IDENTIFIED" | "MIXED" | "STOP_RETHINK";
   readonly workerCount: number;
   readonly elapsedMilliseconds: number;
   readonly calibrationVersions: Readonly<Record<string, string>>;
@@ -486,6 +508,121 @@ export async function createTacticalAgencyB2ProfileFacts(input: {
         : "REFINE",
     elapsedMilliseconds: performance.now() - startedAt,
   };
+}
+
+/** Runs the complete-response attribution over 06C4's exact accepted contexts. */
+export async function createTacticalAgencyB2MaterialityProfileFacts(input: {
+  readonly workerCount: number;
+}): Promise<TacticalAgencyB2MaterialityProfileFacts> {
+  const startedAt = performance.now();
+  const measured = await measureTacticalAgencyConditionedPopulation(input.workerCount);
+  if (measured.decision !== "PASS_PHASE_1") {
+    return {
+      sets: measured.sets.map((set) => ({
+        setName: set.setName,
+        worldSeeds: set.worldSeeds,
+        phaseOneDecision: set.decision,
+        populationHeld: set.populationHeld,
+        attribution: null,
+        replayReconciliationHeld: false,
+      })),
+      owner: "not_evaluated",
+      decision: "STOP_RETHINK",
+      workerCount: input.workerCount,
+      elapsedMilliseconds: performance.now() - startedAt,
+      calibrationVersions: measured.calibrationVersions,
+      worldSeeds: measured.worldSeeds,
+    };
+  }
+
+  const sets: TacticalAgencyB2MaterialityProfileFacts["sets"][number][] = [];
+  for (const [setIndex, set] of measured.sets.entries()) {
+    const selected = selectTacticalAgencyConditionedReplayContexts({
+      responses: set.responses,
+      contexts: set.contexts,
+      matchups: set.matchups,
+    });
+    const partitions = Array.from({ length: input.workerCount }, () =>
+      [] as typeof selected[number][]);
+    for (const [contextIndex, context] of selected.entries()) {
+      (partitions[contextIndex % input.workerCount] as typeof selected[number][]).push(context);
+    }
+    const completed = await Promise.all(partitions.map((contexts, partitionIndex) =>
+      runTacticalAgencyConditionedMaterialityWorker({
+        partitionIndex,
+        responses: set.responses,
+        contexts,
+        engineConfig: set.engineConfig,
+        matchTacticsCalibration: set.matchTacticsCalibration,
+        selectionSeedPrefix: `phase81a-b2-selection-v1-${setIndex}`,
+        replaySeedPrefix: `phase81a-b2-replay-v1-${setIndex}`,
+      })));
+    const rows = completed
+      .sort((left, right) => left.partitionIndex - right.partitionIndex)
+      .flatMap(({ contexts }) => contexts)
+      .sort((left, right) => left.contextIndex - right.contextIndex);
+    const attribution = summarizeTacticalAgencyConditionedMateriality({
+      declaredContextCount: set.analysis.declaredContextCount,
+      contexts: rows,
+    });
+    sets.push({
+      setName: set.setName,
+      worldSeeds: set.worldSeeds,
+      phaseOneDecision: set.decision,
+      populationHeld: set.populationHeld,
+      attribution,
+      replayReconciliationHeld: reproducesAcceptedB2Replay(setIndex, attribution),
+    });
+  }
+  const reconciliationHeld = sets.every(({ replayReconciliationHeld }) =>
+    replayReconciliationHeld);
+  const owners = new Set(sets.flatMap(({ attribution }) =>
+    attribution === null ? [] : [attribution.owner]));
+  const owner = owners.size === 1
+    ? [...owners][0] as TacticalAgencyConditionedMaterialityOwner
+    : "mixed" as const;
+  return {
+    sets,
+    owner,
+    decision: !reconciliationHeld
+      ? "STOP_RETHINK"
+      : owner === "mixed"
+        ? "MIXED"
+        : "OWNER_IDENTIFIED",
+    workerCount: input.workerCount,
+    elapsedMilliseconds: performance.now() - startedAt,
+    calibrationVersions: {
+      ...measured.calibrationVersions,
+      tacticalAgencyMateriality: "phase81a-b2-materiality-attribution-v1",
+    },
+    worldSeeds: measured.worldSeeds,
+  };
+}
+
+/** Frozen accepted 06C4 replay facts; exact reconstruction is the purity gate. */
+function reproducesAcceptedB2Replay(
+  setIndex: number,
+  attribution: TacticalAgencyConditionedMaterialitySummary,
+): boolean {
+  const expected = [
+    {
+      ceiling: 0.004825947794278443,
+      exposure: -0.008083480305702537,
+      contextFree: 0.00020590331916174465,
+    },
+    {
+      ceiling: 0.00796739343438217,
+      exposure: -0.00509255709202033,
+      contextFree: -0.0037882660668468577,
+    },
+  ] as const;
+  const row = expected[setIndex];
+  return row !== undefined
+    && attribution.acceptedReplay.selectedContextCount === 32
+    && attribution.acceptedReplay.declaredContextCount === 3_402
+    && attribution.acceptedReplay.counterMoveCeiling.value === row.ceiling
+    && attribution.acceptedReplay.counterMoveExposure.value === row.exposure
+    && attribution.acceptedReplay.contextFreeDelta.value === row.contextFree;
 }
 
 /** Independent replay cannot reproduce a selected signal when both intervals cross zero. */

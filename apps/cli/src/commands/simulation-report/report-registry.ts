@@ -18,6 +18,7 @@ import {
   createTacticalAgencyA2ProfileFacts,
   createTacticalAgencyB21ProfileFacts,
   createTacticalAgencyB21AProfileFacts,
+  createTacticalAgencyB2MaterialityProfileFacts,
   createTacticalAgencyB2ProfileFacts,
   createTacticalAgencyBProfileFacts,
   createTacticalAgencySectionFacts,
@@ -67,6 +68,7 @@ export const SIMULATION_REPORT_PROFILE_IDS = [
   "phase81a-a2",
   "phase81a-b",
   "phase81a-b2",
+  "phase81a-b2-materiality",
   "phase81a-b2-attribution",
   "phase81a-b2-identity-family",
   "phase81a-substitution-minute-l2-7x1",
@@ -450,6 +452,21 @@ export const SIMULATION_REPORT_PROFILES = {
     measurementRequest: {
       mode: "profile",
       profileId: "phase81a-b2",
+      worldCount: DEFAULT_TACTICAL_AGENCY_WORLD_COUNT,
+      seasonCount: 1,
+      includedSectionIds: ["tactical_agency"],
+      detail: "diagnostic",
+      seedPrefix: DEFAULT_TACTICAL_AGENCY_WORLD_SEED,
+      workerCount: 7,
+    },
+  },
+  "phase81a-b2-materiality": {
+    id: "phase81a-b2-materiality",
+    titleKey: "simulationReport.profile.phase81aB2Materiality.title",
+    descriptionKey: "simulationReport.profile.phase81aB2Materiality.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-b2-materiality",
       worldCount: DEFAULT_TACTICAL_AGENCY_WORLD_COUNT,
       seasonCount: 1,
       includedSectionIds: ["tactical_agency"],
@@ -1658,6 +1675,26 @@ export async function executeSimulationReportModule(
           },
         }),
         decision: facts.decision === "GO" ? "PASS" : "FAIL",
+        calibrationVersions: facts.calibrationVersions,
+        worldSeeds: facts.worldSeeds,
+      };
+    }
+    if (request.profileId === "phase81a-b2-materiality") {
+      const facts = await createTacticalAgencyB2MaterialityProfileFacts({
+        workerCount: request.workerCount,
+      });
+      return {
+        data: toSimulationReportJsonValue({
+          sets: facts.sets,
+          owner: facts.owner,
+          decision: facts.decision,
+          execution: {
+            workerCount: facts.workerCount,
+            partitionCount: facts.workerCount,
+            elapsedMilliseconds: facts.elapsedMilliseconds,
+          },
+        }),
+        decision: facts.decision === "OWNER_IDENTIFIED" ? "NOT_EVALUATED" : "FAIL",
         calibrationVersions: facts.calibrationVersions,
         worldSeeds: facts.worldSeeds,
       };

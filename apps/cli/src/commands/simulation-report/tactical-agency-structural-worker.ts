@@ -3,12 +3,14 @@ import { isMainThread, parentPort, Worker, workerData } from "node:worker_thread
 import {
   runTacticalAgencyConditionedAnalyticPartition,
   runTacticalAgencyConditionedReplayPartition,
+  runTacticalAgencyConditionedMaterialityPartition,
   runTacticalAgencyStructuralAnalyticPartition,
   type TacticalAgencyConditionedContextRow,
   type TacticalAgencyConditionedMatchupInput,
   type TacticalAgencyConditionedResponse,
   type TacticalAgencyConditionedReplayContext,
   type TacticalAgencyConditionedReplayContextResult,
+  type TacticalAgencyConditionedMaterialityContextResult,
   type TacticalAgencyStructuralAction,
   type TacticalAgencyStructuralContextRow,
 } from "@game/simulation-tools";
@@ -17,6 +19,7 @@ import type { FakeDomesticWorld } from "@game/content";
 const STRUCTURAL_WORKER_KIND = "phase81a-b-analytic-partition-v1";
 const CONDITIONED_WORKER_KIND = "phase81a-b2-conditioned-analytic-partition-v1";
 const CONDITIONED_REPLAY_WORKER_KIND = "phase81a-b2-independent-replay-partition-v1";
+const CONDITIONED_MATERIALITY_WORKER_KIND = "phase81a-b2-materiality-partition-v1";
 
 /** Serializable analytic shard; opponent columns share no mutable state. */
 export interface TacticalAgencyStructuralWorkerInput {
@@ -76,6 +79,24 @@ interface TacticalAgencyConditionedReplayWorkerSuccess {
   readonly ok: true;
   readonly partitionIndex: number;
   readonly contexts: readonly TacticalAgencyConditionedReplayContextResult[];
+}
+
+/** Serializable attribution shard over the same frozen replay contexts. */
+export interface TacticalAgencyConditionedMaterialityWorkerInput {
+  readonly kind: typeof CONDITIONED_MATERIALITY_WORKER_KIND;
+  readonly partitionIndex: number;
+  readonly responses: readonly TacticalAgencyConditionedResponse[];
+  readonly contexts: readonly TacticalAgencyConditionedReplayContext[];
+  readonly engineConfig: FakeDomesticWorld["matchEngineConfig"];
+  readonly matchTacticsCalibration: FakeDomesticWorld["matchTacticsCalibration"];
+  readonly selectionSeedPrefix: string;
+  readonly replaySeedPrefix: string;
+}
+
+interface TacticalAgencyConditionedMaterialityWorkerSuccess {
+  readonly ok: true;
+  readonly partitionIndex: number;
+  readonly contexts: readonly TacticalAgencyConditionedMaterialityContextResult[];
 }
 
 /** Executes one declared analytic partition in a real worker thread. */
@@ -140,6 +161,31 @@ export function runTacticalAgencyConditionedReplayWorker(
   });
 }
 
+/** Runs one complete-response materiality shard in a real worker thread. */
+export function runTacticalAgencyConditionedMaterialityWorker(
+  input: Omit<TacticalAgencyConditionedMaterialityWorkerInput, "kind">,
+): Promise<TacticalAgencyConditionedMaterialityWorkerSuccess> {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(new URL(import.meta.url), {
+      workerData: {
+        ...input,
+        kind: CONDITIONED_MATERIALITY_WORKER_KIND,
+      } satisfies TacticalAgencyConditionedMaterialityWorkerInput,
+    });
+    worker.once("message", (
+      message: TacticalAgencyConditionedMaterialityWorkerSuccess
+        | TacticalAgencyStructuralWorkerFailure,
+    ) => {
+      if (message.ok) resolve(message);
+      else reject(new Error(message.message));
+    });
+    worker.once("error", reject);
+    worker.once("exit", (code) => {
+      if (code !== 0) reject(new Error(`Conditioned materiality worker exited with code ${code}`));
+    });
+  });
+}
+
 function isStructuralWorkerInput(value: unknown): value is TacticalAgencyStructuralWorkerInput {
   const candidate = value as Partial<TacticalAgencyStructuralWorkerInput> | undefined;
   return candidate?.kind === STRUCTURAL_WORKER_KIND
@@ -162,6 +208,18 @@ function isConditionedReplayWorkerInput(
 ): value is TacticalAgencyConditionedReplayWorkerInput {
   const candidate = value as Partial<TacticalAgencyConditionedReplayWorkerInput> | undefined;
   return candidate?.kind === CONDITIONED_REPLAY_WORKER_KIND
+    && Number.isSafeInteger(candidate.partitionIndex)
+    && Array.isArray(candidate.responses)
+    && Array.isArray(candidate.contexts)
+    && typeof candidate.selectionSeedPrefix === "string"
+    && typeof candidate.replaySeedPrefix === "string";
+}
+
+function isConditionedMaterialityWorkerInput(
+  value: unknown,
+): value is TacticalAgencyConditionedMaterialityWorkerInput {
+  const candidate = value as Partial<TacticalAgencyConditionedMaterialityWorkerInput> | undefined;
+  return candidate?.kind === CONDITIONED_MATERIALITY_WORKER_KIND
     && Number.isSafeInteger(candidate.partitionIndex)
     && Array.isArray(candidate.responses)
     && Array.isArray(candidate.contexts)
@@ -208,6 +266,21 @@ if (!isMainThread && isConditionedReplayWorkerInput(workerData)) {
       partitionIndex: workerData.partitionIndex,
       contexts: runTacticalAgencyConditionedReplayPartition(workerData),
     } satisfies TacticalAgencyConditionedReplayWorkerSuccess);
+  } catch (error) {
+    parentPort?.postMessage({
+      ok: false,
+      message: error instanceof Error ? error.message : String(error),
+    } satisfies TacticalAgencyStructuralWorkerFailure);
+  }
+}
+
+if (!isMainThread && isConditionedMaterialityWorkerInput(workerData)) {
+  try {
+    parentPort?.postMessage({
+      ok: true,
+      partitionIndex: workerData.partitionIndex,
+      contexts: runTacticalAgencyConditionedMaterialityPartition(workerData),
+    } satisfies TacticalAgencyConditionedMaterialityWorkerSuccess);
   } catch (error) {
     parentPort?.postMessage({
       ok: false,

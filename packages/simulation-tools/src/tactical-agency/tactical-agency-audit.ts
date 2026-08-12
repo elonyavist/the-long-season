@@ -1231,6 +1231,194 @@ export interface TacticalAgencyConditionedReplayContextResult {
   readonly contextFreeDeltas: readonly number[];
 }
 
+/** Full replay row used only to attribute B2's sub-material selected result. */
+export interface TacticalAgencyConditionedMaterialityContextResult
+  extends TacticalAgencyConditionedReplayContextResult {
+  readonly replayWinShares: readonly {
+    readonly responseId: string;
+    readonly winShare: number;
+  }[];
+  readonly optimisticBestResponseId: string;
+  readonly optimisticExposedResponseId: string;
+  readonly optimisticCounterMoveDeltas: readonly number[];
+  readonly optimisticExposureDeltas: readonly number[];
+}
+
+/**
+ * Replays the complete nine-response row on the existing B2 stream.
+ *
+ * Max/min read the same stream and are therefore optimistic. That makes them a
+ * valid upper/lower materiality bound and invalid as a replacement gate.
+ */
+export function runTacticalAgencyConditionedMaterialityPartition(input: {
+  readonly responses: readonly TacticalAgencyConditionedResponse[];
+  readonly contexts: readonly TacticalAgencyConditionedReplayContext[];
+  readonly engineConfig: MatchEngineConfig;
+  readonly matchTacticsCalibration: MatchTacticsCalibrationConfig;
+  readonly selectionSeedPrefix: string;
+  readonly replaySeedPrefix: string;
+}): readonly TacticalAgencyConditionedMaterialityContextResult[] {
+  if (input.selectionSeedPrefix === input.replaySeedPrefix) {
+    throw new TacticalAgencyAuditError(
+      "empty_work_items",
+      "B2 materiality selection and replay seed prefixes must be disjoint",
+    );
+  }
+  return input.contexts.map((context) => {
+    const opponentResponse = input.responses[context.opponentResponseIndex];
+    if (opponentResponse === undefined) {
+      throw new TacticalAgencyAuditError(
+        "missing_telemetry",
+        `B2 materiality lost opponent response ${context.opponentResponseIndex}`,
+      );
+    }
+    const selectionWinShares = tacticalAgencySelectionWinShares({
+      ...input,
+      context,
+      opponentResponse,
+    });
+    const selectionRanked = rankTacticalAgencyResponses(selectionWinShares);
+    const selectionReverseRanked = rankTacticalAgencyResponses(selectionWinShares, true);
+    const bestResponse = requiredTacticalAgencyResponse(
+      input.responses,
+      selectionRanked[0]?.responseId,
+      context.contextId,
+    );
+    const exposedResponse = requiredTacticalAgencyResponse(
+      input.responses,
+      selectionReverseRanked[0]?.responseId,
+      context.contextId,
+    );
+    const replayValuesByResponse = new Map(input.responses.map((response) => [
+      response.responseId,
+      [] as number[],
+    ]));
+    const contextFreeValues: number[] = [];
+    for (
+      let pairIndex = 0;
+      pairIndex < TACTICAL_AGENCY_B2_REPLAY_SEEDS_PER_CONTEXT;
+      pairIndex += 1
+    ) {
+      const contextFreeResponse = input.responses[pairIndex % input.responses.length];
+      if (contextFreeResponse === undefined) {
+        throw new TacticalAgencyAuditError("missing_telemetry", "B2 materiality cycle is incomplete");
+      }
+      for (const ownIsHome of [true, false]) {
+        const seed = `${input.replaySeedPrefix}|${context.contextId}|${pairIndex}|${ownIsHome ? "h" : "a"}`;
+        for (const response of input.responses) {
+          (replayValuesByResponse.get(response.responseId) as number[]).push(
+            tacticalAgencyReplayWinShare({
+              context,
+              response,
+              opponentResponse,
+              seed,
+              ownIsHome,
+              engineConfig: input.engineConfig,
+              matchTacticsCalibration: input.matchTacticsCalibration,
+            }),
+          );
+        }
+        const contextFreeValuesForResponse = replayValuesByResponse.get(contextFreeResponse.responseId);
+        contextFreeValues.push(
+          contextFreeValuesForResponse?.[contextFreeValuesForResponse.length - 1] ?? 0,
+        );
+      }
+    }
+    const replayWinShares = input.responses.map((response) => ({
+      responseId: response.responseId,
+      winShare: mean(replayValuesByResponse.get(response.responseId) ?? []),
+    }));
+    const replayRanked = rankTacticalAgencyResponses(replayWinShares);
+    const replayReverseRanked = rankTacticalAgencyResponses(replayWinShares, true);
+    const optimisticBestResponse = requiredTacticalAgencyResponse(
+      input.responses,
+      replayRanked[0]?.responseId,
+      context.contextId,
+    );
+    const optimisticExposedResponse = requiredTacticalAgencyResponse(
+      input.responses,
+      replayReverseRanked[0]?.responseId,
+      context.contextId,
+    );
+    const values = (response: TacticalAgencyConditionedResponse): readonly number[] =>
+      replayValuesByResponse.get(response.responseId) ?? [];
+    const bestValues = values(bestResponse);
+    const exposedValues = values(exposedResponse);
+    const optimisticBestValues = values(optimisticBestResponse);
+    const optimisticExposedValues = values(optimisticExposedResponse);
+    return {
+      contextIndex: context.contextIndex,
+      contextId: context.contextId,
+      opponentResponseId: context.opponentResponseId,
+      populationWeightCount: context.populationWeightCount,
+      bestResponseId: bestResponse.responseId,
+      exposedResponseId: exposedResponse.responseId,
+      selectionWinShares,
+      bestReplayWinShare: mean(bestValues),
+      exposedReplayWinShare: mean(exposedValues),
+      contextFreeReplayWinShare: mean(contextFreeValues),
+      counterMoveDeltas: bestValues.map((value, index) =>
+        value - (contextFreeValues[index] as number)),
+      exposureDeltas: exposedValues.map((value, index) =>
+        value - (contextFreeValues[index] as number)),
+      contextFreeDeltas: contextFreeValues.map((value) => value - 0.5),
+      replayWinShares,
+      optimisticBestResponseId: optimisticBestResponse.responseId,
+      optimisticExposedResponseId: optimisticExposedResponse.responseId,
+      optimisticCounterMoveDeltas: optimisticBestValues.map((value, index) =>
+        value - (contextFreeValues[index] as number)),
+      optimisticExposureDeltas: optimisticExposedValues.map((value, index) =>
+        value - (contextFreeValues[index] as number)),
+    };
+  });
+}
+
+function tacticalAgencySelectionWinShares(input: {
+  readonly responses: readonly TacticalAgencyConditionedResponse[];
+  readonly context: TacticalAgencyConditionedReplayContext;
+  readonly opponentResponse: TacticalAgencyConditionedResponse;
+  readonly selectionSeedPrefix: string;
+  readonly engineConfig: MatchEngineConfig;
+  readonly matchTacticsCalibration: MatchTacticsCalibrationConfig;
+}): readonly { readonly responseId: string; readonly winShare: number }[] {
+  return input.responses.map((response) => ({
+    responseId: response.responseId,
+    winShare: meanTacticalAgencyReplayWinShare({
+      context: input.context,
+      response,
+      opponentResponse: input.opponentResponse,
+      seedPrefix: input.selectionSeedPrefix,
+      pairedSeedCount: TACTICAL_AGENCY_B2_SELECTION_SEEDS_PER_CANDIDATE,
+      engineConfig: input.engineConfig,
+      matchTacticsCalibration: input.matchTacticsCalibration,
+    }),
+  }));
+}
+
+function rankTacticalAgencyResponses(
+  rows: readonly { readonly responseId: string; readonly winShare: number }[],
+  ascending = false,
+): readonly { readonly responseId: string; readonly winShare: number }[] {
+  return [...rows].sort((left, right) =>
+    (ascending ? left.winShare - right.winShare : right.winShare - left.winShare)
+      || left.responseId.localeCompare(right.responseId));
+}
+
+function requiredTacticalAgencyResponse(
+  responses: readonly TacticalAgencyConditionedResponse[],
+  responseId: string | undefined,
+  contextId: string,
+): TacticalAgencyConditionedResponse {
+  const response = responses.find((candidate) => candidate.responseId === responseId);
+  if (response === undefined) {
+    throw new TacticalAgencyAuditError(
+      "missing_telemetry",
+      `B2 could not resolve response ${String(responseId)} for ${contextId}`,
+    );
+  }
+  return response;
+}
+
 /** Executes independent selection and replay streams for one context shard. */
 export function runTacticalAgencyConditionedReplayPartition(input: {
   readonly responses: readonly TacticalAgencyConditionedResponse[];
@@ -1254,29 +1442,21 @@ export function runTacticalAgencyConditionedReplayPartition(input: {
         `B2 replay lost opponent response ${context.opponentResponseIndex}`,
       );
     }
-    const selectionWinShares = input.responses.map((response) => ({
-      responseId: response.responseId,
-      winShare: meanTacticalAgencyReplayWinShare({
-        context,
-        response,
-        opponentResponse,
-        seedPrefix: input.selectionSeedPrefix,
-        pairedSeedCount: TACTICAL_AGENCY_B2_SELECTION_SEEDS_PER_CANDIDATE,
-        engineConfig: input.engineConfig,
-        matchTacticsCalibration: input.matchTacticsCalibration,
-      }),
-    }));
-    const ranked = [...selectionWinShares].sort((left, right) =>
-      right.winShare - left.winShare || left.responseId.localeCompare(right.responseId));
-    const reverseRanked = [...selectionWinShares].sort((left, right) =>
-      left.winShare - right.winShare || left.responseId.localeCompare(right.responseId));
-    const bestResponseId = ranked[0]?.responseId;
-    const exposedResponseId = reverseRanked[0]?.responseId;
-    const bestResponse = input.responses.find(({ responseId }) => responseId === bestResponseId);
-    const exposedResponse = input.responses.find(({ responseId }) => responseId === exposedResponseId);
-    if (bestResponse === undefined || exposedResponse === undefined) {
-      throw new TacticalAgencyAuditError("missing_telemetry", `B2 replay could not rank ${context.contextId}`);
-    }
+    const selectionWinShares = tacticalAgencySelectionWinShares({
+      ...input,
+      context,
+      opponentResponse,
+    });
+    const bestResponse = requiredTacticalAgencyResponse(
+      input.responses,
+      rankTacticalAgencyResponses(selectionWinShares)[0]?.responseId,
+      context.contextId,
+    );
+    const exposedResponse = requiredTacticalAgencyResponse(
+      input.responses,
+      rankTacticalAgencyResponses(selectionWinShares, true)[0]?.responseId,
+      context.contextId,
+    );
 
     const bestValues: number[] = [];
     const exposedValues: number[] = [];
@@ -1481,6 +1661,66 @@ export function summarizeTacticalAgencyConditionedReplay(input: {
       ...context
     }) => context),
     decision,
+  };
+}
+
+export type TacticalAgencyConditionedMaterialityOwner =
+  | "minute_effect_materiality"
+  | "asymmetric_materiality"
+  | "selection_power";
+
+/** Complete optimistic bound over one seed set's full replay rows. */
+export interface TacticalAgencyConditionedMaterialitySummary {
+  readonly contractVersion: "phase81a-b2-materiality-attribution-v1";
+  readonly acceptedReplay: TacticalAgencyConditionedReplaySummary;
+  readonly optimisticCounterMoveCeiling: TacticalAgencyConditionedReplayEstimate;
+  readonly optimisticCounterMoveExposure: TacticalAgencyConditionedReplayEstimate;
+  readonly selectionRegret: number;
+  readonly exposureRegret: number;
+  readonly owner: TacticalAgencyConditionedMaterialityOwner;
+}
+
+/** Attributes the red selected arms without treating same-stream max/min as a gate. */
+export function summarizeTacticalAgencyConditionedMateriality(input: {
+  readonly declaredContextCount: number;
+  readonly contexts: readonly TacticalAgencyConditionedMaterialityContextResult[];
+}): TacticalAgencyConditionedMaterialitySummary {
+  const acceptedReplay = summarizeTacticalAgencyConditionedReplay(input);
+  const weightTotal = input.contexts.reduce(
+    (sum, context) => sum + context.populationWeightCount,
+    0,
+  );
+  const estimate = (
+    pick: (context: TacticalAgencyConditionedMaterialityContextResult) => readonly number[],
+  ): TacticalAgencyConditionedReplayEstimate => weightedReplayEstimate(
+    input.contexts.flatMap((context) => {
+      const values = pick(context);
+      const weight = context.populationWeightCount / weightTotal / values.length;
+      return values.map((value) => ({ value, weight }));
+    }),
+  );
+  const optimisticCounterMoveCeiling = estimate(
+    ({ optimisticCounterMoveDeltas }) => optimisticCounterMoveDeltas,
+  );
+  const optimisticCounterMoveExposure = estimate(
+    ({ optimisticExposureDeltas }) => optimisticExposureDeltas,
+  );
+  const ceilingHeld = optimisticCounterMoveCeiling.value >= 0.045;
+  const exposureHeld = optimisticCounterMoveExposure.value <= -0.045;
+  return {
+    contractVersion: "phase81a-b2-materiality-attribution-v1",
+    acceptedReplay,
+    optimisticCounterMoveCeiling,
+    optimisticCounterMoveExposure,
+    selectionRegret:
+      optimisticCounterMoveCeiling.value - acceptedReplay.counterMoveCeiling.value,
+    exposureRegret:
+      acceptedReplay.counterMoveExposure.value - optimisticCounterMoveExposure.value,
+    owner: ceilingHeld && exposureHeld
+      ? "selection_power"
+      : ceilingHeld || exposureHeld
+        ? "asymmetric_materiality"
+        : "minute_effect_materiality",
   };
 }
 

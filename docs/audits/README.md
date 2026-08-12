@@ -16,6 +16,11 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_B2_REPLAY_MATERIALITY_ATTRIBUTION.md` —
+  **`OWNER_IDENTIFIED: minute_effect_materiality`.** Complete nine-response
+  rows reconcile 06C4 exactly but optimistic effects reach only about
+  `+0.025/-0.021`; Step 06C6 owns the bounded minute-effect correction.
+
 - `PHASE_81A_CHECKPOINT_B2_INDEPENDENT_REPLAY.md` — **`REFINE`.** Reciprocal
   Phase-2 replay is neutral when blind, but selected ceiling/exposure are only
   `+0.0048/-0.0081` and `+0.0080/-0.0051`; Step 06C5 owns attribution.
