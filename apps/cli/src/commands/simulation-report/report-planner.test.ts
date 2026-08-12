@@ -89,6 +89,19 @@ describe("simulation-report planner", () => {
     });
   });
 
+  it("locks B2.1A identity-family attribution to the B2 population", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-b2-identity-family",
+      workerCount: 7,
+    });
+    expect(plan.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 1,
+      workerCount: 7,
+      includedSectionIds: ["tactical_agency"],
+    });
+  });
+
   it("freezes both league-diversity populations and keeps their seeds disjoint", () => {
     const canary = createSimulationReportPlan({
       profileId: "phase81a-league-diversity-canary-7x10",

@@ -62,6 +62,21 @@ export interface TacticalAgencyB21FormationAttribution {
   readonly owner: TacticalAgencyB21FormationOwner;
 }
 
+/** B2.1A's minimum stable identity-family decision. */
+export interface TacticalAgencyB21IdentityFamilyAttribution {
+  readonly b21Reproduced: boolean;
+  readonly minimumFamilyKeys: readonly string[];
+  readonly failedRowCoverageShares: readonly number[];
+  readonly seedSetFormationShares: readonly {
+    readonly setName: string;
+    readonly appearanceCount: number;
+    readonly fourFourTwoCount: number;
+    readonly fourFourTwoShare: number;
+  }[];
+  readonly allCoveredSelectionsUnique: boolean;
+  readonly decision: "IDENTITY_FAMILY" | "SAMPLING_ONLY" | "REFINE" | "STOP_RETHINK";
+}
+
 /** Attributes the two local B2 failures without changing their verdict. */
 export function summarizeTacticalAgencyB21FormationAttribution(
   sets: readonly TacticalAgencyB21FormationSetInput[],
@@ -146,6 +161,79 @@ export function summarizeTacticalAgencyB21FormationAttribution(
       : candidates.length > 1
         ? "mixed"
         : "unresolved",
+  };
+}
+
+/** Finds the unique minimum family under B2.1A's frozen 80% rules. */
+export function summarizeTacticalAgencyB21IdentityFamily(
+  attribution: TacticalAgencyB21FormationAttribution,
+): TacticalAgencyB21IdentityFamilyAttribution {
+  const identityKeys = [...new Set(attribution.identityRows.map(({ squadIdentityKey }) =>
+    squadIdentityKey))].sort((left, right) => left.localeCompare(right));
+  const candidateFamilies = [
+    ...identityKeys.map((key) => [key] as readonly string[]),
+    ...identityKeys.flatMap((first, firstIndex) =>
+      identityKeys.slice(firstIndex + 1).map((second) => [first, second] as readonly string[])),
+  ];
+  const qualifying = candidateFamilies.filter((family) => {
+    const failedRowsHeld = attribution.failedRows.every((row) => {
+      const covered = row.selections.filter(({ squadIdentityKey }) =>
+        family.includes(squadIdentityKey)).length;
+      return row.selections.length > 0 && covered / row.selections.length >= 0.8;
+    });
+    const setsHeld = [...new Set(attribution.identityRows.map(({ setName }) => setName))].every((setName) => {
+      const rows = attribution.identityRows.filter((row) =>
+        row.setName === setName && family.includes(row.squadIdentityKey));
+      const appearances = rows.reduce((sum, row) => sum + row.appearanceCount, 0);
+      const selected = rows.reduce((sum, row) => sum + row.fourFourTwoCount, 0);
+      return appearances > 0 && selected / appearances >= 0.8;
+    });
+    return failedRowsHeld && setsHeld;
+  });
+  const minimumSize = Math.min(3, ...qualifying.map((family) => family.length));
+  const minimumFamilies = qualifying.filter((family) => family.length === minimumSize);
+  const minimumFamilyKeys = minimumFamilies.length === 1
+    ? minimumFamilies[0] as readonly string[]
+    : [];
+  const failedRowCoverageShares = attribution.failedRows.map((row) => {
+    const covered = row.selections.filter(({ squadIdentityKey }) =>
+      minimumFamilyKeys.includes(squadIdentityKey)).length;
+    return row.selections.length === 0 ? 0 : covered / row.selections.length;
+  });
+  const setNames = [...new Set(attribution.identityRows.map(({ setName }) => setName))];
+  const seedSetFormationShares = setNames.map((setName) => {
+    const rows = attribution.identityRows.filter((row) =>
+      row.setName === setName && minimumFamilyKeys.includes(row.squadIdentityKey));
+    const appearanceCount = rows.reduce((sum, row) => sum + row.appearanceCount, 0);
+    const fourFourTwoCount = rows.reduce((sum, row) => sum + row.fourFourTwoCount, 0);
+    return {
+      setName,
+      appearanceCount,
+      fourFourTwoCount,
+      fourFourTwoShare: appearanceCount === 0 ? 0 : fourFourTwoCount / appearanceCount,
+    };
+  });
+  const allCoveredSelectionsUnique = attribution.failedRows.flatMap(({ selections }) => selections)
+    .filter(({ squadIdentityKey }) => minimumFamilyKeys.includes(squadIdentityKey))
+    .every(({ tiedAtBestCount }) => tiedAtBestCount === 1);
+  const b21Reproduced = attribution.failedRows.length === 2
+    && attribution.owner === "mixed"
+    && attribution.selectionFitRuleHeld
+    && attribution.samplingVarianceRuleHeld;
+
+  return {
+    b21Reproduced,
+    minimumFamilyKeys,
+    failedRowCoverageShares,
+    seedSetFormationShares,
+    allCoveredSelectionsUnique,
+    decision: !b21Reproduced
+      ? "STOP_RETHINK"
+      : minimumFamilies.length > 1
+        ? "REFINE"
+        : minimumFamilyKeys.length > 0 && allCoveredSelectionsUnique
+          ? "IDENTITY_FAMILY"
+          : "SAMPLING_ONLY",
   };
 }
 

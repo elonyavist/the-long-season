@@ -2,10 +2,10 @@
 
 ## Status
 
-Ready. B2.1 found that the twelve `4-4-2` selections in the two failed league
-rows split evenly between two identities. Its frozen single-identity rule could
-not call that a squad-chart owner and is not changed after output. This short
-observational follow-up tests the minimum identity family explicitly.
+Done: `IDENTITY_FAMILY`. The unique minimum family is
+`double_width_stock + wide_midfield_stock`: it covers `100%` of both failed
+rows and selects `4-4-2` in `86.67% / 85.71%` of complete-population
+appearances. All covered selections are unique maxima. No gameplay changed.
 
 ## Goal
 
@@ -41,6 +41,20 @@ observed a split owner. No threshold, seed, failed row or formation may move.
 - `REFINE`: more than one minimum family or incomplete evidence prevents a
   unique owner.
 - `STOP / RETHINK`: B2.1 does not reproduce exactly.
+
+## Result
+
+B2 and B2.1 reproduce. The minimum two-identity family covers all twelve
+failed-row selections and is the only qualifying minimum subset. Complete-set
+shares are `78 / 90` and `84 / 98`. The canonical artifact is
+`simulation-out/phase81a-checkpoint-b2-1a-identity-family.json`, SHA-256
+`c0a498bac32d6a3464bb3a3d59870a26eae41bfcc259376b218a46ea8047d6cc`.
+
+The correction owner is `double_width_stock`: `wide_midfield_stock` already
+expresses its name through full-backs, wide midfielders and a strike pair;
+`double_width_stock` promises wing-backs plus advanced width but currently
+supplies another four-midfielder/two-striker skeleton. The next step may change
+only that chart and must let the canonical selector choose freely afterward.
 
 ## Expected Files
 

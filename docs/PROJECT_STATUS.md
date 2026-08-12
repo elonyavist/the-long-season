@@ -23,10 +23,10 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **B2.1 `OWNER_IDENTIFIED`:** lateral leverage owns concentration;
-  balanced wins all `126/126` and `252/252` asymmetric contexts per tactic.
-  Formation is mixed: 12 unique positive `4-4-2` fits split across two
-  identities, only two rows red. B2.1A resolves; Step 07 remains closed.
+- Phase 81A **B2.1A `IDENTITY_FAMILY`:** `double_width_stock` plus
+  `wide_midfield_stock` cover all 12 failed-row `4-4-2` choices and select it
+  `86.67%/85.71%` overall. Lateral leverage separately owns tactical
+  concentration. Correct only double-width content, then repeat B2 unchanged.
 - **L6.31 stays green twice:** routine-youth runway improves ready replacements
   `+0.1363/+0.1034`, leaders `+0.0810/+0.0905`, with exact immediate purity.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;

@@ -48,6 +48,7 @@ import {
 } from "./tactical-agency-checkpoint-a2.ts";
 import {
   summarizeTacticalAgencyB21FormationAttribution,
+  summarizeTacticalAgencyB21IdentityFamily,
   type TacticalAgencyB21FormationAttribution,
 } from "./tactical-agency-b2-attribution.ts";
 import { measureTacticalShapeQualityBands } from "./tactical-shape-section.ts";
@@ -258,6 +259,18 @@ export interface TacticalAgencyB21ProfileFacts {
   readonly worldSeeds: readonly string[];
 }
 
+/** B2.1A profile evidence over B2.1's exact retained population. */
+export interface TacticalAgencyB21AProfileFacts {
+  readonly b2Reproduced: boolean;
+  readonly formation: TacticalAgencyB21FormationAttribution;
+  readonly family: ReturnType<typeof summarizeTacticalAgencyB21IdentityFamily>;
+  readonly decision: "IDENTITY_FAMILY" | "SAMPLING_ONLY" | "REFINE" | "STOP_RETHINK";
+  readonly workerCount: number;
+  readonly elapsedMilliseconds: number;
+  readonly calibrationVersions: Readonly<Record<string, string>>;
+  readonly worldSeeds: readonly string[];
+}
+
 interface TacticalAgencyConditionedMeasuredSet extends TacticalAgencyB2SetFacts {
   readonly responses: ReturnType<typeof buildTacticalAgencyConditionedResponses>;
   readonly matchups: readonly TacticalAgencyConditionedAttributionMatchup[];
@@ -384,6 +397,36 @@ export async function createTacticalAgencyB21ProfileFacts(input: {
     calibrationVersions: {
       ...measured.calibrationVersions,
       tacticalAgencyConditionedAttribution: "phase81a-b2-1-attribution-v1",
+    },
+    worldSeeds: measured.worldSeeds,
+  };
+}
+
+/** Runs the frozen minimum-family follow-up without a second world producer. */
+export async function createTacticalAgencyB21AProfileFacts(input: {
+  readonly workerCount: number;
+}): Promise<TacticalAgencyB21AProfileFacts> {
+  const measured = await measureTacticalAgencyConditionedPopulation(input.workerCount);
+  const formation = summarizeTacticalAgencyB21FormationAttribution(
+    measured.sets.map((set) => ({
+      setName: set.setName,
+      clubSelections: set.clubSelections,
+      populationRows: set.populationRows,
+      population: set.population,
+    })),
+  );
+  const family = summarizeTacticalAgencyB21IdentityFamily(formation);
+  const b2Reproduced = reproducesFrozenCheckpointB2(measured.sets);
+  return {
+    b2Reproduced,
+    formation,
+    family,
+    decision: b2Reproduced ? family.decision : "STOP_RETHINK",
+    workerCount: measured.workerCount,
+    elapsedMilliseconds: measured.elapsedMilliseconds,
+    calibrationVersions: {
+      ...measured.calibrationVersions,
+      tacticalAgencyIdentityFamily: "phase81a-b2-1a-identity-family-v1",
     },
     worldSeeds: measured.worldSeeds,
   };

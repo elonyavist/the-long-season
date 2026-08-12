@@ -16,6 +16,10 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_B2_1A_IDENTITY_FAMILY.md` — **`IDENTITY_FAMILY`.**
+  `double_width_stock + wide_midfield_stock` cover every failed-row `4-4-2`
+  choice and select it in `86.67% / 85.71%` of their total appearances.
+
 - `PHASE_81A_CHECKPOINT_B2_1_ATTRIBUTION.md` — **`OWNER_IDENTIFIED`.**
   Lateral-route leverage owns the tactical concentration in both seed sets;
   formation concentration is mixed between legitimate selector fit and the

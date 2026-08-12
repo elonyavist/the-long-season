@@ -2,7 +2,10 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import { evaluateLeagueDiversityOpeningGate } from "./league-diversity-gate.ts";
-import { summarizeTacticalAgencyB21FormationAttribution } from "./tactical-agency-b2-attribution.ts";
+import {
+  summarizeTacticalAgencyB21FormationAttribution,
+  summarizeTacticalAgencyB21IdentityFamily,
+} from "./tactical-agency-b2-attribution.ts";
 import { runTacticalAgencyConditionedWorld } from "./tactical-agency-world.ts";
 
 test("B2.1 reaches both formation concentration explanations on generated careers", () => {
@@ -32,4 +35,9 @@ test("B2.1 reaches both formation concentration explanations on generated career
   assert.equal(attribution.selectionFitRuleHeld, true);
   assert.equal(attribution.samplingVarianceRuleHeld, true);
   assert.equal(attribution.owner, "mixed");
+  const family = summarizeTacticalAgencyB21IdentityFamily(attribution);
+  assert.equal(family.decision, "IDENTITY_FAMILY");
+  assert.deepEqual(family.minimumFamilyKeys, ["double_width_stock", "wide_midfield_stock"]);
+  assert.deepEqual(family.failedRowCoverageShares, [1, 1]);
+  assert.equal((family.seedSetFormationShares[0]?.fourFourTwoShare ?? 0) >= 0.8, true);
 });
