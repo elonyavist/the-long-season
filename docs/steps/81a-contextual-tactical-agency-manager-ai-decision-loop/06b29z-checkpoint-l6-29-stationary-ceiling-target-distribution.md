@@ -2,7 +2,8 @@
 
 ## Status
 
-Planned and active. Cached attribution only; no gameplay correction.
+Done: `STOP / RETHINK`; cached instrument invalid and removed. No report profile,
+reader, test helper or i18n key survives this step.
 
 ## User-Facing Reason
 
@@ -70,3 +71,20 @@ report entrypoint change.
 
 Focused tests, typecheck, two byte-identical cache-only evaluations with exactly
 seven workers, `git diff --check`, graphify update and `pnpm check` alone.
+
+## Outcome
+
+The first cache-only read stopped structurally. Provenance contained `5,685`
+accepted annual academy candidates, but the season facts contained a usable
+first observation for only `2,660`; `3,025` were absent. The latter facts are a
+senior/fieldable season projection, not a generation-time population ledger.
+Discarding the missing candidates would have conditioned the result on later
+senior reachability and violated this checkpoint's population contract.
+
+The invalid diagnostic reported `678` capable and `1,982` below-ceiling among
+the visible subset, but those values are not evidence and authorize no owner.
+Artifact SHA-256:
+`cc35e8922728a18e776cfb3ebc790c0eceaa0ec287e1533a46236a14aa72718a`.
+L6.29A repeats the frozen comparison with current ability, stored ceiling,
+canonical role and competition captured for every accepted candidate at the
+existing generation boundary. No threshold changes.

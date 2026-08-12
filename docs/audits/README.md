@@ -16,6 +16,10 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_L6_29_CACHED_STATIONARY_TARGET_STOP.md` — **`STOP /
+  RETHINK`; reader removed.** Senior season facts omit `3,025/5,685` accepted
+  prospects, so the full distribution must be observed at generation time.
+
 - `PHASE_81A_CHECKPOINT_L6_28_EXIT_LINKED_STATIONARY_CEILING.md` — **`REFINE`;
   candidate removed.** `1,358` valid exit-linked pairings move stationary-ready
   share only `+0.0022` and slightly worsen the ceiling-supply gap.

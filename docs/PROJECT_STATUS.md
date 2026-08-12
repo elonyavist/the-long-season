@@ -23,10 +23,10 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **L6.28 `REFINE`:** `1,358` valid exit-linked pairings move
-  stationary-ready share only `+0.0022` and worsen the ceiling gap `0.9232 ->
-  0.9247`; the candidate is fully removed. L6.29 measures the annual cohort's
-  stationary target deficit before any new product rule.
+- Phase 81A **L6.29 `STOP / RETHINK`:** cached senior facts omit `3,025/5,685`
+  accepted academy prospects, so its reader is removed and its subset values
+  are not evidence. L6.29A captures the same frozen comparison at generation
+  time for every accepted candidate; no gameplay or threshold changes.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;
   conversion `0.7260` and ordinary assisted share `0.7540` remain healthy.
 - Phase 81A **L6.3G `REFINE`:** `8000` yields `1.4692/1.4645` direct-free-kick
