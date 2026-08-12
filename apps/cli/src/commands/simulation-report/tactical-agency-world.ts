@@ -81,8 +81,26 @@ export interface TacticalAgencyWorldResult {
 /** One directed real-squad matchup with both production-selected contexts. */
 export interface TacticalAgencyConditionedMatchup {
   readonly contextId: string;
+  readonly worldSeed: string;
+  readonly competitionId: CliCompetitionId;
+  readonly ownIdentityKey: string;
+  readonly opponentIdentityKey: string;
+  readonly ownFormationKey: string;
+  readonly opponentFormationKey: string;
   readonly own: MatchTeamContext;
   readonly opponent: MatchTeamContext;
+}
+
+/** One production selector decision retained for B2 population attribution. */
+export interface TacticalAgencyConditionedClubSelection {
+  readonly worldSeed: string;
+  readonly competitionId: CliCompetitionId;
+  readonly clubId: ClubId;
+  readonly squadIdentityKey: string;
+  readonly formationKey: string;
+  readonly bestStructuralScore: number;
+  readonly secondStructuralScore: number | "not_observed";
+  readonly tiedAtBestCount: number;
 }
 
 /** B2's opening row plus the formation distribution needed for attribution. */
@@ -94,6 +112,7 @@ export interface TacticalAgencyConditionedPopulationRow extends LeagueDiversityO
 export interface TacticalAgencyConditionedWorldResult {
   readonly worldSeed: string;
   readonly matchups: readonly TacticalAgencyConditionedMatchup[];
+  readonly clubSelections: readonly TacticalAgencyConditionedClubSelection[];
   readonly populationRows: readonly TacticalAgencyConditionedPopulationRow[];
   readonly matchTacticsCalibrationVersion: string;
   readonly engineConfig: FakeDomesticWorld["matchEngineConfig"];
@@ -195,6 +214,7 @@ export function runTacticalAgencyConditionedWorld(
   );
   const valuationConfig = selectPlayerValuationConfig(careerState.gameState.meta.calibrationVersions);
   const matchups: TacticalAgencyConditionedMatchup[] = [];
+  const clubSelections: TacticalAgencyConditionedClubSelection[] = [];
   const populationRows: TacticalAgencyConditionedPopulationRow[] = [];
 
   for (const competitionId of world.domesticCompetitionWorld.competitionIds) {
@@ -250,10 +270,35 @@ export function runTacticalAgencyConditionedWorld(
       );
     }
 
+    for (const clubId of clubIds) {
+      const observed = observedByClub.get(clubId);
+      const squadIdentityKey = identityKeyByClubId.get(clubId);
+      if (observed === undefined || squadIdentityKey === undefined) {
+        throw new Error(`B2 attribution join omitted ${clubId}`);
+      }
+      clubSelections.push({
+        worldSeed: input.worldSeed,
+        competitionId,
+        clubId,
+        squadIdentityKey,
+        formationKey: observed.row.formationKey,
+        bestStructuralScore: observed.row.bestStructuralScore,
+        secondStructuralScore: observed.row.secondStructuralScore ?? "not_observed",
+        tiedAtBestCount: observed.row.tiedAtBestCount,
+      });
+    }
+
     for (const fixture of firstRound) {
-      const home = observedByClub.get(fixture.homeClubId)?.teamContext;
-      const away = observedByClub.get(fixture.awayClubId)?.teamContext;
-      if (home === undefined || away === undefined) {
+      const homeObserved = observedByClub.get(fixture.homeClubId);
+      const awayObserved = observedByClub.get(fixture.awayClubId);
+      const homeIdentity = identityKeyByClubId.get(fixture.homeClubId);
+      const awayIdentity = identityKeyByClubId.get(fixture.awayClubId);
+      if (
+        homeObserved === undefined
+        || awayObserved === undefined
+        || homeIdentity === undefined
+        || awayIdentity === undefined
+      ) {
         throw new Error(`B2 fixture ${fixture.id} has an unselected side`);
       }
       const homeContextId = `${input.worldSeed}|${competitionId}|${fixture.id}|home`;
@@ -261,13 +306,25 @@ export function runTacticalAgencyConditionedWorld(
       matchups.push(
         {
           contextId: homeContextId,
-          own: home,
-          opponent: away,
+          worldSeed: input.worldSeed,
+          competitionId,
+          ownIdentityKey: homeIdentity,
+          opponentIdentityKey: awayIdentity,
+          ownFormationKey: homeObserved.row.formationKey,
+          opponentFormationKey: awayObserved.row.formationKey,
+          own: homeObserved.teamContext,
+          opponent: awayObserved.teamContext,
         },
         {
           contextId: awayContextId,
-          own: away,
-          opponent: home,
+          worldSeed: input.worldSeed,
+          competitionId,
+          ownIdentityKey: awayIdentity,
+          opponentIdentityKey: homeIdentity,
+          ownFormationKey: awayObserved.row.formationKey,
+          opponentFormationKey: homeObserved.row.formationKey,
+          own: awayObserved.teamContext,
+          opponent: homeObserved.teamContext,
         },
       );
     }
@@ -285,6 +342,7 @@ export function runTacticalAgencyConditionedWorld(
   return {
     worldSeed: input.worldSeed,
     matchups,
+    clubSelections,
     populationRows,
     matchTacticsCalibrationVersion: world.matchTacticsCalibration.version,
     engineConfig: world.matchEngineConfig,

@@ -16,6 +16,7 @@ import {
   DEFAULT_TACTICAL_AGENCY_WORLD_COUNT,
   DEFAULT_TACTICAL_AGENCY_WORLD_SEED,
   createTacticalAgencyA2ProfileFacts,
+  createTacticalAgencyB21ProfileFacts,
   createTacticalAgencyB2ProfileFacts,
   createTacticalAgencyBProfileFacts,
   createTacticalAgencySectionFacts,
@@ -65,6 +66,7 @@ export const SIMULATION_REPORT_PROFILE_IDS = [
   "phase81a-a2",
   "phase81a-b",
   "phase81a-b2",
+  "phase81a-b2-attribution",
   "phase81a-substitution-minute-l2-7x1",
   "phase81a-availability-aging-l3-7x2",
   "phase81a-generational-succession-l4-7x10",
@@ -446,6 +448,21 @@ export const SIMULATION_REPORT_PROFILES = {
     measurementRequest: {
       mode: "profile",
       profileId: "phase81a-b2",
+      worldCount: DEFAULT_TACTICAL_AGENCY_WORLD_COUNT,
+      seasonCount: 1,
+      includedSectionIds: ["tactical_agency"],
+      detail: "diagnostic",
+      seedPrefix: DEFAULT_TACTICAL_AGENCY_WORLD_SEED,
+      workerCount: 7,
+    },
+  },
+  "phase81a-b2-attribution": {
+    id: "phase81a-b2-attribution",
+    titleKey: "simulationReport.profile.phase81aB21.title",
+    descriptionKey: "simulationReport.profile.phase81aB21.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-b2-attribution",
       worldCount: DEFAULT_TACTICAL_AGENCY_WORLD_COUNT,
       seasonCount: 1,
       includedSectionIds: ["tactical_agency"],
@@ -1623,6 +1640,27 @@ export async function executeSimulationReportModule(
           },
         }),
         decision: facts.decision === "PASS_PHASE_1" ? "NOT_EVALUATED" : "FAIL",
+        calibrationVersions: facts.calibrationVersions,
+        worldSeeds: facts.worldSeeds,
+      };
+    }
+    if (request.profileId === "phase81a-b2-attribution") {
+      const facts = await createTacticalAgencyB21ProfileFacts({ workerCount: request.workerCount });
+      return {
+        data: toSimulationReportJsonValue({
+          sets: facts.sets,
+          tacticalOwner: facts.tacticalOwner,
+          firstCoherentComponent: facts.firstCoherentComponent,
+          formation: facts.formation,
+          b2Reproduced: facts.b2Reproduced,
+          decision: facts.decision,
+          execution: {
+            workerCount: facts.workerCount,
+            partitionCount: facts.workerCount,
+            elapsedMilliseconds: facts.elapsedMilliseconds,
+          },
+        }),
+        decision: facts.decision === "OWNER_IDENTIFIED" ? "NOT_EVALUATED" : "FAIL",
         calibrationVersions: facts.calibrationVersions,
         worldSeeds: facts.worldSeeds,
       };

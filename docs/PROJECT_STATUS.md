@@ -23,10 +23,10 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **Checkpoint B2 `REFINE`:** `3/9` best responses, `134/133` local
-  cycles, no universal response; `high_pressing|balanced` covers `2269/2385`
-  contexts (`6.0026/6.3095 > 4`). Population is `21/21` and `19/21`; two OOS
-  leagues have `4-4-2 = 6/18`. 06C1 attributes; Step 07 remains closed.
+- Phase 81A **B2.1 `OWNER_IDENTIFIED`:** lateral leverage owns concentration;
+  balanced wins all `126/126` and `252/252` asymmetric contexts per tactic.
+  Formation is mixed: 12 unique positive `4-4-2` fits split across two
+  identities, only two rows red. B2.1A resolves; Step 07 remains closed.
 - **L6.31 stays green twice:** routine-youth runway improves ready replacements
   `+0.1363/+0.1034`, leaders `+0.0810/+0.0905`, with exact immediate purity.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;

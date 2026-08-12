@@ -16,6 +16,11 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_B2_1_ATTRIBUTION.md` — **`OWNER_IDENTIFIED`.**
+  Lateral-route leverage owns the tactical concentration in both seed sets;
+  formation concentration is mixed between legitimate selector fit and the
+  two local samples, with a two-identity family left for B2.1A.
+
 - `PHASE_81A_CHECKPOINT_B2_CONDITIONED_TACTICAL_CEILING.md` — **`REFINE`.**
   Real squad-selected formations create material local cycles and no universal
   response, but `high_pressing|balanced` covers about two thirds of contexts;

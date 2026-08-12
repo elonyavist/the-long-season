@@ -9,6 +9,7 @@ import {
   type DeriveOpportunityRoutePlanInput,
   type OpportunityRoutePlan,
 } from "@game/engine";
+import { tacticalAgencyShapeAsymmetryBasisPoints } from "@game/simulation-tools";
 
 import {
   buildTacticalAgencyLowBlockInput,
@@ -64,10 +65,13 @@ test("B2 selects every domestic club once and retains both directions of each fi
 
   assert.equal(world.populationRows.length, 3);
   assert.equal(world.matchups.length, clubCount);
+  assert.equal(world.clubSelections.length, clubCount);
   assert.equal(new Set(ownClubIds).size, clubCount);
   assert.equal(world.matchups.every((matchup) =>
     world.matchups.some((candidate) =>
       candidate.own.clubId === matchup.opponent.clubId
       && candidate.opponent.clubId === matchup.own.clubId)), true);
   assert.equal(world.populationRows.every(({ distinctFormationCount }) => distinctFormationCount > 1), true);
+  assert.equal(world.matchups.some((matchup) =>
+    tacticalAgencyShapeAsymmetryBasisPoints(matchup.own.shape, matchup.opponent.shape) >= 500), true);
 });

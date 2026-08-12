@@ -382,6 +382,8 @@ export {
   type TacticalAgencyAuditReport,
   type TacticalAgencyBTacticKey,
   type TacticalAgencyConditionedAnalysis,
+  type TacticalAgencyAnalyticThreatComponents,
+  type TacticalAgencyConditionedCandidateRow,
   type TacticalAgencyConditionedContextRow,
   type TacticalAgencyConditionedCycle,
   type TacticalAgencyConditionedMatchupInput,
@@ -411,3 +413,19 @@ export {
   type TacticalAgencyStructuralStanding,
   type TacticalAgencyTacticRow,
 } from "./tactical-agency/tactical-agency-audit.ts";
+
+export {
+  decideTacticalAgencyConditionedOwner,
+  firstCoherentTacticalAgencyComponent,
+  summarizeTacticalAgencyConditionedAttribution,
+  tacticalAgencyShapeAsymmetryBasisPoints,
+  TACTICAL_AGENCY_B21_ASYMMETRY_BASIS_POINTS,
+  type TacticalAgencyB21BestResponseGroup,
+  type TacticalAgencyB21ComponentKey,
+  type TacticalAgencyB21ComponentWorldRow,
+  type TacticalAgencyB21FocusTacticRow,
+  type TacticalAgencyB21TacticalAttribution,
+  type TacticalAgencyB21TacticalOwner,
+  type TacticalAgencyB21TacticFocusRow,
+  type TacticalAgencyConditionedAttributionMatchup,
+} from "./tactical-agency/tactical-agency-attribution.ts";

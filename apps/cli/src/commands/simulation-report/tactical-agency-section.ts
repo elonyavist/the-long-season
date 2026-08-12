@@ -2,14 +2,20 @@ import {
   buildTacticalAgencyConditionedResponses,
   buildTacticalAgencyStructuralActions,
   buildTacticalAgencyAuditReport,
+  decideTacticalAgencyConditionedOwner,
+  firstCoherentTacticalAgencyComponent,
   poolTacticalAgencyLowBlockResults,
   runTacticalAgencyLowBlockSeries,
   summarizeTacticalAgencyConditionedAnalysis,
+  summarizeTacticalAgencyConditionedAttribution,
   summarizeTacticalAgencyStructuralAnalysis,
   type TacticalAgencyAuditReport,
   type TacticalAgencyConditionedAnalysis,
+  type TacticalAgencyB21TacticalAttribution,
+  type TacticalAgencyB21TacticalOwner,
+  type TacticalAgencyB21ComponentKey,
+  type TacticalAgencyConditionedAttributionMatchup,
   type TacticalAgencyConditionedContextRow,
-  type TacticalAgencyConditionedMatchupInput,
   type TacticalAgencyRoleSummary,
   type TacticalAgencySelectionRow,
   type TacticalAgencyStructuralAnalysis,
@@ -26,6 +32,7 @@ import {
   runTacticalAgencyWorld,
   runTacticalAgencyWorldInWorker,
   type TacticalAgencyConditionedPopulationRow,
+  type TacticalAgencyConditionedClubSelection,
   type TacticalAgencySquadChart,
   type TacticalAgencyWorldResult,
 } from "./tactical-agency-world.ts";
@@ -39,6 +46,10 @@ import {
   type CheckpointA2Facts,
   type CheckpointA2SetEvaluation,
 } from "./tactical-agency-checkpoint-a2.ts";
+import {
+  summarizeTacticalAgencyB21FormationAttribution,
+  type TacticalAgencyB21FormationAttribution,
+} from "./tactical-agency-b2-attribution.ts";
 import { measureTacticalShapeQualityBands } from "./tactical-shape-section.ts";
 import {
   runTacticalAgencyConditionedWorker,
@@ -229,6 +240,40 @@ export interface TacticalAgencyB2ProfileFacts {
   readonly worldSeeds: readonly string[];
 }
 
+/** B2.1's observational owner decision over the exact B2 population. */
+export interface TacticalAgencyB21ProfileFacts {
+  readonly sets: readonly {
+    readonly setName: string;
+    readonly worldSeeds: readonly string[];
+    readonly tactical: TacticalAgencyB21TacticalAttribution;
+  }[];
+  readonly tacticalOwner: TacticalAgencyB21TacticalOwner;
+  readonly firstCoherentComponent: TacticalAgencyB21ComponentKey | "none";
+  readonly formation: TacticalAgencyB21FormationAttribution;
+  readonly b2Reproduced: boolean;
+  readonly decision: "OWNER_IDENTIFIED" | "REFINE" | "STOP_RETHINK";
+  readonly workerCount: number;
+  readonly elapsedMilliseconds: number;
+  readonly calibrationVersions: Readonly<Record<string, string>>;
+  readonly worldSeeds: readonly string[];
+}
+
+interface TacticalAgencyConditionedMeasuredSet extends TacticalAgencyB2SetFacts {
+  readonly responses: ReturnType<typeof buildTacticalAgencyConditionedResponses>;
+  readonly matchups: readonly TacticalAgencyConditionedAttributionMatchup[];
+  readonly contexts: readonly TacticalAgencyConditionedContextRow[];
+  readonly clubSelections: readonly TacticalAgencyConditionedClubSelection[];
+}
+
+interface TacticalAgencyConditionedMeasurement {
+  readonly sets: readonly TacticalAgencyConditionedMeasuredSet[];
+  readonly decision: TacticalAgencyB2ProfileFacts["decision"];
+  readonly workerCount: number;
+  readonly elapsedMilliseconds: number;
+  readonly calibrationVersions: Readonly<Record<string, string>>;
+  readonly worldSeeds: readonly string[];
+}
+
 /**
  * Runs Checkpoint B Phase 1 across seven real worker threads.
  *
@@ -284,12 +329,76 @@ export async function createTacticalAgencyBProfileFacts(input: {
 export async function createTacticalAgencyB2ProfileFacts(input: {
   readonly workerCount: number;
 }): Promise<TacticalAgencyB2ProfileFacts> {
-  if (input.workerCount !== 7) {
-    throw new Error(`Checkpoint B2 requires exactly 7 workers: ${input.workerCount}`);
+  const measured = await measureTacticalAgencyConditionedPopulation(input.workerCount);
+  return {
+    ...measured,
+    sets: measured.sets.map(({ responses: _responses, matchups: _matchups, contexts: _contexts,
+      clubSelections: _clubSelections, ...set }) => set),
+  };
+}
+
+/** Runs B2.1 over fresh B2 facts without retaining a second simulation path. */
+export async function createTacticalAgencyB21ProfileFacts(input: {
+  readonly workerCount: number;
+}): Promise<TacticalAgencyB21ProfileFacts> {
+  const measured = await measureTacticalAgencyConditionedPopulation(input.workerCount);
+  const tacticalSets = measured.sets.map((set) => ({
+    setName: set.setName,
+    worldSeeds: set.worldSeeds,
+    tactical: summarizeTacticalAgencyConditionedAttribution({
+      responses: set.responses,
+      matchups: set.matchups,
+      contexts: set.contexts,
+    }),
+  }));
+  const tacticalOwner = decideTacticalAgencyConditionedOwner(
+    tacticalSets.map(({ tactical }) => tactical),
+  );
+  const formation = summarizeTacticalAgencyB21FormationAttribution(
+    measured.sets.map((set) => ({
+      setName: set.setName,
+      clubSelections: set.clubSelections,
+      populationRows: set.populationRows,
+      population: set.population,
+    })),
+  );
+  const b2Reproduced = reproducesFrozenCheckpointB2(measured.sets);
+  const reconciliationHeld = tacticalSets.every(({ tactical }) =>
+    tactical.reconciliationMismatchCount === 0);
+  const ownerIdentified = tacticalOwner !== "unresolved" && formation.owner !== "unresolved";
+  return {
+    sets: tacticalSets,
+    tacticalOwner,
+    firstCoherentComponent: firstCoherentTacticalAgencyComponent(
+      tacticalSets.map(({ tactical }) => tactical),
+    ),
+    formation,
+    b2Reproduced,
+    decision: !b2Reproduced || !reconciliationHeld
+      ? "STOP_RETHINK"
+      : ownerIdentified
+        ? "OWNER_IDENTIFIED"
+        : "REFINE",
+    workerCount: measured.workerCount,
+    elapsedMilliseconds: measured.elapsedMilliseconds,
+    calibrationVersions: {
+      ...measured.calibrationVersions,
+      tacticalAgencyConditionedAttribution: "phase81a-b2-1-attribution-v1",
+    },
+    worldSeeds: measured.worldSeeds,
+  };
+}
+
+/** One canonical producer shared by B2 and its attribution retry. */
+async function measureTacticalAgencyConditionedPopulation(
+  workerCount: number,
+): Promise<TacticalAgencyConditionedMeasurement> {
+  if (workerCount !== 7) {
+    throw new Error(`Checkpoint B2 requires exactly 7 workers: ${workerCount}`);
   }
   const startedAt = performance.now();
   const responses = buildTacticalAgencyConditionedResponses();
-  const sets: TacticalAgencyB2SetFacts[] = [];
+  const sets: TacticalAgencyConditionedMeasuredSet[] = [];
   const allWorldSeeds: string[] = [];
   const calibrationVersions = new Set<string>();
 
@@ -304,16 +413,24 @@ export async function createTacticalAgencyB2ProfileFacts(input: {
     for (const world of worlds) calibrationVersions.add(world.matchTacticsCalibrationVersion);
     const firstWorld = worlds[0];
     if (firstWorld === undefined) throw new Error(`B2 set has no worlds: ${seedSet.setName}`);
-    const matchups: TacticalAgencyConditionedMatchupInput[] = worlds.flatMap((world) =>
+    const matchups: TacticalAgencyConditionedAttributionMatchup[] = worlds.flatMap((world) =>
       world.matchups.map((matchup) => ({
         matchupId: matchup.contextId,
+        worldSeed: matchup.worldSeed,
+        competitionId: String(matchup.competitionId),
+        ownClubId: String(matchup.own.clubId),
+        opponentClubId: String(matchup.opponent.clubId),
+        ownIdentityKey: matchup.ownIdentityKey,
+        opponentIdentityKey: matchup.opponentIdentityKey,
+        ownFormationKey: matchup.ownFormationKey,
+        opponentFormationKey: matchup.opponentFormationKey,
         ownShape: matchup.own.shape,
         opponentShape: matchup.opponent.shape,
       })));
     const contextCount = matchups.length * responses.length;
-    const partitions = Array.from({ length: input.workerCount }, () => [] as number[]);
+    const partitions = Array.from({ length: workerCount }, () => [] as number[]);
     for (let contextIndex = 0; contextIndex < contextCount; contextIndex += 1) {
-      (partitions[contextIndex % input.workerCount] as number[]).push(contextIndex);
+      (partitions[contextIndex % workerCount] as number[]).push(contextIndex);
     }
     const completed = await Promise.all(partitions.map((contextIndexes, partitionIndex) =>
       runTacticalAgencyConditionedWorker({
@@ -345,6 +462,10 @@ export async function createTacticalAgencyB2ProfileFacts(input: {
       populationHeld,
       analysis,
       decision,
+      responses,
+      matchups,
+      contexts,
+      clubSelections: worlds.flatMap(({ clubSelections }) => clubSelections),
     });
   }
 
@@ -360,7 +481,7 @@ export async function createTacticalAgencyB2ProfileFacts(input: {
   return {
     sets,
     decision,
-    workerCount: input.workerCount,
+    workerCount,
     elapsedMilliseconds: performance.now() - startedAt,
     calibrationVersions: {
       matchTactics: [...calibrationVersions][0] as string,
@@ -368,6 +489,45 @@ export async function createTacticalAgencyB2ProfileFacts(input: {
     },
     worldSeeds: allWorldSeeds,
   };
+}
+
+/** Exact B2 facts pinned before B2.1 can inspect any new attribution output. */
+function reproducesFrozenCheckpointB2(
+  sets: readonly TacticalAgencyConditionedMeasuredSet[],
+): boolean {
+  const expected = [
+    { populationPassCount: 21, coverage: [2_269, 1_132, 1], cycleCount: 134 },
+    { populationPassCount: 19, coverage: [2_385, 1_014, 3], cycleCount: 133 },
+  ] as const;
+  const primaryHeld = sets[0]?.population.every(({ held }) => held) === true;
+  const outOfSampleFailures = sets[1]?.populationRows.filter((row) => {
+    const verdict = sets[1]?.population.find((candidate) =>
+      candidate.worldSeed === row.worldSeed && candidate.competitionId === row.competitionId);
+    return verdict?.held === false;
+  }) ?? [];
+  const frozenFailuresHeld = outOfSampleFailures.length === 2
+    && outOfSampleFailures.some((row) =>
+      row.worldSeed === "phase81a-agency-a2-out-of-sample-002"
+      && row.competitionId === "competition:ita-3"
+      && row.formationCounts["4-4-2"] === 6)
+    && outOfSampleFailures.some((row) =>
+      row.worldSeed === "phase81a-agency-a2-out-of-sample-006"
+      && row.competitionId === "competition:ita-2"
+      && row.formationCounts["4-4-2"] === 6);
+  return primaryHeld && frozenFailuresHeld && sets.length === expected.length && sets.every((set, index) => {
+    const row = expected[index];
+    return row !== undefined
+      && set.decision === "REFINE"
+      && set.analysis.effectiveSignatureCount === 9
+      && set.analysis.responseSignatureCount === 3
+      && set.analysis.conservationMismatchCount === 0
+      && set.analysis.mirrorMismatchCount === 0
+      && set.analysis.dominantResponseIds.length === 0
+      && set.analysis.materialCycles.length === row.cycleCount
+      && set.population.filter(({ held }) => held).length === row.populationPassCount
+      && set.analysis.responseCoverage.every(({ contextCount }, coverageIndex) =>
+        contextCount === row.coverage[coverageIndex]);
+  });
 }
 
 /**

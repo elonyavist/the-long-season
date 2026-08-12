@@ -314,7 +314,8 @@ contexts; it never owns the analytic diversity gate.
 | 06B29Z2 | [competition-role stationary ceiling quota](06b29z2-competition-role-stationary-ceiling-quota.md) | yes | Done: `STOP / RETHINK`; removed |
 | 06B29Z3 | [routine-youth stationary runway](06b29z3-routine-youth-stationary-runway.md) | yes | Done: `GO` in-sample and OOS |
 | 06C | [Checkpoint B2 conditioned tactical ceiling](06c-checkpoint-b2-conditioned-tactical-ceiling.md) | no | Done: `REFINE` |
-| 06C1 | [conditioned response and formation concentration attribution](06c1-conditioned-response-and-formation-concentration-attribution.md) | no | Ready: name correction owners |
+| 06C1 | [conditioned response and formation concentration attribution](06c1-conditioned-response-and-formation-concentration-attribution.md) | no | Done: lateral owner, formation mixed |
+| 06C1A | [formation identity-family concentration attribution](06c1a-formation-identity-family-concentration-attribution.md) | no | Ready: resolve two-identity family |
 | 07 | [player task execution](07-player-task-execution.md) | yes | Step 08 |
 | 08 | [squad identity and lateral execution](08-squad-identity-and-lateral-execution.md) | yes | Step 09 |
 | 09 | [Checkpoint C player context](09-checkpoint-c-player-context.md) | no | GO authorizes 10 |
@@ -348,6 +349,12 @@ universal response and produces material local cycles, but
 `high_pressing|balanced` still covers about two thirds of contexts and two of
 forty-two league rows exceed the local `4-4-2` concentration gate. Step 06C1
 attributes both findings before any gameplay value moves.
+
+**Checkpoint B2.1 identified `lateral_route_leverage`.** Balanced wins every
+materially asymmetric context within all three tactic rows in both seed sets;
+tactic magnitude is not authorized. The formation result is mixed because the
+twelve unique positive `4-4-2` fits split evenly across two identity charts and
+only two local rows cross the band. B2.1A tests that minimum identity family.
 
 **Amendment A2 preserves L1's `REFINE` and separates its two player-world
 owners.** The committed canary has `395/420` season-ten scorer/assist rows still

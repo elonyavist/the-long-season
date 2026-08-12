@@ -989,6 +989,23 @@ export interface TacticalAgencyConditionedMatchupInput {
   readonly opponentShape: TacticalShapeProfile;
 }
 
+/** Multiplicative facts already consumed by the canonical analytic threat. */
+export interface TacticalAgencyAnalyticThreatComponents {
+  readonly volumeMultiplier: number;
+  readonly effectiveControl: number;
+  readonly routeSaturation: number;
+  readonly expectedRouteQuality: number;
+  readonly leftAllocation: number;
+  readonly rightAllocation: number;
+  readonly threat: number;
+}
+
+/** A conditioned candidate plus the facts that produced its payoff. */
+export interface TacticalAgencyConditionedCandidateRow extends TacticalAgencyStructuralCandidateRow {
+  readonly ownThreat: TacticalAgencyAnalyticThreatComponents;
+  readonly opponentThreat: TacticalAgencyAnalyticThreatComponents;
+}
+
 /** One analytic column: fixed real shapes plus one declared opponent response. */
 export interface TacticalAgencyConditionedContextRow {
   readonly contextIndex: number;
@@ -996,7 +1013,7 @@ export interface TacticalAgencyConditionedContextRow {
   readonly matchupId: string;
   readonly opponentResponseIndex: number;
   readonly opponentResponseId: string;
-  readonly candidates: readonly TacticalAgencyStructuralCandidateRow[];
+  readonly candidates: readonly TacticalAgencyConditionedCandidateRow[];
   readonly mirrorMismatchCount: number;
 }
 
@@ -1072,7 +1089,7 @@ function conditionedCandidateRow(input: {
   readonly opponentResponse: TacticalAgencyConditionedResponse;
   readonly engineConfig: MatchEngineConfig;
   readonly matchTacticsCalibration: MatchTacticsCalibrationConfig;
-}): TacticalAgencyStructuralCandidateRow {
+}): TacticalAgencyConditionedCandidateRow {
   const ownPlan = deriveOpportunityRoutePlan({
     own: input.ownShape,
     opponent: input.opponentShape,
@@ -1095,11 +1112,15 @@ function conditionedCandidateRow(input: {
     calibration: input.matchTacticsCalibration,
     goalDifference: 0,
   });
+  const ownThreat = analyticThreatComponents(ownPlan, opponentPlan);
+  const opponentThreat = analyticThreatComponents(opponentPlan, ownPlan);
   return {
     actionId: input.response.responseId,
     planSignature: opportunityRouteStrategicSignature(ownPlan),
     routeBudget: opportunityRouteBudget(ownPlan),
-    payoffBasisPoints: analyticPayoffBasisPoints(ownPlan, opponentPlan),
+    payoffBasisPoints: analyticPayoffFromThreat(ownThreat.threat, opponentThreat.threat),
+    ownThreat,
+    opponentThreat,
   };
 }
 
@@ -1469,17 +1490,21 @@ function analyticPayoffBasisPoints(
   ownPlan: ReturnType<typeof deriveOpportunityRoutePlan>,
   opponentPlan: ReturnType<typeof deriveOpportunityRoutePlan>,
 ): number {
-  const ownThreat = analyticThreat(ownPlan, opponentPlan);
-  const opponentThreat = analyticThreat(opponentPlan, ownPlan);
+  const ownThreat = analyticThreatComponents(ownPlan, opponentPlan).threat;
+  const opponentThreat = analyticThreatComponents(opponentPlan, ownPlan).threat;
+  return analyticPayoffFromThreat(ownThreat, opponentThreat);
+}
+
+function analyticPayoffFromThreat(ownThreat: number, opponentThreat: number): number {
   const total = ownThreat + opponentThreat;
   return Math.round((total === 0 ? 0.5 : ownThreat / total) * 10_000);
 }
 
 /** Outcome-blind threat implied by facts the minute loop already consumes. */
-function analyticThreat(
+function analyticThreatComponents(
   plan: ReturnType<typeof deriveOpportunityRoutePlan>,
   opponentPlan: ReturnType<typeof deriveOpportunityRoutePlan>,
-): number {
+): TacticalAgencyAnalyticThreatComponents {
   const controlTotal = plan.controlMultiplier + opponentPlan.controlMultiplier;
   const possessionClaim = controlTotal === 0 ? 0.5 : plan.controlMultiplier / controlTotal;
   const effectiveControl = possessionClaim
@@ -1490,13 +1515,23 @@ function analyticThreat(
     expectedQuality += weights[route] * clampShare(0.5 + opportunityRouteQualityEdge(plan, route));
   }
 
-  return Math.max(
+  const routeSaturation = expectedRouteSaturation(plan);
+  const threat = Math.max(
     0,
     plan.volumeMultiplier
       * effectiveControl
-      * expectedRouteSaturation(plan)
+      * routeSaturation
       * expectedQuality,
   );
+  return {
+    volumeMultiplier: plan.volumeMultiplier,
+    effectiveControl,
+    routeSaturation,
+    expectedRouteQuality: expectedQuality,
+    leftAllocation: weights.left,
+    rightAllocation: weights.right,
+    threat,
+  };
 }
 
 function clampShare(value: number): number {
