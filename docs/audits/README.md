@@ -16,6 +16,10 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_L6_23_GENERATED_PLAYER_LIFECYCLE.md` — **`MIXED`.**
+  The rejected combined arm changes `190` authored classes but produces `59`
+  leader losses and `54` gains; no lifecycle reason owns half of the losses.
+
 - `PHASE_81A_CHECKPOINT_L6_22_ACADEMY_INTAKE_FACTORIAL.md` - **`STOP /
   RETHINK`; both factors removed.** Frequency and ceiling have a `-0.0333`
   leader-share interaction; combined leader share falls `0.2714 -> 0.2476`.

@@ -23,10 +23,10 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **L6.23 active:** L6.22 rejects academy frequency x ceiling:
-  isolated leader effects are `+0.0024/+0.0071`, but interaction is `-0.0333`
-  and combined leader share falls `0.2714 -> 0.2476`. L6.23 follows identical
-  generated IDs through current, minutes, growth, retention and leadership.
+- Phase 81A **L6.24 active:** L6.23 is `MIXED`: `190` class changes produce
+  `59` leader losses and `54` gains; quality-not-leadership and below-floor
+  ambiguity each own `22`. L6.24 decomposes the current quality-ready cohort
+  into quality, minutes, actor access, execution and leaderboard cutoff.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;
   conversion `0.7260` and ordinary assisted share `0.7540` remain healthy.
 - Phase 81A **L6.3G `REFINE`:** `8000` yields `1.4692/1.4645` direct-free-kick

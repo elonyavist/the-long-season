@@ -346,8 +346,15 @@ interface BelowLeaderQualityFact {
   readonly qualityFloor: number;
 }
 
-interface RepresentedGeneratedPlayerFact extends BelowLeaderQualityFact {
+export interface RepresentedGeneratedPlayerFact extends BelowLeaderQualityFact {
   readonly stage: LeaderConversionStage;
+}
+
+/** Per-player form of the canonical L6.15 conversion reader. */
+export function leaderConversionPlayerFacts(
+  input: LeaderConversionWorldInput,
+): readonly RepresentedGeneratedPlayerFact[] {
+  return deriveLeaderConversionWorld(input).representedPlayers;
 }
 
 function deriveLeaderConversionWorld(input: LeaderConversionWorldInput): {
@@ -748,6 +755,207 @@ export function evaluateAcademyProspectClassConversion(input: {
     unreachableClasses,
     worlds: input.worlds,
   };
+}
+
+export const GENERATED_PLAYER_LIFECYCLE_DIVERGENCE_REASONS = [
+  "current_profile_cost",
+  "intake_acceptance_path",
+  "minute_access",
+  "development_realization",
+  "exit_or_retention",
+  "quality_not_leadership",
+  "mixed_below_floor",
+] as const;
+export type GeneratedPlayerLifecycleDivergenceReason =
+  typeof GENERATED_PLAYER_LIFECYCLE_DIVERGENCE_REASONS[number];
+
+export interface GeneratedPlayerLifecycleFact {
+  readonly playerId: string;
+  readonly prospectClass: ContextualProspectClass;
+  readonly generationDivision: "first_division" | "second_division" | "third_division";
+  readonly generatedSeasonNumber: number;
+  readonly firstObservedCurrentAbility: number | "not_observed";
+  readonly firstObservedStoredCeiling: number | "not_observed";
+  readonly minutesThroughSeasonSix: number;
+  readonly seasonTenAbilityGain: number | "not_observed";
+  readonly activeSeasonTen: boolean;
+  readonly representedSeasonTen: boolean;
+  readonly qualityReadySeasonTen: boolean;
+  readonly leaderSeasonTen: boolean;
+}
+
+export interface GeneratedPlayerLifecycleWorldFacts {
+  readonly worldSeed: string;
+  readonly players: readonly GeneratedPlayerLifecycleFact[];
+  readonly reconciliationFailureCount: number;
+}
+
+/** Applies the frozen L6.23 owner rule to paired per-player lifecycle facts. */
+export function evaluateGeneratedPlayerLifecycleAttribution(input: {
+  readonly current: readonly GeneratedPlayerLifecycleWorldFacts[];
+  readonly combined: readonly GeneratedPlayerLifecycleWorldFacts[];
+  readonly seasonCount: number;
+}) {
+  const combinedBySeed = new Map(input.combined.map((world) => [world.worldSeed, world]));
+  const worldResults = input.current.flatMap((currentWorld) => {
+    const combinedWorld = combinedBySeed.get(currentWorld.worldSeed);
+    if (combinedWorld === undefined) return [];
+    const currentById = uniqueLifecyclePlayers(currentWorld.players);
+    const combinedById = uniqueLifecyclePlayers(combinedWorld.players);
+    const playerIds = [...new Set([...currentById.keys(), ...combinedById.keys()])].sort();
+    const lossCounts = emptyLifecycleReasonCounts();
+    const gainCounts = emptyLifecycleReasonCounts();
+    let leaderLossCount = 0;
+    let leaderGainCount = 0;
+    let classChangedPlayerCount = 0;
+    for (const playerId of playerIds) {
+      const current = currentById.get(playerId);
+      const combined = combinedById.get(playerId);
+      if (
+        current !== undefined
+        && combined !== undefined
+        && current.prospectClass !== combined.prospectClass
+      ) classChangedPlayerCount += 1;
+      if (current?.leaderSeasonTen === true && combined?.leaderSeasonTen !== true) {
+        leaderLossCount += 1;
+        lossCounts[lifecycleDivergenceReason(current, combined)] += 1;
+      }
+      if (combined?.leaderSeasonTen === true && current?.leaderSeasonTen !== true) {
+        leaderGainCount += 1;
+        gainCounts[lifecycleDivergenceReason(combined, current)] += 1;
+      }
+    }
+    return [{
+      worldSeed: currentWorld.worldSeed,
+      leaderLossCount,
+      leaderGainCount,
+      classChangedPlayerCount,
+      lossCounts,
+      gainCounts,
+      reconciliationFailureCount:
+        currentWorld.reconciliationFailureCount
+        + combinedWorld.reconciliationFailureCount
+        + duplicateLifecyclePlayerCount(currentWorld.players)
+        + duplicateLifecyclePlayerCount(combinedWorld.players),
+    }];
+  });
+  const lossCounts = combineLifecycleReasonCounts(worldResults, "lossCounts");
+  const gainCounts = combineLifecycleReasonCounts(worldResults, "gainCounts");
+  const leaderLossCount = worldResults.reduce((total, world) => total + world.leaderLossCount, 0);
+  const leaderGainCount = worldResults.reduce((total, world) => total + world.leaderGainCount, 0);
+  const reconciliationFailureCount = worldResults.reduce(
+    (total, world) => total + world.reconciliationFailureCount,
+    0,
+  );
+  const dominantReason = GENERATED_PLAYER_LIFECYCLE_DIVERGENCE_REASONS.reduce(
+    (best, reason) => lossCounts[reason] > lossCounts[best] ? reason : best,
+  );
+  const dominantShare = leaderLossCount === 0 ? 0 : lossCounts[dominantReason] / leaderLossCount;
+  const coherenceCount = worldResults.filter((world) =>
+    world.lossCounts[dominantReason] - world.gainCounts[dominantReason] >= 0
+  ).length;
+  const structuralFailure = input.seasonCount !== 10
+    || input.current.length !== 7
+    || input.combined.length !== 7
+    || worldResults.length !== 7
+    || new Set(input.current.map(({ worldSeed }) => worldSeed)).size !== 7
+    || new Set(input.combined.map(({ worldSeed }) => worldSeed)).size !== 7
+    || leaderLossCount === 0
+    || reconciliationFailureCount > 0;
+  return {
+    decision: structuralFailure
+      ? "STOP_RETHINK" as const
+      : dominantShare >= 0.50 && coherenceCount >= 5
+        ? "OWNER_IDENTIFIED" as const
+        : "MIXED" as const,
+    owner: structuralFailure
+      ? "structural_reconciliation" as const
+      : dominantShare >= 0.50 && coherenceCount >= 5
+        ? dominantReason
+        : "mixed" as const,
+    leaderLossCount,
+    leaderGainCount,
+    netLeaderLossCount: leaderLossCount - leaderGainCount,
+    lossCounts,
+    gainCounts,
+    dominantReason,
+    dominantShare,
+    coherenceCount,
+    classChangedPlayerCount: worldResults.reduce(
+      (total, world) => total + world.classChangedPlayerCount,
+      0,
+    ),
+    reconciliationFailureCount,
+    worlds: worldResults,
+  };
+}
+
+function lifecycleDivergenceReason(
+  source: GeneratedPlayerLifecycleFact,
+  target: GeneratedPlayerLifecycleFact | undefined,
+): GeneratedPlayerLifecycleDivergenceReason {
+  if (target === undefined) return "intake_acceptance_path";
+  if (
+    source.firstObservedCurrentAbility !== "not_observed"
+    && target.firstObservedCurrentAbility !== "not_observed"
+    && source.firstObservedCurrentAbility - target.firstObservedCurrentAbility >= 0.25
+  ) {
+    return "current_profile_cost";
+  }
+  if (
+    source.activeSeasonTen
+    && target.activeSeasonTen
+    && source.minutesThroughSeasonSix - target.minutesThroughSeasonSix >= 450
+  ) return "minute_access";
+  if (
+    source.activeSeasonTen
+    && target.activeSeasonTen
+    && source.seasonTenAbilityGain !== "not_observed"
+    && target.seasonTenAbilityGain !== "not_observed"
+    && source.seasonTenAbilityGain - target.seasonTenAbilityGain >= 0.50
+  ) return "development_realization";
+  if (source.activeSeasonTen && !target.activeSeasonTen) return "exit_or_retention";
+  if (
+    source.qualityReadySeasonTen
+    && target.qualityReadySeasonTen
+    && source.leaderSeasonTen
+    && !target.leaderSeasonTen
+  ) return "quality_not_leadership";
+  return "mixed_below_floor";
+}
+
+function uniqueLifecyclePlayers(
+  players: readonly GeneratedPlayerLifecycleFact[],
+): ReadonlyMap<string, GeneratedPlayerLifecycleFact> {
+  return new Map(players.map((player) => [player.playerId, player]));
+}
+
+function duplicateLifecyclePlayerCount(
+  players: readonly GeneratedPlayerLifecycleFact[],
+): number {
+  return players.length - new Set(players.map(({ playerId }) => playerId)).size;
+}
+
+function emptyLifecycleReasonCounts(): Record<GeneratedPlayerLifecycleDivergenceReason, number> {
+  return Object.fromEntries(
+    GENERATED_PLAYER_LIFECYCLE_DIVERGENCE_REASONS.map((reason) => [reason, 0]),
+  ) as Record<GeneratedPlayerLifecycleDivergenceReason, number>;
+}
+
+function combineLifecycleReasonCounts(
+  worlds: readonly {
+    readonly lossCounts: Readonly<Record<GeneratedPlayerLifecycleDivergenceReason, number>>;
+    readonly gainCounts: Readonly<Record<GeneratedPlayerLifecycleDivergenceReason, number>>;
+  }[],
+  key: "lossCounts" | "gainCounts",
+): Record<GeneratedPlayerLifecycleDivergenceReason, number> {
+  const combined = emptyLifecycleReasonCounts();
+  for (const world of worlds) {
+    for (const reason of GENERATED_PLAYER_LIFECYCLE_DIVERGENCE_REASONS) {
+      combined[reason] += world[key][reason];
+    }
+  }
+  return combined;
 }
 
 type MutableAcademyProspectClassCounts = {

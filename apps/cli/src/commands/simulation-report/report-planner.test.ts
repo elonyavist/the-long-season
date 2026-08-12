@@ -855,6 +855,21 @@ describe("simulation-report planner", () => {
       .toThrow(/refuses measurement overrides/);
   });
 
+  it("freezes L6.23 to the exact paired cached lifecycle population", () => {
+    const profileId = "phase81a-generated-player-lifecycle-l6-23-cached";
+    const plan = createSimulationReportPlan({ profileId, workerCount: 7 });
+
+    expect(plan.measurementRequest).toMatchObject({
+      profileId,
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-academy-prospect-class-l6-20-v1",
+    });
+    expect(() => createSimulationReportPlan({ profileId, worldCount: 8 }))
+      .toThrow(/refuses measurement overrides/);
+  });
+
 
   it("plans no audit work when a custom request lacks the locked shape population", () => {
     const plan = createSimulationReportPlan({

@@ -5,6 +5,7 @@ import {
   academyProspectClassWorldFacts,
   deriveSuccessionDownstreamPlayerOutcome,
   evaluateAcademyProspectClassConversion,
+  evaluateGeneratedPlayerLifecycleAttribution,
   evaluateLeaderConversionFunnel,
   evaluateLeaderCeilingDistance,
   evaluateLeaderQualityFeasibility,
@@ -17,6 +18,7 @@ import {
   leaderQualityFeasibilityWorldFacts,
   successionGrowthFeasibilityStage,
   type SuccessionPriorityArmSummary,
+  type GeneratedPlayerLifecycleFact,
 } from "./succession-priority-attribution.ts";
 
 test("bounded succession passes only with paired renewal and guardrails", () => {
@@ -582,6 +584,43 @@ test("academy prospect provenance identifies a real routine ceiling majority", (
   }).decision, "STOP_RETHINK");
 });
 
+test("paired lifecycle attribution identifies a coherent material owner", () => {
+  const current = lifecycleWorlds({ leader: true, current: 10, minutes: 2_000, gain: 2 });
+  const combined = lifecycleWorlds({ leader: false, current: 9.5, minutes: 2_000, gain: 2 });
+  const result = evaluateGeneratedPlayerLifecycleAttribution({
+    current,
+    combined,
+    seasonCount: 10,
+  });
+
+  assert.equal(result.decision, "OWNER_IDENTIFIED");
+  assert.equal(result.owner, "current_profile_cost");
+  assert.equal(result.leaderLossCount, 7);
+  assert.equal(result.coherenceCount, 7);
+});
+
+test("paired lifecycle attribution keeps acceptance divergence and mixed outcomes falsifiable", () => {
+  const current = lifecycleWorlds({ leader: true, current: 10, minutes: 2_000, gain: 2 });
+  const combined = lifecycleWorlds({ leader: false, current: 10, minutes: 1_000, gain: 2 });
+  const missingFirst = combined.map((world, index) => index === 0
+    ? { ...world, players: [] }
+    : world);
+  const result = evaluateGeneratedPlayerLifecycleAttribution({
+    current,
+    combined: missingFirst,
+    seasonCount: 10,
+  });
+
+  assert.equal(result.decision, "OWNER_IDENTIFIED");
+  assert.equal(result.owner, "minute_access");
+  assert.equal(result.lossCounts.intake_acceptance_path, 1);
+  assert.equal(evaluateGeneratedPlayerLifecycleAttribution({
+    current,
+    combined: [{ ...combined[0]!, reconciliationFailureCount: 1 }, ...combined.slice(1)],
+    seasonCount: 10,
+  }).decision, "STOP_RETHINK");
+});
+
 function arm(
   local: number,
   generated: number,
@@ -596,6 +635,41 @@ function arm(
       values: values(local, generated, division, formations),
     })),
     transferAcquisitionCount: transfers,
+  };
+}
+
+function lifecycleWorlds(input: {
+  readonly leader: boolean;
+  readonly current: number;
+  readonly minutes: number;
+  readonly gain: number;
+}) {
+  return Array.from({ length: 7 }, (_, index) => ({
+    worldSeed: `lifecycle-world-${index + 1}`,
+    players: [lifecyclePlayer(input)],
+    reconciliationFailureCount: 0,
+  }));
+}
+
+function lifecyclePlayer(input: {
+  readonly leader: boolean;
+  readonly current: number;
+  readonly minutes: number;
+  readonly gain: number;
+}): GeneratedPlayerLifecycleFact {
+  return {
+    playerId: "academy-player-1",
+    prospectClass: "interesting",
+    generationDivision: "first_division",
+    generatedSeasonNumber: 1,
+    firstObservedCurrentAbility: input.current,
+    firstObservedStoredCeiling: 14,
+    minutesThroughSeasonSix: input.minutes,
+    seasonTenAbilityGain: input.gain,
+    activeSeasonTen: true,
+    representedSeasonTen: true,
+    qualityReadySeasonTen: true,
+    leaderSeasonTen: input.leader,
   };
 }
 
