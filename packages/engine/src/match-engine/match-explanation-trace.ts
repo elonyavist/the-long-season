@@ -12,7 +12,11 @@ import {
 import type { MatchContext, MatchTeamContext } from "./match-context.ts";
 import { deriveOpportunityRoutePlan, opportunityRouteSaturation } from "./opportunity-route.ts";
 import type { MatchScore, MatchSide, MatchSimulationStats } from "./match-simulation-state.ts";
-import type { MatchStepEvent } from "./step-match.ts";
+import {
+  BALANCED_MATCH_LATERAL_FOCUS_BY_SIDE,
+  type MatchLateralFocusBySide,
+  type MatchStepEvent,
+} from "./step-match.ts";
 
 /**
  * Schema version for engine-local match explanation traces.
@@ -267,6 +271,8 @@ export interface CreateMatchExplanationTraceInput {
   readonly stats: MatchSimulationStats;
   /** Sparse events already produced by simulation. */
   readonly events: readonly MatchStepEvent[];
+  /** Lateral plan the minute loop consumed. */
+  readonly lateralFocusBySide?: MatchLateralFocusBySide;
 }
 
 /**
@@ -287,8 +293,16 @@ export function createMatchExplanationTrace(input: CreateMatchExplanationTraceIn
       "opportunity_context",
       "variance",
     ],
-    home: createTeamSnapshot("home", input.context),
-    away: createTeamSnapshot("away", input.context),
+    home: createTeamSnapshot(
+      "home",
+      input.context,
+      input.lateralFocusBySide ?? BALANCED_MATCH_LATERAL_FOCUS_BY_SIDE,
+    ),
+    away: createTeamSnapshot(
+      "away",
+      input.context,
+      input.lateralFocusBySide ?? BALANCED_MATCH_LATERAL_FOCUS_BY_SIDE,
+    ),
     opportunitySummary: {
       home: createOpportunitySideSummary("home", input.stats, input.events),
       away: createOpportunitySideSummary("away", input.stats, input.events),
@@ -304,11 +318,21 @@ export function createMatchExplanationTrace(input: CreateMatchExplanationTraceIn
 /**
  * Builds one team snapshot from match context inputs.
  */
-function createTeamSnapshot(side: MatchSide, context: MatchContext): MatchExplanationTeamSnapshot {
+function createTeamSnapshot(
+  side: MatchSide,
+  context: MatchContext,
+  lateralFocusBySide: MatchLateralFocusBySide,
+): MatchExplanationTeamSnapshot {
   const team = context[side];
 
   return {
-    routes: createRouteSnapshots(team, context[side === "home" ? "away" : "home"], context),
+    routes: createRouteSnapshots(
+      team,
+      context[side === "home" ? "away" : "home"],
+      context,
+      lateralFocusBySide,
+      side,
+    ),
     side,
     clubId: team.clubId,
     strength: {
@@ -360,14 +384,16 @@ function createRouteSnapshots(
   team: MatchTeamContext,
   opponent: MatchTeamContext,
   context: MatchContext,
+  lateralFocusBySide: MatchLateralFocusBySide,
+  side: MatchSide,
 ): readonly MatchExplanationRouteSnapshot[] {
   const plan = deriveOpportunityRoutePlan({
     own: team.shape,
     opponent: opponent.shape,
     ownTactics: team.tacticalDistribution,
     opponentTactics: opponent.tacticalDistribution,
-    lateralFocus: "balanced",
-    opponentLateralFocus: "balanced",
+    lateralFocus: lateralFocusBySide[side],
+    opponentLateralFocus: lateralFocusBySide[side === "home" ? "away" : "home"],
     caps: context.engineConfig.tacticalDistributionCaps,
     calibration: context.matchTacticsCalibration,
     goalDifference: KICKOFF_GOAL_DIFFERENCE,

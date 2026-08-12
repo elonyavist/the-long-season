@@ -1649,6 +1649,7 @@ export async function executeSimulationReportModule(
       return {
         data: toSimulationReportJsonValue({
           sets: facts.sets,
+          originalDominance: facts.originalDominance,
           decision: facts.decision,
           execution: {
             workerCount: facts.workerCount,
@@ -1656,7 +1657,7 @@ export async function executeSimulationReportModule(
             elapsedMilliseconds: facts.elapsedMilliseconds,
           },
         }),
-        decision: facts.decision === "PASS_PHASE_1" ? "NOT_EVALUATED" : "FAIL",
+        decision: facts.decision === "GO" ? "PASS" : "FAIL",
         calibrationVersions: facts.calibrationVersions,
         worldSeeds: facts.worldSeeds,
       };

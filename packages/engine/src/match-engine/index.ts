@@ -188,7 +188,9 @@ export {
 export type { MatchSubstitutionDecision } from "@game/domain";
 
 export {
+  BALANCED_MATCH_LATERAL_FOCUS_BY_SIDE,
   stepMatch,
+  type MatchLateralFocusBySide,
   type MatchFullTimeStepEvent,
   type MatchHalfTimeStepEvent,
   type MatchKickoffStepEvent,

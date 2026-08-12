@@ -1,6 +1,7 @@
 import {
   type FoulMatchEvent,
   type InjuryMatchEvent,
+  type LateralFocus,
   type MatchEventSide,
   type PlayerId,
   type ShotChanceType,
@@ -188,9 +189,23 @@ export interface StepMatchInput {
   readonly simulation: MatchSimulationState;
   /** Mutable local match RNG stream. */
   readonly rng: Rng;
+  /** Complete lateral instruction pair used by both plans this minute. */
+  readonly lateralFocusBySide?: MatchLateralFocusBySide;
   /** Optional resolver, mainly for tests and future resolver swaps. */
   readonly occasionResolver?: OccasionResolver;
 }
+
+/** One explicit lateral instruction for each side of the same match. */
+export interface MatchLateralFocusBySide {
+  readonly home: LateralFocus;
+  readonly away: LateralFocus;
+}
+
+/** Current product behaviour until durable preparation lands in Step 14. */
+export const BALANCED_MATCH_LATERAL_FOCUS_BY_SIDE = {
+  home: "balanced",
+  away: "balanced",
+} as const satisfies MatchLateralFocusBySide;
 
 /**
  * Result of one match step.
@@ -229,9 +244,11 @@ export function stepMatch(input: StepMatchInput): StepMatchResult {
 
   const currentMinute = input.simulation.minute + 1;
   const processedSides = deriveProcessingOrder(input.rng);
+  const lateralFocusBySide = input.lateralFocusBySide
+    ?? BALANCED_MATCH_LATERAL_FOCUS_BY_SIDE;
   const routePlans = {
-    home: routePlanFor(input.simulation, "home"),
-    away: routePlanFor(input.simulation, "away"),
+    home: routePlanFor(input.simulation, "home", lateralFocusBySide),
+    away: routePlanFor(input.simulation, "away", lateralFocusBySide),
   } as const;
   const events: MatchStepEvent[] = [];
   let nextScore = input.simulation.score;
@@ -428,7 +445,11 @@ function deriveProcessingOrder(rng: Rng): readonly [MatchSide, MatchSide] {
  * randomized home/away processing order cannot change what either side intends
  * to do. Order decides who resolves first, never who plans against what.
  */
-function routePlanFor(simulation: MatchSimulationState, side: MatchSide): OpportunityRoutePlan {
+function routePlanFor(
+  simulation: MatchSimulationState,
+  side: MatchSide,
+  lateralFocusBySide: MatchLateralFocusBySide,
+): OpportunityRoutePlan {
   const own = teamBySide(simulation, side);
   const opponent = teamBySide(simulation, otherSide(side));
 
@@ -437,8 +458,8 @@ function routePlanFor(simulation: MatchSimulationState, side: MatchSide): Opport
     opponent: opponent.shape,
     ownTactics: own.tacticalDistribution,
     opponentTactics: opponent.tacticalDistribution,
-    lateralFocus: "balanced",
-    opponentLateralFocus: "balanced",
+    lateralFocus: lateralFocusBySide[side],
+    opponentLateralFocus: lateralFocusBySide[otherSide(side)],
     caps: simulation.context.engineConfig.tacticalDistributionCaps,
     calibration: simulation.context.matchTacticsCalibration,
     goalDifference: goalDifferenceFor(simulation.score, side),

@@ -26,7 +26,12 @@ import type { MatchContext, MatchTeamContext } from "./match-context.ts";
 import type { MatchSimulationState } from "./match-simulation-state.ts";
 import { createInitialMatchSimulationState } from "./match-simulation-state.ts";
 import type { OccasionResolver } from "./occasion-resolver.ts";
-import { stepMatch, type MatchStepEvent } from "./step-match.ts";
+import {
+  BALANCED_MATCH_LATERAL_FOCUS_BY_SIDE,
+  stepMatch,
+  type MatchLateralFocusBySide,
+  type MatchStepEvent,
+} from "./step-match.ts";
 
 /** Bench and unavailable-player facts kept beside one live team context. */
 export interface ProgressiveMatchTeamAvailability {
@@ -100,6 +105,8 @@ export type ProgressiveMatchBeforeMinute = (
 export interface AdvanceProgressiveMatchMinuteOptions {
   readonly occasionResolver?: OccasionResolver;
   readonly beforeMinute?: ProgressiveMatchBeforeMinute;
+  /** Explicit analysis plan; live play stays balanced until Step 14. */
+  readonly lateralFocusBySide?: MatchLateralFocusBySide;
 }
 
 /** Options for a non-interactive driver that requests a known minute target. */
@@ -266,9 +273,11 @@ export function advanceProgressiveMatchMinute(
   const simulation = options.beforeMinute === undefined
     ? state.simulation
     : options.beforeMinute(state.simulation, nextMinute);
+  const lateralFocusBySide = options.lateralFocusBySide
+    ?? BALANCED_MATCH_LATERAL_FOCUS_BY_SIDE;
   const stepped = options.occasionResolver === undefined
-    ? stepMatch({ simulation, rng })
-    : stepMatch({ simulation, rng, occasionResolver: options.occasionResolver });
+    ? stepMatch({ simulation, rng, lateralFocusBySide })
+    : stepMatch({ simulation, rng, lateralFocusBySide, occasionResolver: options.occasionResolver });
   const phase = progressiveMatchPhaseFor(stepped.simulation);
   const incidentPause = incidentPauseFor(state, stepped.events);
 

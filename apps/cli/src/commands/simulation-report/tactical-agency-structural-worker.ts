@@ -2,10 +2,13 @@ import { isMainThread, parentPort, Worker, workerData } from "node:worker_thread
 
 import {
   runTacticalAgencyConditionedAnalyticPartition,
+  runTacticalAgencyConditionedReplayPartition,
   runTacticalAgencyStructuralAnalyticPartition,
   type TacticalAgencyConditionedContextRow,
   type TacticalAgencyConditionedMatchupInput,
   type TacticalAgencyConditionedResponse,
+  type TacticalAgencyConditionedReplayContext,
+  type TacticalAgencyConditionedReplayContextResult,
   type TacticalAgencyStructuralAction,
   type TacticalAgencyStructuralContextRow,
 } from "@game/simulation-tools";
@@ -13,6 +16,7 @@ import type { FakeDomesticWorld } from "@game/content";
 
 const STRUCTURAL_WORKER_KIND = "phase81a-b-analytic-partition-v1";
 const CONDITIONED_WORKER_KIND = "phase81a-b2-conditioned-analytic-partition-v1";
+const CONDITIONED_REPLAY_WORKER_KIND = "phase81a-b2-independent-replay-partition-v1";
 
 /** Serializable analytic shard; opponent columns share no mutable state. */
 export interface TacticalAgencyStructuralWorkerInput {
@@ -56,6 +60,24 @@ interface TacticalAgencyConditionedWorkerSuccess {
   readonly contexts: readonly TacticalAgencyConditionedContextRow[];
 }
 
+/** Serializable B2 Phase-2 shard over already-frozen contexts. */
+export interface TacticalAgencyConditionedReplayWorkerInput {
+  readonly kind: typeof CONDITIONED_REPLAY_WORKER_KIND;
+  readonly partitionIndex: number;
+  readonly responses: readonly TacticalAgencyConditionedResponse[];
+  readonly contexts: readonly TacticalAgencyConditionedReplayContext[];
+  readonly engineConfig: FakeDomesticWorld["matchEngineConfig"];
+  readonly matchTacticsCalibration: FakeDomesticWorld["matchTacticsCalibration"];
+  readonly selectionSeedPrefix: string;
+  readonly replaySeedPrefix: string;
+}
+
+interface TacticalAgencyConditionedReplayWorkerSuccess {
+  readonly ok: true;
+  readonly partitionIndex: number;
+  readonly contexts: readonly TacticalAgencyConditionedReplayContextResult[];
+}
+
 /** Executes one declared analytic partition in a real worker thread. */
 export function runTacticalAgencyStructuralWorker(
   input: Omit<TacticalAgencyStructuralWorkerInput, "kind">,
@@ -94,6 +116,30 @@ export function runTacticalAgencyConditionedWorker(
   });
 }
 
+/** Runs one independent B2 replay shard in a real worker thread. */
+export function runTacticalAgencyConditionedReplayWorker(
+  input: Omit<TacticalAgencyConditionedReplayWorkerInput, "kind">,
+): Promise<TacticalAgencyConditionedReplayWorkerSuccess> {
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(new URL(import.meta.url), {
+      workerData: {
+        ...input,
+        kind: CONDITIONED_REPLAY_WORKER_KIND,
+      } satisfies TacticalAgencyConditionedReplayWorkerInput,
+    });
+    worker.once("message", (
+      message: TacticalAgencyConditionedReplayWorkerSuccess | TacticalAgencyStructuralWorkerFailure,
+    ) => {
+      if (message.ok) resolve(message);
+      else reject(new Error(message.message));
+    });
+    worker.once("error", reject);
+    worker.once("exit", (code) => {
+      if (code !== 0) reject(new Error(`Conditioned replay worker exited with code ${code}`));
+    });
+  });
+}
+
 function isStructuralWorkerInput(value: unknown): value is TacticalAgencyStructuralWorkerInput {
   const candidate = value as Partial<TacticalAgencyStructuralWorkerInput> | undefined;
   return candidate?.kind === STRUCTURAL_WORKER_KIND
@@ -109,6 +155,18 @@ function isConditionedWorkerInput(value: unknown): value is TacticalAgencyCondit
     && Array.isArray(candidate.responses)
     && Array.isArray(candidate.matchups)
     && Array.isArray(candidate.contextIndexes);
+}
+
+function isConditionedReplayWorkerInput(
+  value: unknown,
+): value is TacticalAgencyConditionedReplayWorkerInput {
+  const candidate = value as Partial<TacticalAgencyConditionedReplayWorkerInput> | undefined;
+  return candidate?.kind === CONDITIONED_REPLAY_WORKER_KIND
+    && Number.isSafeInteger(candidate.partitionIndex)
+    && Array.isArray(candidate.responses)
+    && Array.isArray(candidate.contexts)
+    && typeof candidate.selectionSeedPrefix === "string"
+    && typeof candidate.replaySeedPrefix === "string";
 }
 
 // This entrypoint may be imported inside unrelated workers. It answers only
@@ -135,6 +193,21 @@ if (!isMainThread && isConditionedWorkerInput(workerData)) {
       partitionIndex: workerData.partitionIndex,
       contexts: runTacticalAgencyConditionedAnalyticPartition(workerData),
     } satisfies TacticalAgencyConditionedWorkerSuccess);
+  } catch (error) {
+    parentPort?.postMessage({
+      ok: false,
+      message: error instanceof Error ? error.message : String(error),
+    } satisfies TacticalAgencyStructuralWorkerFailure);
+  }
+}
+
+if (!isMainThread && isConditionedReplayWorkerInput(workerData)) {
+  try {
+    parentPort?.postMessage({
+      ok: true,
+      partitionIndex: workerData.partitionIndex,
+      contexts: runTacticalAgencyConditionedReplayPartition(workerData),
+    } satisfies TacticalAgencyConditionedReplayWorkerSuccess);
   } catch (error) {
     parentPort?.postMessage({
       ok: false,

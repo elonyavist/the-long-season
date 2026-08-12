@@ -9,6 +9,7 @@ import {
 import type { MatchSimulationState } from "./match-simulation-state.ts";
 import { runMatchSimulation } from "./match-simulation-runner.ts";
 import type { OccasionResolver } from "./occasion-resolver.ts";
+import type { MatchLateralFocusBySide } from "./step-match.ts";
 import { simulateMatch, type SimulateMatchResult } from "./simulate-match.ts";
 
 /**
@@ -23,6 +24,8 @@ export interface SimulateMatchWithManualTacticsOptions {
   readonly maxStepCount?: number;
   /** Whether to include deterministic explanation trace data in the result. */
   readonly includeExplanationTrace?: boolean;
+  /** Match-local lateral instructions shared with the canonical minute loop. */
+  readonly lateralFocusBySide?: MatchLateralFocusBySide;
 }
 
 /**
@@ -47,6 +50,7 @@ export function simulateMatchWithManualTactics(
       ...(options.occasionResolver === undefined ? {} : { occasionResolver: options.occasionResolver }),
       ...(options.maxStepCount === undefined ? {} : { maxStepCount: options.maxStepCount }),
       ...(options.includeExplanationTrace === undefined ? {} : { includeExplanationTrace: options.includeExplanationTrace }),
+      ...(options.lateralFocusBySide === undefined ? {} : { lateralFocusBySide: options.lateralFocusBySide }),
     });
   }
 
@@ -59,6 +63,7 @@ export function simulateMatchWithManualTactics(
     ...(options.occasionResolver === undefined ? {} : { occasionResolver: options.occasionResolver }),
     ...(options.maxStepCount === undefined ? {} : { maxStepCount: options.maxStepCount }),
     ...(options.includeExplanationTrace === undefined ? {} : { includeExplanationTrace: options.includeExplanationTrace }),
+    ...(options.lateralFocusBySide === undefined ? {} : { lateralFocusBySide: options.lateralFocusBySide }),
     beforeStep: (simulation, currentMinute) => ({
       ...simulation,
       context: applyScheduledManualTacticChanges(simulation.context, schedule, currentMinute),

@@ -21,6 +21,7 @@ import {
   poolTacticalAgencyLowBlockResults,
   runTacticalAgencyOwnershipReplay,
   runTacticalAgencyConditionedAnalyticPartition,
+  selectTacticalAgencyConditionedReplayContexts,
   runTacticalAgencySelectionSeries,
   runTacticalAgencyStructuralAnalyticPartition,
   summarizeTacticalContributionConservation,
@@ -29,16 +30,18 @@ import {
   summarizeTacticalAgencySquadIdentities,
   summarizeTacticalAgencyStructuralAnalysis,
   summarizeTacticalAgencyConditionedAnalysis,
+  summarizeTacticalAgencyConditionedReplay,
   tacticalAgencyReorderInvariantShare,
   TACTICAL_AGENCY_AUDIT_CONTRACT_VERSION,
   TACTICAL_AGENCY_CHECKPOINT_WORKER_COUNT,
   TacticalAgencyAuditError,
   type TacticalAgencyLowBlockResult,
+  type TacticalAgencyConditionedReplayContextResult,
   type TacticalAgencyPopulationManifest,
   type TacticalAgencySelectionRow,
 } from "./tactical-agency-audit.ts";
 import { matchTacticsCalibrationFixture } from "../test-fixtures/match-tactics-calibration.ts";
-import type { MatchEngineConfig } from "@game/engine";
+import type { MatchEngineConfig, MatchTeamContext } from "@game/engine";
 
 /**
  * These tests own the audit's arithmetic and its refusals. The traversal of a
@@ -576,6 +579,112 @@ test("Checkpoint B2 fixes real shapes, enumerates nine responses and mirrors exa
     /does not contain each opponent response exactly once/,
   );
 });
+
+test("B2 replay sampling covers every response stratum and preserves population weights", () => {
+  const calibration = matchTacticsCalibrationFixture();
+  const structural = buildTacticalAgencyStructuralActions({
+    referenceBand: {
+      bandKey: "checkpoint_b2_replay",
+      goalkeeper: 10,
+      defense: 10,
+      midfield: 10,
+      attack: 10,
+    },
+    matchTacticsCalibration: calibration,
+  });
+  const first = structural.find(({ formationKey }) => formationKey === "4-4-2");
+  const second = structural.find(({ formationKey }) => formationKey === "3-5-2");
+  if (first === undefined || second === undefined) throw new Error("B2 replay shapes are missing");
+  const responses = buildTacticalAgencyConditionedResponses();
+  const matchups = [
+    { matchupId: "replay|home", ownShape: first.shape, opponentShape: second.shape },
+    { matchupId: "replay|away", ownShape: second.shape, opponentShape: first.shape },
+  ];
+  const engineConfig = {
+    tacticalDistributionCaps: {
+      directness: { minInclusive: 0, maxInclusive: 1 },
+      pressing: { minInclusive: 0, maxInclusive: 1 },
+      width: { minInclusive: 0, maxInclusive: 1 },
+      risk: { minInclusive: 0, maxInclusive: 1 },
+    },
+  } as MatchEngineConfig;
+  const contexts = runTacticalAgencyConditionedAnalyticPartition({
+    responses,
+    matchups,
+    contextIndexes: Array.from({ length: matchups.length * responses.length }, (_, index) => index),
+    engineConfig,
+    matchTacticsCalibration: calibration,
+  });
+  const team = {} as MatchTeamContext;
+  const replayMatchups = matchups.map((matchup, index) => ({
+    ...matchup,
+    reciprocalMatchupId: matchups[index === 0 ? 1 : 0]?.matchupId ?? "missing",
+    own: team,
+    opponent: team,
+  }));
+  const selected = selectTacticalAgencyConditionedReplayContexts({
+    responses,
+    contexts,
+    matchups: replayMatchups,
+    maximumContextCount: 32,
+  });
+  const repeated = selectTacticalAgencyConditionedReplayContexts({
+    responses,
+    contexts: [...contexts].reverse(),
+    matchups: [...replayMatchups].reverse(),
+    maximumContextCount: 32,
+  });
+
+  assert.equal(selected.length, 18);
+  assert.equal(new Set(selected.map(({ opponentResponseId }) => opponentResponseId)).size, 9);
+  assert.equal(selected.reduce((sum, row) => sum + row.populationWeightCount, 0), contexts.length);
+  assert.deepEqual(
+    selected.map(({ contextId }) => contextId),
+    repeated.map(({ contextId }) => contextId),
+  );
+});
+
+test("B2 replay decision is reachable in both directions without moving its targets", () => {
+  const go = summarizeTacticalAgencyConditionedReplay({
+    declaredContextCount: 1,
+    contexts: [replayResult({ ceiling: 0.08, exposure: -0.08, contextFree: 0 })],
+  });
+  const refine = summarizeTacticalAgencyConditionedReplay({
+    declaredContextCount: 1,
+    contexts: [replayResult({ ceiling: 0.02, exposure: -0.08, contextFree: 0 })],
+  });
+
+  assert.equal(go.decision, "GO");
+  assert.equal(refine.decision, "REFINE");
+  assert.equal(go.counterMoveCeiling.value, 0.08);
+  assert.equal(go.counterMoveExposure.value, -0.08);
+  assert.deepEqual(go.contextFreeDelta.interval95, [0, 0]);
+});
+
+function replayResult(input: {
+  readonly ceiling: number;
+  readonly exposure: number;
+  readonly contextFree: number;
+}): TacticalAgencyConditionedReplayContextResult {
+  return {
+    contextIndex: 0,
+    contextId: "context:replay",
+    opponentResponseId: "direct_play|balanced",
+    populationWeightCount: 1,
+    bestResponseId: "high_pressing|left",
+    exposedResponseId: "low_block|right",
+    selectionWinShares: [
+      { responseId: "high_pressing|left", winShare: 0.6 },
+      { responseId: "low_block|right", winShare: 0.4 },
+    ],
+    bestReplayWinShare: 0.5 + input.contextFree + input.ceiling,
+    exposedReplayWinShare: 0.5 + input.contextFree + input.exposure,
+    contextFreeReplayWinShare: 0.5 + input.contextFree,
+    counterMoveDeltas: [input.ceiling, input.ceiling],
+    exposureDeltas: [input.exposure, input.exposure],
+    contextFreeDeltas: [input.contextFree, input.contextFree],
+  };
+}
 
 function neutralIntensity(): Parameters<typeof legacyPhase81ControlWeightReference>[0] {
   return { directness: 0.5, pressing: 0.5, width: 0.5, risk: 0.5 };

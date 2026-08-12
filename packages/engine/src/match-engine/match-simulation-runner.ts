@@ -5,6 +5,7 @@ import { buildMatchRngKey, matchRngKeyParts, type MatchContext } from "./match-c
 import { createMatchExplanationTrace, type MatchExplanationTrace } from "./match-explanation-trace.ts";
 import type { MatchScore, MatchSimulationState, MatchSimulationStats } from "./match-simulation-state.ts";
 import type { OccasionResolver } from "./occasion-resolver.ts";
+import type { MatchLateralFocusBySide } from "./step-match.ts";
 import {
   createProgressiveMatchSession,
   ProgressiveMatchSessionError,
@@ -45,6 +46,8 @@ export interface SimulateMatchOptions {
   readonly maxStepCount?: number;
   /** Whether to include deterministic explanation trace data in the result. */
   readonly includeExplanationTrace?: boolean;
+  /** Match-local lateral instructions; omission is the explicit balanced pair. */
+  readonly lateralFocusBySide?: MatchLateralFocusBySide;
 }
 
 /** Error categories exposed by batch match simulation. */
@@ -104,6 +107,9 @@ export function runMatchSimulation(input: RunMatchSimulationInput): SimulateMatc
         maxStepCount,
         ...(input.occasionResolver === undefined ? {} : { occasionResolver: input.occasionResolver }),
         ...(input.beforeStep === undefined ? {} : { beforeMinute: input.beforeStep }),
+        ...(input.lateralFocusBySide === undefined
+          ? {}
+          : { lateralFocusBySide: input.lateralFocusBySide }),
       },
     ).state;
   } catch (error) {
@@ -133,6 +139,9 @@ export function runMatchSimulation(input: RunMatchSimulationInput): SimulateMatc
       score: completed.simulation.score,
       stats: completed.simulation.stats,
       events: completed.events,
+      ...(input.lateralFocusBySide === undefined
+        ? {}
+        : { lateralFocusBySide: input.lateralFocusBySide }),
     }),
   };
 }

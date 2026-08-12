@@ -16,6 +16,10 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_B2_INDEPENDENT_REPLAY.md` — **`REFINE`.** Reciprocal
+  Phase-2 replay is neutral when blind, but selected ceiling/exposure are only
+  `+0.0048/-0.0081` and `+0.0080/-0.0051`; Step 06C5 owns attribution.
+
 - `PHASE_81A_CONTEXTUAL_LATERAL_ROUTE_LEVERAGE.md` — **`PASS_PHASE_1`.** The
   first passing preregistered value is `6000 bp`; ubiquity is
   `3.6587 / 3.7037`, population is `21/21` twice, and independent Phase-2

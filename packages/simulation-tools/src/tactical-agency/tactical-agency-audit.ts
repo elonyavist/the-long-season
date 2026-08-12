@@ -8,6 +8,7 @@ import {
   TACTICAL_SHAPE_CAPACITY_MIRROR,
   TACTICAL_SHAPE_TASKS,
   evaluatePositionSuitability,
+  fixtureId,
   tacticalRoleAllocationTotal,
   type CareerState,
   type CanonicalPlayerRole,
@@ -987,6 +988,522 @@ export interface TacticalAgencyConditionedMatchupInput {
   readonly matchupId: string;
   readonly ownShape: TacticalShapeProfile;
   readonly opponentShape: TacticalShapeProfile;
+}
+
+/** Real selected elevens retained only long enough for independent B2 replay. */
+export interface TacticalAgencyConditionedReplayMatchupInput
+  extends TacticalAgencyConditionedMatchupInput {
+  readonly reciprocalMatchupId: string;
+  readonly own: MatchTeamContext;
+  readonly opponent: MatchTeamContext;
+}
+
+/** One deterministically selected Phase-2 context and its population weight. */
+export interface TacticalAgencyConditionedReplayContext {
+  readonly contextIndex: number;
+  readonly contextId: string;
+  readonly matchupId: string;
+  readonly opponentResponseIndex: number;
+  readonly opponentResponseId: string;
+  readonly populationWeightCount: number;
+  readonly own: MatchTeamContext;
+  readonly opponent: MatchTeamContext;
+}
+
+/** Frozen B2 replay sizes; changing either creates a new checkpoint contract. */
+export const TACTICAL_AGENCY_B2_SELECTION_SEEDS_PER_CANDIDATE = 8;
+export const TACTICAL_AGENCY_B2_REPLAY_SEEDS_PER_CONTEXT = 207;
+export const TACTICAL_AGENCY_B2_MAX_REPLAY_CONTEXTS = 32;
+
+/** Selects the output-blind stratified farthest-first B2 replay population. */
+export function selectTacticalAgencyConditionedReplayContexts(input: {
+  readonly responses: readonly TacticalAgencyConditionedResponse[];
+  readonly contexts: readonly TacticalAgencyConditionedContextRow[];
+  readonly matchups: readonly TacticalAgencyConditionedReplayMatchupInput[];
+  readonly maximumContextCount?: number;
+}): readonly TacticalAgencyConditionedReplayContext[] {
+  const maximumContextCount = input.maximumContextCount
+    ?? TACTICAL_AGENCY_B2_MAX_REPLAY_CONTEXTS;
+  if (!Number.isSafeInteger(maximumContextCount) || maximumContextCount < input.responses.length * 2) {
+    throw new TacticalAgencyAuditError(
+      "empty_work_items",
+      `B2 replay needs at least ${input.responses.length * 2} contexts for reciprocal response strata: ${maximumContextCount}`,
+    );
+  }
+  const ordered = [...input.contexts].sort((left, right) =>
+    left.contextId.localeCompare(right.contextId));
+  if (ordered.length === 0) {
+    throw new TacticalAgencyAuditError("empty_work_items", "B2 replay has no analytic contexts");
+  }
+  const matchupById = new Map(input.matchups.map((matchup) => [matchup.matchupId, matchup]));
+  const contextByMatchupAndResponse = new Map(ordered.map((context) => [
+    `${context.matchupId}|${context.opponentResponseId}`,
+    context,
+  ]));
+  interface ReciprocalUnit {
+    readonly unitId: string;
+    readonly opponentResponseId: string;
+    readonly rows: readonly [TacticalAgencyConditionedContextRow, TacticalAgencyConditionedContextRow];
+    readonly vector: readonly (number | string)[];
+  }
+  const units: ReciprocalUnit[] = [];
+  for (const row of ordered) {
+    const matchup = matchupById.get(row.matchupId);
+    if (matchup === undefined) {
+      throw new TacticalAgencyAuditError("missing_telemetry", `B2 replay lost ${row.matchupId}`);
+    }
+    const reciprocal = contextByMatchupAndResponse.get(
+      `${matchup.reciprocalMatchupId}|${row.opponentResponseId}`,
+    );
+    if (reciprocal === undefined) {
+      throw new TacticalAgencyAuditError(
+        "missing_telemetry",
+        `B2 replay lost reciprocal context for ${row.contextId}`,
+      );
+    }
+    if (row.contextId > reciprocal.contextId) continue;
+    const rows = [row, reciprocal] as const;
+    units.push({
+      unitId: `${row.contextId}<>${reciprocal.contextId}`,
+      opponentResponseId: row.opponentResponseId,
+      rows,
+      vector: rows.flatMap(conditionedContextSignatureVector),
+    });
+  }
+  if (units.length * 2 !== ordered.length) {
+    throw new TacticalAgencyAuditError(
+      "missing_telemetry",
+      `B2 replay paired ${units.length * 2} of ${ordered.length} directed contexts`,
+    );
+  }
+  units.sort((left, right) => left.unitId.localeCompare(right.unitId));
+  const selectionLimit = Math.min(Math.floor(maximumContextCount / 2), units.length);
+  const selected: ReciprocalUnit[] = [];
+  const selectedIds = new Set<string>();
+
+  // Start with one reciprocal matchup from every opponent-response stratum.
+  for (const response of [...input.responses].sort((left, right) =>
+    left.responseId.localeCompare(right.responseId))) {
+    const unit = units.find(({ opponentResponseId }) => opponentResponseId === response.responseId);
+    if (unit !== undefined) {
+      selected.push(unit);
+      selectedIds.add(unit.unitId);
+    }
+  }
+
+  const minimumDistanceByUnitId = new Map<string, number>();
+  for (const candidate of units) {
+    if (selectedIds.has(candidate.unitId)) continue;
+    minimumDistanceByUnitId.set(
+      candidate.unitId,
+      Math.min(...selected.map((unit) => conditionedContextSignatureDistance(
+        candidate.vector,
+        unit.vector,
+      ))),
+    );
+  }
+  while (selected.length < selectionLimit) {
+    let next: ReciprocalUnit | undefined;
+    let nextDistance = -1;
+    for (const candidate of units) {
+      if (selectedIds.has(candidate.unitId)) continue;
+      const distance = minimumDistanceByUnitId.get(candidate.unitId) ?? -1;
+      if (
+        distance > nextDistance
+        || (distance === nextDistance
+          && (next === undefined || candidate.unitId < next.unitId))
+      ) {
+        next = candidate;
+        nextDistance = distance;
+      }
+    }
+    if (next === undefined) break;
+    selected.push(next);
+    selectedIds.add(next.unitId);
+    minimumDistanceByUnitId.delete(next.unitId);
+    for (const candidate of units) {
+      if (selectedIds.has(candidate.unitId)) continue;
+      const distance = conditionedContextSignatureDistance(candidate.vector, next.vector);
+      minimumDistanceByUnitId.set(
+        candidate.unitId,
+        Math.min(minimumDistanceByUnitId.get(candidate.unitId) ?? Number.POSITIVE_INFINITY, distance),
+      );
+    }
+  }
+
+  const populationWeights = new Map(selected.map(({ unitId }) => [unitId, 0]));
+  for (const unit of units) {
+    const sameStratum = selected.filter(
+      ({ opponentResponseId }) => opponentResponseId === unit.opponentResponseId,
+    );
+    let nearest: ReciprocalUnit | undefined;
+    let nearestDistance = Number.POSITIVE_INFINITY;
+    for (const candidate of sameStratum) {
+      const distance = conditionedContextSignatureDistance(unit.vector, candidate.vector);
+      if (
+        distance < nearestDistance
+        || (distance === nearestDistance
+          && (nearest === undefined || candidate.unitId < nearest.unitId))
+      ) {
+        nearest = candidate;
+        nearestDistance = distance;
+      }
+    }
+    if (nearest === undefined) {
+      throw new TacticalAgencyAuditError("empty_work_items", "B2 replay selected no representative");
+    }
+    populationWeights.set(
+      nearest.unitId,
+      (populationWeights.get(nearest.unitId) ?? 0) + 1,
+    );
+  }
+
+  return selected.flatMap((unit) => unit.rows.map((row) => {
+    const matchup = matchupById.get(row.matchupId);
+    if (matchup === undefined) {
+      throw new TacticalAgencyAuditError(
+        "missing_telemetry",
+        `B2 replay lost real matchup ${row.matchupId}`,
+      );
+    }
+    return {
+      contextIndex: row.contextIndex,
+      contextId: row.contextId,
+      matchupId: row.matchupId,
+      opponentResponseIndex: row.opponentResponseIndex,
+      opponentResponseId: row.opponentResponseId,
+      populationWeightCount: populationWeights.get(unit.unitId) ?? 0,
+      own: matchup.own,
+      opponent: matchup.opponent,
+    };
+  }));
+}
+
+/** Squared Euclidean distance over complete basis-point plan facts. */
+function conditionedContextSignatureVector(
+  context: TacticalAgencyConditionedContextRow,
+): readonly (number | string)[] {
+  return context.candidates.flatMap(({ planSignature }) =>
+    planSignature.split("|").map((field) => {
+      const numeric = Number(field);
+      return Number.isFinite(numeric) ? numeric / 10_000 : field;
+    }));
+}
+
+function conditionedContextSignatureDistance(
+  leftFields: readonly (number | string)[],
+  rightFields: readonly (number | string)[],
+): number {
+  if (leftFields.length !== rightFields.length) {
+    throw new TacticalAgencyAuditError("missing_telemetry", "B2 context signatures have different widths");
+  }
+  let distance = 0;
+  for (const [index, leftField] of leftFields.entries()) {
+    const rightField = rightFields[index] as number | string;
+    if (typeof leftField === "number" && typeof rightField === "number") {
+      const delta = leftField - rightField;
+      distance += delta * delta;
+    } else if (leftField !== rightField) {
+      distance += 1;
+    }
+  }
+  return distance;
+}
+
+/** One selected context after independent selection and replay streams. */
+export interface TacticalAgencyConditionedReplayContextResult {
+  readonly contextIndex: number;
+  readonly contextId: string;
+  readonly opponentResponseId: string;
+  readonly populationWeightCount: number;
+  readonly bestResponseId: string;
+  readonly exposedResponseId: string;
+  readonly selectionWinShares: readonly {
+    readonly responseId: string;
+    readonly winShare: number;
+  }[];
+  readonly bestReplayWinShare: number;
+  readonly exposedReplayWinShare: number;
+  readonly contextFreeReplayWinShare: number;
+  /** Paired replay observations retained for the one canonical summarizer. */
+  readonly counterMoveDeltas: readonly number[];
+  readonly exposureDeltas: readonly number[];
+  readonly contextFreeDeltas: readonly number[];
+}
+
+/** Executes independent selection and replay streams for one context shard. */
+export function runTacticalAgencyConditionedReplayPartition(input: {
+  readonly responses: readonly TacticalAgencyConditionedResponse[];
+  readonly contexts: readonly TacticalAgencyConditionedReplayContext[];
+  readonly engineConfig: MatchEngineConfig;
+  readonly matchTacticsCalibration: MatchTacticsCalibrationConfig;
+  readonly selectionSeedPrefix: string;
+  readonly replaySeedPrefix: string;
+}): readonly TacticalAgencyConditionedReplayContextResult[] {
+  if (input.selectionSeedPrefix === input.replaySeedPrefix) {
+    throw new TacticalAgencyAuditError(
+      "empty_work_items",
+      "B2 selection and replay seed prefixes must be disjoint",
+    );
+  }
+  return input.contexts.map((context) => {
+    const opponentResponse = input.responses[context.opponentResponseIndex];
+    if (opponentResponse === undefined) {
+      throw new TacticalAgencyAuditError(
+        "missing_telemetry",
+        `B2 replay lost opponent response ${context.opponentResponseIndex}`,
+      );
+    }
+    const selectionWinShares = input.responses.map((response) => ({
+      responseId: response.responseId,
+      winShare: meanTacticalAgencyReplayWinShare({
+        context,
+        response,
+        opponentResponse,
+        seedPrefix: input.selectionSeedPrefix,
+        pairedSeedCount: TACTICAL_AGENCY_B2_SELECTION_SEEDS_PER_CANDIDATE,
+        engineConfig: input.engineConfig,
+        matchTacticsCalibration: input.matchTacticsCalibration,
+      }),
+    }));
+    const ranked = [...selectionWinShares].sort((left, right) =>
+      right.winShare - left.winShare || left.responseId.localeCompare(right.responseId));
+    const reverseRanked = [...selectionWinShares].sort((left, right) =>
+      left.winShare - right.winShare || left.responseId.localeCompare(right.responseId));
+    const bestResponseId = ranked[0]?.responseId;
+    const exposedResponseId = reverseRanked[0]?.responseId;
+    const bestResponse = input.responses.find(({ responseId }) => responseId === bestResponseId);
+    const exposedResponse = input.responses.find(({ responseId }) => responseId === exposedResponseId);
+    if (bestResponse === undefined || exposedResponse === undefined) {
+      throw new TacticalAgencyAuditError("missing_telemetry", `B2 replay could not rank ${context.contextId}`);
+    }
+
+    const bestValues: number[] = [];
+    const exposedValues: number[] = [];
+    const contextFreeValues: number[] = [];
+    for (
+      let pairIndex = 0;
+      pairIndex < TACTICAL_AGENCY_B2_REPLAY_SEEDS_PER_CONTEXT;
+      pairIndex += 1
+    ) {
+      const contextFreeResponse = input.responses[pairIndex % input.responses.length];
+      if (contextFreeResponse === undefined) {
+        throw new TacticalAgencyAuditError("missing_telemetry", "B2 context-free cycle is incomplete");
+      }
+      for (const ownIsHome of [true, false]) {
+        const replayKey = `${context.contextId}|${pairIndex}|${ownIsHome ? "h" : "a"}`;
+        bestValues.push(tacticalAgencyReplayWinShare({
+          context,
+          response: bestResponse,
+          opponentResponse,
+          seed: `${input.replaySeedPrefix}|${replayKey}`,
+          ownIsHome,
+          engineConfig: input.engineConfig,
+          matchTacticsCalibration: input.matchTacticsCalibration,
+        }));
+        exposedValues.push(tacticalAgencyReplayWinShare({
+          context,
+          response: exposedResponse,
+          opponentResponse,
+          seed: `${input.replaySeedPrefix}|${replayKey}`,
+          ownIsHome,
+          engineConfig: input.engineConfig,
+          matchTacticsCalibration: input.matchTacticsCalibration,
+        }));
+        contextFreeValues.push(tacticalAgencyReplayWinShare({
+          context,
+          response: contextFreeResponse,
+          opponentResponse,
+          seed: `${input.replaySeedPrefix}|${replayKey}`,
+          ownIsHome,
+          engineConfig: input.engineConfig,
+          matchTacticsCalibration: input.matchTacticsCalibration,
+        }));
+      }
+    }
+
+    return {
+      contextIndex: context.contextIndex,
+      contextId: context.contextId,
+      opponentResponseId: context.opponentResponseId,
+      populationWeightCount: context.populationWeightCount,
+      bestResponseId: bestResponse.responseId,
+      exposedResponseId: exposedResponse.responseId,
+      selectionWinShares,
+      bestReplayWinShare: mean(bestValues),
+      exposedReplayWinShare: mean(exposedValues),
+      contextFreeReplayWinShare: mean(contextFreeValues),
+      counterMoveDeltas: bestValues.map((value, index) =>
+        value - (contextFreeValues[index] as number)),
+      exposureDeltas: exposedValues.map((value, index) =>
+        value - (contextFreeValues[index] as number)),
+      contextFreeDeltas: contextFreeValues.map((value) => value - 0.5),
+    };
+  });
+}
+
+function meanTacticalAgencyReplayWinShare(input: {
+  readonly context: TacticalAgencyConditionedReplayContext;
+  readonly response: TacticalAgencyConditionedResponse;
+  readonly opponentResponse: TacticalAgencyConditionedResponse;
+  readonly seedPrefix: string;
+  readonly pairedSeedCount: number;
+  readonly engineConfig: MatchEngineConfig;
+  readonly matchTacticsCalibration: MatchTacticsCalibrationConfig;
+}): number {
+  const values: number[] = [];
+  for (let pairIndex = 0; pairIndex < input.pairedSeedCount; pairIndex += 1) {
+    for (const ownIsHome of [true, false]) {
+      values.push(tacticalAgencyReplayWinShare({
+        ...input,
+        seed: `${input.seedPrefix}|${input.context.contextId}|${pairIndex}|${ownIsHome ? "h" : "a"}`,
+        ownIsHome,
+      }));
+    }
+  }
+  return mean(values);
+}
+
+function tacticalAgencyReplayWinShare(input: {
+  readonly context: TacticalAgencyConditionedReplayContext;
+  readonly response: TacticalAgencyConditionedResponse;
+  readonly opponentResponse: TacticalAgencyConditionedResponse;
+  readonly seed: string;
+  readonly ownIsHome: boolean;
+  readonly engineConfig: MatchEngineConfig;
+  readonly matchTacticsCalibration: MatchTacticsCalibrationConfig;
+}): number {
+  const own = { ...input.context.own, tacticalDistribution: input.response.tactic };
+  const opponent = { ...input.context.opponent, tacticalDistribution: input.opponentResponse.tactic };
+  const result = simulateMatch({
+    fixtureId: fixtureId(`fixture:b2-replay-${String(input.context.contextIndex).padStart(4, "0")}`),
+    seed: input.seed,
+    home: input.ownIsHome ? own : opponent,
+    away: input.ownIsHome ? opponent : own,
+    engineConfig: input.engineConfig,
+    matchTacticsCalibration: input.matchTacticsCalibration,
+  }, {
+    lateralFocusBySide: input.ownIsHome
+      ? { home: input.response.lateralFocus, away: input.opponentResponse.lateralFocus }
+      : { home: input.opponentResponse.lateralFocus, away: input.response.lateralFocus },
+  });
+  const ownGoals = input.ownIsHome ? result.score.home : result.score.away;
+  const opponentGoals = input.ownIsHome ? result.score.away : result.score.home;
+  return ownGoals > opponentGoals ? 1 : ownGoals < opponentGoals ? 0 : 0.5;
+}
+
+function mean(values: readonly number[]): number {
+  return values.length === 0
+    ? 0
+    : values.reduce((sum, value) => sum + value, 0) / values.length;
+}
+
+/** Weighted replay estimate and its deterministic normal 95% interval. */
+export interface TacticalAgencyConditionedReplayEstimate {
+  readonly value: number;
+  readonly interval95: readonly [number, number];
+}
+
+/** Complete independent B2 replay decision for one seed set. */
+export interface TacticalAgencyConditionedReplaySummary {
+  readonly contractVersion: "phase81a-b2-independent-replay-v1";
+  readonly selectedContextCount: number;
+  readonly declaredContextCount: number;
+  readonly selectionSeedsPerCandidate: number;
+  readonly replaySeedsPerContext: number;
+  readonly simulatedMatchCount: number;
+  readonly counterMoveCeiling: TacticalAgencyConditionedReplayEstimate;
+  readonly counterMoveExposure: TacticalAgencyConditionedReplayEstimate;
+  readonly contextFreeDelta: TacticalAgencyConditionedReplayEstimate;
+  readonly selectedContexts: readonly Omit<
+    TacticalAgencyConditionedReplayContextResult,
+    "counterMoveDeltas" | "exposureDeltas" | "contextFreeDeltas"
+  >[];
+  readonly decision: "GO" | "REFINE";
+}
+
+/** Aggregates only replay observations; analytic output cannot enter the result. */
+export function summarizeTacticalAgencyConditionedReplay(input: {
+  readonly declaredContextCount: number;
+  readonly contexts: readonly TacticalAgencyConditionedReplayContextResult[];
+}): TacticalAgencyConditionedReplaySummary {
+  if (input.contexts.length === 0) {
+    throw new TacticalAgencyAuditError("empty_work_items", "B2 replay produced no contexts");
+  }
+  const weightTotal = input.contexts.reduce(
+    (sum, context) => sum + context.populationWeightCount,
+    0,
+  );
+  if (weightTotal !== input.declaredContextCount) {
+    throw new TacticalAgencyAuditError(
+      "missing_telemetry",
+      `B2 replay weights sum to ${weightTotal}; expected ${input.declaredContextCount}`,
+    );
+  }
+  const estimate = (
+    pick: (context: TacticalAgencyConditionedReplayContextResult) => readonly number[],
+  ): TacticalAgencyConditionedReplayEstimate => weightedReplayEstimate(
+    input.contexts.flatMap((context) => {
+      const values = pick(context);
+      const weight = context.populationWeightCount / weightTotal / values.length;
+      return values.map((value) => ({ value, weight }));
+    }),
+  );
+  const counterMoveCeiling = estimate(({ counterMoveDeltas }) => counterMoveDeltas);
+  const counterMoveExposure = estimate(({ exposureDeltas }) => exposureDeltas);
+  const contextFreeDelta = estimate(({ contextFreeDeltas }) => contextFreeDeltas);
+  const decision = counterMoveCeiling.value >= 0.045
+    && counterMoveExposure.value <= -0.045
+    && Math.abs(contextFreeDelta.value) <= 0.015
+    && contextFreeDelta.interval95[0] <= 0
+    && contextFreeDelta.interval95[1] >= 0
+    ? "GO" as const
+    : "REFINE" as const;
+  return {
+    contractVersion: "phase81a-b2-independent-replay-v1",
+    selectedContextCount: input.contexts.length,
+    declaredContextCount: input.declaredContextCount,
+    selectionSeedsPerCandidate: TACTICAL_AGENCY_B2_SELECTION_SEEDS_PER_CANDIDATE,
+    replaySeedsPerContext: TACTICAL_AGENCY_B2_REPLAY_SEEDS_PER_CONTEXT,
+    simulatedMatchCount: input.contexts.length * (
+      (input.contexts[0]?.selectionWinShares.length ?? 0)
+        * TACTICAL_AGENCY_B2_SELECTION_SEEDS_PER_CANDIDATE
+        * 2
+      + 3 * TACTICAL_AGENCY_B2_REPLAY_SEEDS_PER_CONTEXT * 2
+    ),
+    counterMoveCeiling,
+    counterMoveExposure,
+    contextFreeDelta,
+    selectedContexts: input.contexts.map(({
+      counterMoveDeltas: _counterMoveDeltas,
+      exposureDeltas: _exposureDeltas,
+      contextFreeDeltas: _contextFreeDeltas,
+      ...context
+    }) => context),
+    decision,
+  };
+}
+
+function weightedReplayEstimate(
+  observations: readonly { readonly value: number; readonly weight: number }[],
+): TacticalAgencyConditionedReplayEstimate {
+  const value = observations.reduce(
+    (sum, observation) => sum + observation.value * observation.weight,
+    0,
+  );
+  const squaredWeightTotal = observations.reduce(
+    (sum, observation) => sum + observation.weight * observation.weight,
+    0,
+  );
+  const varianceOfMean = squaredWeightTotal >= 1
+    ? 0
+    : observations.reduce(
+      (sum, observation) => sum
+        + observation.weight * observation.weight * (observation.value - value) ** 2,
+      0,
+    ) / (1 - squaredWeightTotal);
+  const margin = 1.96 * Math.sqrt(varianceOfMean);
+  return { value, interval95: [value - margin, value + margin] };
 }
 
 /** Multiplicative facts already consumed by the canonical analytic threat. */

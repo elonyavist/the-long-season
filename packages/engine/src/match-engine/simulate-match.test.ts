@@ -105,6 +105,39 @@ test("optional explanation trace is deterministic for the same seed", () => {
   assert.equal(JSON.stringify(first.explanationTrace), JSON.stringify(second.explanationTrace));
 });
 
+test("explicit lateral focus reaches both the minute loop and its explanation", () => {
+  let balancedHomeExpectedGoals = 0;
+  let focusedHomeExpectedGoals = 0;
+  for (let index = 0; index < 120; index += 1) {
+    const context = validContext({
+      fixtureValue: `fixture:lateral-focus-${String(index).padStart(3, "0")}`,
+      minuteCount: 90,
+    });
+    const balanced = simulateMatch(context);
+    const focused = simulateMatch(context, {
+      lateralFocusBySide: { home: "left", away: "right" },
+    });
+    balancedHomeExpectedGoals += balanced.stats.telemetry?.stats.home.expectedGoals ?? 0;
+    focusedHomeExpectedGoals += focused.stats.telemetry?.stats.home.expectedGoals ?? 0;
+  }
+
+  assert.notEqual(focusedHomeExpectedGoals, balancedHomeExpectedGoals);
+
+  const context = validContext({ fixtureValue: "fixture:lateral-focus-trace", minuteCount: 90 });
+  const focused = simulateMatch(context, {
+    includeExplanationTrace: true,
+    lateralFocusBySide: { home: "left", away: "right" },
+  });
+  const replay = simulateMatch(context, {
+    includeExplanationTrace: true,
+    lateralFocusBySide: { home: "left", away: "right" },
+  });
+  const balanced = simulateMatch(context, { includeExplanationTrace: true });
+
+  assert.deepEqual(focused, replay);
+  assert.notDeepEqual(focused.explanationTrace?.home.routes, balanced.explanationTrace?.home.routes);
+});
+
 test("different fixture IDs can produce different output with the same seed", () => {
   const first = JSON.stringify(simulateMatch(validContext({ fixtureValue: "fixture:variance-a", minuteCount: 90 })));
   const second = JSON.stringify(simulateMatch(validContext({ fixtureValue: "fixture:variance-b", minuteCount: 90 })));

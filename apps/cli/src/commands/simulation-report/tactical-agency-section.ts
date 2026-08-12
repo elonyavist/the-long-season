@@ -6,7 +6,9 @@ import {
   firstCoherentTacticalAgencyComponent,
   poolTacticalAgencyLowBlockResults,
   runTacticalAgencyLowBlockSeries,
+  selectTacticalAgencyConditionedReplayContexts,
   summarizeTacticalAgencyConditionedAnalysis,
+  summarizeTacticalAgencyConditionedReplay,
   summarizeTacticalAgencyConditionedAttribution,
   summarizeTacticalAgencyStructuralAnalysis,
   type TacticalAgencyAuditReport,
@@ -16,10 +18,13 @@ import {
   type TacticalAgencyB21ComponentKey,
   type TacticalAgencyConditionedAttributionMatchup,
   type TacticalAgencyConditionedContextRow,
+  type TacticalAgencyConditionedReplayMatchupInput,
+  type TacticalAgencyConditionedReplaySummary,
   type TacticalAgencyRoleSummary,
   type TacticalAgencySelectionRow,
   type TacticalAgencyStructuralAnalysis,
   type TacticalAgencyStructuralContextRow,
+  type TacticalShapeInvariantResult,
 } from "@game/simulation-tools";
 
 import { createFakeDomesticWorld, GENERATED_SQUAD_IDENTITY_KEYS } from "@game/content";
@@ -51,8 +56,12 @@ import {
   summarizeTacticalAgencyB21IdentityFamily,
   type TacticalAgencyB21FormationAttribution,
 } from "./tactical-agency-b2-attribution.ts";
-import { measureTacticalShapeQualityBands } from "./tactical-shape-section.ts";
 import {
+  createTacticalShapeSectionFacts,
+  measureTacticalShapeQualityBands,
+} from "./tactical-shape-section.ts";
+import {
+  runTacticalAgencyConditionedReplayWorker,
   runTacticalAgencyConditionedWorker,
   runTacticalAgencyStructuralWorker,
 } from "./tactical-agency-structural-worker.ts";
@@ -160,6 +169,15 @@ function pooledLowBlockForChart(
   worldSeeds: readonly string[],
   chart: TacticalAgencySquadChart,
 ): TacticalAgencyAuditReport["lowBlock"] {
+  return pooledLowBlockForWorldSeeds(input, worldSeeds, chart);
+}
+
+/** Pools the canonical low-block reader over an already-declared world set. */
+function pooledLowBlockForWorldSeeds(
+  input: Pick<Parameters<typeof runCheckpointA21>[0], "seedPrefix" | "pairedSeedCount">,
+  worldSeeds: readonly string[],
+  chart?: TacticalAgencySquadChart,
+): TacticalAgencyAuditReport["lowBlock"] {
   return poolTacticalAgencyLowBlockResults(
     worldSeeds.map((worldSeed) =>
       runTacticalAgencyLowBlockSeries(
@@ -167,7 +185,7 @@ function pooledLowBlockForChart(
           worldSeed,
           seedPrefix: input.seedPrefix,
           pairedSeedCount: input.pairedSeedCount,
-          reRoleAllClubsTo: chart,
+          ...(chart === undefined ? {} : { reRoleAllClubsTo: chart }),
         }),
       ),
     ),
@@ -228,13 +246,26 @@ export interface TacticalAgencyB2SetFacts {
   readonly population: readonly LeagueDiversityOpeningGateVerdict[];
   readonly populationHeld: boolean;
   readonly analysis: TacticalAgencyConditionedAnalysis;
-  readonly decision: "PASS_PHASE_1" | "REFINE" | "STOP_RETHINK";
+  readonly phaseOneDecision: "PASS_PHASE_1" | "REFINE" | "STOP_RETHINK";
+  readonly phaseTwo:
+    | { readonly status: "not_run_by_protocol" }
+    | {
+        readonly status: "completed";
+        readonly replay: TacticalAgencyConditionedReplaySummary;
+        readonly lowBlock: TacticalAgencyAuditReport["lowBlock"];
+        readonly lowBlockHeld: boolean;
+      };
+  readonly decision: "GO" | "REFINE" | "STOP_RETHINK";
 }
 
-/** Complete B2 Phase-1 result; replay is added only after an analytic pass. */
+/** Complete B2 result, including the unchanged original dominance readers. */
 export interface TacticalAgencyB2ProfileFacts {
   readonly sets: readonly TacticalAgencyB2SetFacts[];
-  readonly decision: "PASS_PHASE_1" | "REFINE" | "STOP_RETHINK";
+  readonly originalDominance: {
+    readonly invariants: readonly TacticalShapeInvariantResult[];
+    readonly held: boolean;
+  } | { readonly status: "not_run_by_protocol" };
+  readonly decision: "GO" | "REFINE" | "STOP_RETHINK";
   readonly workerCount: number;
   readonly elapsedMilliseconds: number;
   readonly calibrationVersions: Readonly<Record<string, string>>;
@@ -271,16 +302,26 @@ export interface TacticalAgencyB21AProfileFacts {
   readonly worldSeeds: readonly string[];
 }
 
-interface TacticalAgencyConditionedMeasuredSet extends TacticalAgencyB2SetFacts {
+interface TacticalAgencyConditionedMeasuredSet {
+  readonly setName: string;
+  readonly worldSeeds: readonly string[];
+  readonly populationRows: readonly TacticalAgencyConditionedPopulationRow[];
+  readonly population: readonly LeagueDiversityOpeningGateVerdict[];
+  readonly populationHeld: boolean;
+  readonly analysis: TacticalAgencyConditionedAnalysis;
+  readonly decision: "PASS_PHASE_1" | "REFINE" | "STOP_RETHINK";
   readonly responses: ReturnType<typeof buildTacticalAgencyConditionedResponses>;
-  readonly matchups: readonly TacticalAgencyConditionedAttributionMatchup[];
+  readonly matchups: readonly (TacticalAgencyConditionedAttributionMatchup
+    & TacticalAgencyConditionedReplayMatchupInput)[];
   readonly contexts: readonly TacticalAgencyConditionedContextRow[];
   readonly clubSelections: readonly TacticalAgencyConditionedClubSelection[];
+  readonly engineConfig: ReturnType<typeof runTacticalAgencyConditionedWorld>["engineConfig"];
+  readonly matchTacticsCalibration: ReturnType<typeof runTacticalAgencyConditionedWorld>["matchTacticsCalibration"];
 }
 
 interface TacticalAgencyConditionedMeasurement {
   readonly sets: readonly TacticalAgencyConditionedMeasuredSet[];
-  readonly decision: TacticalAgencyB2ProfileFacts["decision"];
+  readonly decision: "PASS_PHASE_1" | "REFINE" | "STOP_RETHINK";
   readonly workerCount: number;
   readonly elapsedMilliseconds: number;
   readonly calibrationVersions: Readonly<Record<string, string>>;
@@ -338,16 +379,121 @@ export async function createTacticalAgencyBProfileFacts(input: {
   };
 }
 
-/** Runs B2 Phase 1 over both frozen real-career seed sets. */
+/** Runs complete B2, opening Phase 2 only after both analytic sets pass. */
 export async function createTacticalAgencyB2ProfileFacts(input: {
   readonly workerCount: number;
 }): Promise<TacticalAgencyB2ProfileFacts> {
+  const startedAt = performance.now();
   const measured = await measureTacticalAgencyConditionedPopulation(input.workerCount);
+  if (measured.decision !== "PASS_PHASE_1") {
+    return {
+      ...measured,
+      sets: measured.sets.map(({ responses: _responses, matchups: _matchups, contexts: _contexts,
+        clubSelections: _clubSelections, engineConfig: _engineConfig,
+        matchTacticsCalibration: _matchTacticsCalibration, decision, ...set }) => ({
+        ...set,
+        phaseOneDecision: decision,
+        phaseTwo: { status: "not_run_by_protocol" },
+        decision: decision === "STOP_RETHINK" ? "STOP_RETHINK" : "REFINE",
+      })),
+      originalDominance: { status: "not_run_by_protocol" },
+      decision: measured.decision === "STOP_RETHINK" ? "STOP_RETHINK" : "REFINE",
+      elapsedMilliseconds: performance.now() - startedAt,
+    };
+  }
+
+  const sets: TacticalAgencyB2SetFacts[] = [];
+  for (const [setIndex, set] of measured.sets.entries()) {
+    const selected = selectTacticalAgencyConditionedReplayContexts({
+      responses: set.responses,
+      contexts: set.contexts,
+      matchups: set.matchups,
+    });
+    const partitions = Array.from({ length: input.workerCount }, () =>
+      [] as typeof selected[number][]);
+    for (const [contextIndex, context] of selected.entries()) {
+      (partitions[contextIndex % input.workerCount] as typeof selected[number][]).push(context);
+    }
+    const completed = await Promise.all(partitions.map((contexts, partitionIndex) =>
+      runTacticalAgencyConditionedReplayWorker({
+        partitionIndex,
+        responses: set.responses,
+        contexts,
+        engineConfig: set.engineConfig,
+        matchTacticsCalibration: set.matchTacticsCalibration,
+        selectionSeedPrefix: `phase81a-b2-selection-v1-${setIndex}`,
+        replaySeedPrefix: `phase81a-b2-replay-v1-${setIndex}`,
+      })));
+    const replayRows = completed
+      .sort((left, right) => left.partitionIndex - right.partitionIndex)
+      .flatMap(({ contexts }) => contexts)
+      .sort((left, right) => left.contextIndex - right.contextIndex);
+    const replay = summarizeTacticalAgencyConditionedReplay({
+      declaredContextCount: set.analysis.declaredContextCount,
+      contexts: replayRows,
+    });
+    const lowBlock = pooledLowBlockForWorldSeeds(
+      {
+        seedPrefix: `phase81a-b2-low-block-v1-${setIndex}`,
+        pairedSeedCount: DEFAULT_TACTICAL_AGENCY_PAIRED_SEEDS,
+      },
+      set.worldSeeds,
+    );
+    const exchangeRate = lowBlock.ownLossPerConcededReduction;
+    const lowBlockHeld = lowBlock.concededExpectedGoalsReduction >= 0.08
+      && typeof exchangeRate === "number"
+      && exchangeRate <= 2;
+    const {
+      responses: _responses,
+      matchups: _matchups,
+      contexts: _contexts,
+      clubSelections: _clubSelections,
+      engineConfig: _engineConfig,
+      matchTacticsCalibration: _matchTacticsCalibration,
+      decision: phaseOneDecision,
+      ...publicSet
+    } = set;
+    sets.push({
+      ...publicSet,
+      phaseOneDecision,
+      phaseTwo: { status: "completed", replay, lowBlock, lowBlockHeld },
+      decision: replaySignalIsAbsent(replay)
+        ? "STOP_RETHINK"
+        : replay.decision === "GO" && lowBlockHeld
+          ? "GO"
+          : "REFINE",
+    });
+  }
+
+  const originalDominanceInvariants = createTacticalShapeSectionFacts().report.invariants.filter(
+    ({ key }) => key === "no_dominant_composition"
+      || key === "no_dominant_formation"
+      || key === "no_dominant_tactic",
+  );
+  const originalDominance = {
+    invariants: originalDominanceInvariants,
+    held: originalDominanceInvariants.length === 3
+      && originalDominanceInvariants.every(({ status }) => status === "pass"),
+  };
   return {
     ...measured,
-    sets: measured.sets.map(({ responses: _responses, matchups: _matchups, contexts: _contexts,
-      clubSelections: _clubSelections, ...set }) => set),
+    sets,
+    originalDominance,
+    decision: sets.some(({ decision }) => decision === "STOP_RETHINK")
+      ? "STOP_RETHINK"
+      : sets.every(({ decision }) => decision === "GO") && originalDominance.held
+        ? "GO"
+        : "REFINE",
+    elapsedMilliseconds: performance.now() - startedAt,
   };
+}
+
+/** Independent replay cannot reproduce a selected signal when both intervals cross zero. */
+function replaySignalIsAbsent(replay: TacticalAgencyConditionedReplaySummary): boolean {
+  const includesZero = (interval: readonly [number, number]): boolean =>
+    interval[0] <= 0 && interval[1] >= 0;
+  return includesZero(replay.counterMoveCeiling.interval95)
+    && includesZero(replay.counterMoveExposure.interval95);
 }
 
 /** Runs B2.1 over fresh B2 facts without retaining a second simulation path. */
@@ -456,9 +602,11 @@ async function measureTacticalAgencyConditionedPopulation(
     for (const world of worlds) calibrationVersions.add(world.matchTacticsCalibrationVersion);
     const firstWorld = worlds[0];
     if (firstWorld === undefined) throw new Error(`B2 set has no worlds: ${seedSet.setName}`);
-    const matchups: TacticalAgencyConditionedAttributionMatchup[] = worlds.flatMap((world) =>
+    const matchups: (TacticalAgencyConditionedAttributionMatchup
+      & TacticalAgencyConditionedReplayMatchupInput)[] = worlds.flatMap((world) =>
       world.matchups.map((matchup) => ({
         matchupId: matchup.contextId,
+        reciprocalMatchupId: reciprocalConditionedMatchupId(matchup.contextId),
         worldSeed: matchup.worldSeed,
         competitionId: String(matchup.competitionId),
         ownClubId: String(matchup.own.clubId),
@@ -469,6 +617,8 @@ async function measureTacticalAgencyConditionedPopulation(
         opponentFormationKey: matchup.opponentFormationKey,
         ownShape: matchup.own.shape,
         opponentShape: matchup.opponent.shape,
+        own: matchup.own,
+        opponent: matchup.opponent,
       })));
     const contextCount = matchups.length * responses.length;
     const partitions = Array.from({ length: workerCount }, () => [] as number[]);
@@ -509,6 +659,8 @@ async function measureTacticalAgencyConditionedPopulation(
       matchups,
       contexts,
       clubSelections: worlds.flatMap(({ clubSelections }) => clubSelections),
+      engineConfig: firstWorld.engineConfig,
+      matchTacticsCalibration: firstWorld.matchTacticsCalibration,
     });
   }
 
@@ -532,6 +684,13 @@ async function measureTacticalAgencyConditionedPopulation(
     },
     worldSeeds: allWorldSeeds,
   };
+}
+
+/** B2 worlds name the two directed views explicitly; no guessed fallback. */
+function reciprocalConditionedMatchupId(contextId: string): string {
+  if (contextId.endsWith("|home")) return `${contextId.slice(0, -5)}|away`;
+  if (contextId.endsWith("|away")) return `${contextId.slice(0, -5)}|home`;
+  throw new Error(`B2 matchup has no canonical direction suffix: ${contextId}`);
 }
 
 /** Exact B2 facts pinned before B2.1 can inspect any new attribution output. */
