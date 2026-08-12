@@ -23,10 +23,10 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **L6.20 active:** L6.19 rejected and removed the bounded top-flight
-  ceiling tail: leaders fell `0.2595 -> 0.2310`. A fresh `7 x 10` now captures
-  accepted academy prospect class at generation and joins it to season-ten
-  leader conversion; all gameplay owners remain closed.
+- Phase 81A **L6.21 active:** L6.20 identifies routine-to-interesting intake:
+  routine owns `73.96%` of top-flight ceiling failures and converts only `4/375`
+  represented players into leaders. A paired `+0.12` annual top-flight
+  interesting chance opens; volume, higher classes and lower tiers stay fixed.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;
   conversion `0.7260` and ordinary assisted share `0.7540` remain healthy.
 - Phase 81A **L6.3G `REFINE`:** `8000` yields `1.4692/1.4645` direct-free-kick

@@ -2,7 +2,7 @@
 
 ## Status
 
-Planned.
+Done - `OWNER_IDENTIFIED: routine_to_interesting_transition`.
 
 ## User-Facing Reason
 
@@ -85,3 +85,21 @@ pnpm cli simulation-report \
   --report-output=simulation-out/phase81a-academy-prospect-class-l6-20-7x10.json
 git diff --check
 ```
+
+## Outcome
+
+The fresh `7 x 10` completed with exit `0`, exactly 21 competition
+observations, every class reachable and zero reconciliation failures. Artifact
+SHA-256:
+`a997213fcee4fa2ba294c367e1b9ee6d70e75d3b4d40abcda0ca54f374f97e44`.
+
+In First Division, routine players own `355/480 = 0.7396` of all mature stored-
+ceiling failures. Interesting prospects own `0.1875`; serious and rare combined
+only `0.0729`. Post-ceiling non-realization is `0.0734`, so development/minutes
+are not the majority owner. Among represented players, leaders are `4/375`
+routine, `17/179` interesting, `5/66` serious, and `7/22` rare.
+
+The next candidate may only convert a bounded share of annual First-Division
+routine intake into existing interesting prospects. It must conserve candidate
+volume, roles, serious/rare counts, lower-division distributions, current
+ability bands and every integrated guardrail.

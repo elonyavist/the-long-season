@@ -15,6 +15,7 @@ import {
   selectPlayerValuationConfig,
   selectPlayerWagePolicyConfig,
   type AnnualWorldIntakeExceptionalCandidate,
+  type AnnualWorldIntakeProviderDiagnostics,
   type AnnualWorldRoleContinuityDiagnostics,
   type FakeDomesticWorld,
 } from "@game/content";
@@ -281,6 +282,12 @@ export interface CareerWorldInspection {
     readonly seasonNumber: number;
     readonly careerState: CliCareerState;
     readonly diagnostics: AnnualWorldRoleContinuityDiagnostics;
+  }) => void;
+  /** Reads accepted youth provenance once, at the content/engine boundary. */
+  readonly observeAcceptedYouthProspectClasses?: (context: {
+    readonly seasonNumber: number;
+    readonly careerState: CliCareerState;
+    readonly candidates: AnnualWorldIntakeProviderDiagnostics["generatedYouthProspectClasses"];
   }) => void;
 }
 
@@ -4749,6 +4756,20 @@ function advanceCareerForReport(
   const acceptedYouthIds = new Set(
     advanced.facts.youthIntake.acceptedPlayerIds.map(String),
   );
+  const acceptedProspectClasses = annualIntakeDiagnostics.generatedYouthProspectClasses.filter(
+    ({ playerId }) => acceptedYouthIds.has(String(playerId)),
+  );
+  if (acceptedProspectClasses.length !== acceptedYouthIds.size) {
+    throw new Error(
+      `Accepted annual youth provenance mismatch in season ${context.seasonNumber}: `
+        + `${acceptedProspectClasses.length}/${acceptedYouthIds.size}`,
+    );
+  }
+  inspection?.observeAcceptedYouthProspectClasses?.({
+    seasonNumber: context.seasonNumber,
+    careerState: advanced.careerState,
+    candidates: acceptedProspectClasses,
+  });
   if (
     annualIntakeDiagnostics.allocation.potentialSixPlayerKeys.some(
       (id) => !acceptedYouthIds.has(id),

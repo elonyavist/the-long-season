@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import {
+  academyProspectClassWorldFacts,
   deriveSuccessionDownstreamPlayerOutcome,
+  evaluateAcademyProspectClassConversion,
   evaluateLeaderConversionFunnel,
   evaluateLeaderCeilingDistance,
   evaluateLeaderQualityFeasibility,
@@ -510,6 +512,76 @@ test("leader ceiling distance identifies level only on a reconciled majority", (
   }).decision, "STOP_RETHINK");
 });
 
+test("academy prospect provenance identifies a real routine ceiling majority", () => {
+  const competitions = ["competition:ita-1", "competition:ita-2", "competition:ita-3"];
+  const opening = competitions.flatMap((competitionId) => Array.from(
+    { length: 10 },
+    (_, index) => playerSeason({
+      competitionId,
+      playerId: `${competitionId}:leader-${index}`,
+      currentAbility: 15,
+      minutes: 2_000,
+      goals: 20 - index,
+      assists: 10 - index,
+    }),
+  ));
+  const generated = [
+    ...Array.from({ length: 6 }, (_, index) => ({
+      playerId: `routine-${index}`,
+      prospectClass: "routine" as const,
+      currentAbility: 12,
+      potentialRoom: 1,
+    })),
+    { playerId: "interesting", prospectClass: "interesting" as const, currentAbility: 13, potentialRoom: 1 },
+    { playerId: "serious", prospectClass: "serious" as const, currentAbility: 14, potentialRoom: 0.5 },
+    { playerId: "rare", prospectClass: "rare" as const, currentAbility: 14.9, potentialRoom: 0.2 },
+  ];
+  const facts = academyProspectClassWorldFacts({
+    worldSeed: "prospect-world",
+    provenance: generated.map(({ playerId, prospectClass }) => ({
+      playerId,
+      prospectClass,
+      generatedSeasonNumber: 6,
+      generationDivision: "first_division" as const,
+    })),
+    playerSeasons: [
+      ...opening,
+      ...generated.map(({ playerId, currentAbility, potentialRoom }) => playerSeason({
+        playerId,
+        currentAbility,
+        potentialRoom,
+        minutes: 900,
+      })),
+    ],
+    playerOrigins: [
+      ...opening.map(({ playerId }) => ({
+        playerId,
+        origin: "opening_senior" as const,
+        generatedSeasonNumber: 0,
+      })),
+      ...generated.map(({ playerId }) => ({
+        playerId,
+        origin: "annual_academy_intake" as const,
+        generatedSeasonNumber: 6,
+      })),
+    ],
+  });
+  const worlds = Array.from({ length: 7 }, (_, index) => ({
+    ...facts,
+    worldSeed: `prospect-world-${index + 1}`,
+  }));
+  const result = evaluateAcademyProspectClassConversion({ worlds, seasonCount: 10 });
+
+  assert.equal(result.decision, "OWNER_IDENTIFIED");
+  assert.equal(result.owner, "routine_to_interesting_transition");
+  assert.equal(result.firstDivisionStoredCeilingBelowShares.routine > 0.50, true);
+  assert.deepEqual(result.unreachableClasses, []);
+  assert.equal(evaluateAcademyProspectClassConversion({
+    worlds: [{ ...worlds[0]!, reconciliationFailureCount: 1 }, ...worlds.slice(1)],
+    seasonCount: 10,
+  }).decision, "STOP_RETHINK");
+});
+
 function arm(
   local: number,
   generated: number,
@@ -589,6 +661,7 @@ function downstreamCounts(
 
 function playerSeason(input: {
   readonly playerId: string;
+  readonly competitionId?: string;
   readonly role?: "striker" | "goalkeeper";
   readonly currentAbility: number;
   readonly potentialRoom?: number;
@@ -597,7 +670,7 @@ function playerSeason(input: {
   readonly assists?: number;
 }) {
   return {
-    competitionId: "competition:ita-1",
+    competitionId: input.competitionId ?? "competition:ita-1",
     seasonNumber: 10,
     playerId: input.playerId,
     clubId: "club:ita-1-01",

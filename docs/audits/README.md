@@ -16,6 +16,10 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_L6_20_ACADEMY_PROSPECT_CLASS_CONVERSION.md` -
+  **OWNER_IDENTIFIED: routine_to_interesting_transition.** Routine prospects
+  own `73.96%` of top-flight ceiling failures; serious/rare only `7.29%`.
+
 - `PHASE_81A_CHECKPOINT_L6_19_FIRST_DIVISION_CEILING_TAIL.md` - **`REFINE`;
   candidate removed.** A bounded five-star tail barely changes feasibility and
   reduces generated leaders; prospect-class provenance is the missing split.

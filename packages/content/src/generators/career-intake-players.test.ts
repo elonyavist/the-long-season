@@ -343,6 +343,16 @@ test("shared annual providers allocate once and do not inflate a full active sto
       ),
       true,
     );
+    assert.deepEqual(
+      diagnostics.generatedYouthProspectClasses.map(({ playerId }) => playerId),
+      candidates.map(({ player }) => player.id),
+    );
+    assert.equal(
+      diagnostics.generatedYouthProspectClasses.every(({ prospectClass }) =>
+        ["routine", "interesting", "serious", "rare"].includes(prospectClass)
+      ),
+      true,
+    );
     assert.throws(
       () => providers.createYouthIntakeCandidates({
         careerState,

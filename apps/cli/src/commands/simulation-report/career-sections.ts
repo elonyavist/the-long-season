@@ -11,6 +11,7 @@ import {
   squadIdentityPositionForSlot,
   type FakeDomesticWorld,
   type GeneratedSquadIdentityKey,
+  type ContextualProspectClass,
 } from "@game/content";
 import { createTranslator } from "@game/i18n";
 import {
@@ -106,6 +107,8 @@ import {
 } from "./historical-simulation-targets.ts";
 import {
   deriveSuccessionDownstreamPlayerOutcome,
+  academyProspectClassWorldFacts,
+  evaluateAcademyProspectClassConversion,
   evaluateLeaderConversionFunnel,
   evaluateLeaderCeilingDistance,
   evaluateLeaderQualityFeasibility,
@@ -172,7 +175,8 @@ export type CareerCheckpointKind =
   | "leader_conversion_l6_15"
   | "mature_leader_conversion_l6_15b"
   | "leader_quality_feasibility_l6_16"
-  | "leader_ceiling_distance_l6_18";
+  | "leader_ceiling_distance_l6_18"
+  | "academy_prospect_class_l6_20";
 
 /** Versioned readers sharing the one product-versus-legacy contest producer. */
 export type StrengthContestMode = "canary" | "full" | "retry_canary" | "retry_full";
@@ -221,6 +225,7 @@ const CHECKPOINT_OBSERVES_GENERATIONAL_SUCCESSION = {
   mature_leader_conversion_l6_15b: true,
   leader_quality_feasibility_l6_16: true,
   leader_ceiling_distance_l6_18: true,
+  academy_prospect_class_l6_20: true,
 } as const satisfies Readonly<Record<CareerCheckpointKind, boolean>>;
 
 /** Keeps observer and checkpoint-section routing on one exhaustive policy. */
@@ -252,8 +257,17 @@ interface CareerWorldProjection {
   readonly renewalArchitecture?: GenerationalRenewalArchitectureFacts;
   readonly standingsHierarchy?: StandingsHierarchyWorldFacts;
   readonly marketTargeting?: RoleAwareMarketWorldFacts;
+  readonly academyProspectClasses?: readonly AcademyProspectClassProvenanceFact[];
   readonly renewalNeedEpisodes?: readonly RenewalNeedEpisodeFact[];
   readonly renewalPopulationSignatures?: readonly RenewalPopulationSeasonSignature[];
+}
+
+interface AcademyProspectClassProvenanceFact {
+  readonly playerId: string;
+  readonly targetClubId: string;
+  readonly prospectClass: ContextualProspectClass;
+  readonly generatedSeasonNumber: number;
+  readonly generationDivision: "first_division" | "second_division" | "third_division";
 }
 
 interface RenewalPopulationSnapshot {
@@ -1220,7 +1234,10 @@ export async function createCareerSectionsFacts(input: {
             || input.leagueDiversityProfile?.checkpointKind === "strength_contest_l6_1d"
             || input.leagueDiversityProfile?.checkpointKind === "succession_target_pool_l6_9b"
             || input.leagueDiversityProfile?.checkpointKind === "succession_affordability_l6_9c"
-            || input.leagueDiversityProfile?.checkpointKind === "succession_affordability_l6_9d",
+            || input.leagueDiversityProfile?.checkpointKind === "succession_affordability_l6_9d"
+            || input.leagueDiversityProfile?.checkpointKind === "academy_prospect_class_l6_20",
+          collectAcademyProspectClasses:
+            input.leagueDiversityProfile?.checkpointKind === "academy_prospect_class_l6_20",
           assistSupply:
             input.leagueDiversityProfile?.checkpointKind === "assist_supply_l6_3c"
             || input.leagueDiversityProfile?.checkpointKind === "assist_eligibility_l6_3d"
@@ -1236,7 +1253,8 @@ export async function createCareerSectionsFacts(input: {
             || input.leagueDiversityProfile?.checkpointKind === "renewal_refinement_l6_1a"
             || input.leagueDiversityProfile?.checkpointKind === "succession_target_pool_l6_9b"
             || input.leagueDiversityProfile?.checkpointKind === "succession_affordability_l6_9c"
-            || input.leagueDiversityProfile?.checkpointKind === "succession_affordability_l6_9d",
+            || input.leagueDiversityProfile?.checkpointKind === "succession_affordability_l6_9d"
+            || input.leagueDiversityProfile?.checkpointKind === "academy_prospect_class_l6_20",
           standingsHierarchy:
             input.leagueDiversityProfile?.checkpointKind === "standings_hierarchy_l5_2"
             || input.leagueDiversityProfile?.checkpointKind === "integrated_player_world_l5_4"
@@ -1388,6 +1406,8 @@ export async function createCareerSectionsFacts(input: {
       ? evaluateLeaderQualityFeasibilityCheckpoint(worlds, input.seasonCount)
     : input.leagueDiversityProfile.checkpointKind === "leader_ceiling_distance_l6_18"
       ? evaluateLeaderCeilingDistanceCheckpoint(worlds, input.seasonCount)
+    : input.leagueDiversityProfile.checkpointKind === "academy_prospect_class_l6_20"
+      ? evaluateAcademyProspectClassCheckpoint(worlds, input.seasonCount)
     : input.leagueDiversityProfile.checkpointKind === "strength_contest_l6_1d"
       ? evaluateStrengthContestCheckpoint(
           worlds.map(requiredOwnerAttributionFacts),
@@ -1594,6 +1614,7 @@ function createCareerWorldProjection(input: {
   readonly analysisStrengthGapScale?: number;
   readonly collectSquadUse: boolean;
   readonly collectRenewalAnalysis: boolean;
+  readonly collectAcademyProspectClasses?: boolean;
   readonly renewalAblationArm?: RenewalAblationArm;
   readonly maximumActiveTalksOverride?: number;
   readonly aiMarketNeedSubmissionOrder?: "legacy" | "bounded_succession";
@@ -1606,6 +1627,7 @@ function createCareerWorldProjection(input: {
   const standingsHierarchySeasons: StandingsHierarchySeasonFact[] = [];
   const renewalNeedEpisodes: RenewalNeedEpisodeFact[] = [];
   const renewalPopulationSnapshots: RenewalPopulationSnapshot[] = [];
+  const academyProspectClasses: AcademyProspectClassProvenanceFact[] = [];
   const generationalObserver = input.generationalSuccession
     ? new GenerationalSuccessionObserver(input.seed)
     : undefined;
@@ -1814,6 +1836,31 @@ function createCareerWorldProjection(input: {
         });
         ownerAttributionObserver?.observeGeneratedIntakeRoles({ seasonNumber, diagnostics });
       },
+      ...(input.collectAcademyProspectClasses
+        ? {
+            observeAcceptedYouthProspectClasses: ({
+              seasonNumber,
+              careerState,
+              candidates,
+            }: Parameters<NonNullable<
+              CareerWorldInspection["observeAcceptedYouthProspectClasses"]
+            >>[0]) => {
+              for (const candidate of candidates) {
+                const club = careerState.gameState.clubs[candidate.targetClubId];
+                if (club === undefined) {
+                  throw new Error(`Academy prospect provenance lost club ${candidate.targetClubId}`);
+                }
+                academyProspectClasses.push({
+                  playerId: String(candidate.playerId),
+                  targetClubId: String(candidate.targetClubId),
+                  prospectClass: candidate.prospectClass,
+                  generatedSeasonNumber: seasonNumber,
+                  generationDivision: club.category,
+                });
+              }
+            },
+          }
+        : {}),
     },
   );
   rememberPlayerNames(report.finalCareerState, names);
@@ -1918,6 +1965,7 @@ function createCareerWorldProjection(input: {
     ...(renewalArchitecture === undefined ? {} : { renewalArchitecture }),
     ...(standingsHierarchy === undefined ? {} : { standingsHierarchy }),
     ...(marketTargeting === undefined ? {} : { marketTargeting }),
+    ...(input.collectAcademyProspectClasses ? { academyProspectClasses } : {}),
     ...(!input.collectRenewalAnalysis && input.renewalAblationArm === undefined
       ? {}
       : { renewalNeedEpisodes }),
@@ -3459,6 +3507,28 @@ function evaluateLeaderCeilingDistanceCheckpoint(
       const architecture = requiredRenewalArchitectureFacts(world);
       return leaderCeilingDistanceWorldFacts({
         worldSeed: world.seed,
+        playerSeasons: owner.playerSeasons,
+        playerOrigins: architecture.playerOrigins,
+      });
+    }),
+    seasonCount,
+  });
+}
+
+function evaluateAcademyProspectClassCheckpoint(
+  worlds: readonly CareerWorldProjection[],
+  seasonCount: number,
+) {
+  return evaluateAcademyProspectClassConversion({
+    worlds: worlds.map((world) => {
+      const owner = requiredOwnerAttributionFacts(world);
+      const architecture = requiredRenewalArchitectureFacts(world);
+      if (world.academyProspectClasses === undefined) {
+        throw new Error(`Career world ${world.seed} omitted academy prospect provenance`);
+      }
+      return academyProspectClassWorldFacts({
+        worldSeed: world.seed,
+        provenance: world.academyProspectClasses,
         playerSeasons: owner.playerSeasons,
         playerOrigins: architecture.playerOrigins,
       });

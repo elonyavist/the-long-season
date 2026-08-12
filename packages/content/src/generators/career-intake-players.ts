@@ -25,7 +25,11 @@ import { getNameCulturePool } from "../identity/name-cultures.ts";
 import { selectNationality, type LeagueNationCode } from "../identity/nationality-distribution.ts";
 import { assembleGeneratedPlayer } from "./generated-player-factory.ts";
 import { getGeneratedPlayerArchetype, type GeneratedPlayerArchetypeKey } from "./player-archetypes.ts";
-import { currentAbilityRarityLaneForYouthProspect } from "./player-potential-rarity.ts";
+import {
+  contextualProspectClassForArchetype,
+  currentAbilityRarityLaneForYouthProspect,
+  type ContextualProspectClass,
+} from "./player-potential-rarity.ts";
 import {
   buildContextualProspectJointProfile,
   type ContextualProspectCeilingConstraint,
@@ -203,6 +207,12 @@ export interface AnnualWorldIntakeProviderDiagnostics {
   readonly allocatedStoredCeilingSixPlacements:
     readonly AnnualWorldIntakeExceptionalCandidate[];
   readonly generatedStoredCeilingSixPlayerIds: readonly PlayerId[];
+  /** Generation-time provenance that cannot be reconstructed from Player. */
+  readonly generatedYouthProspectClasses: readonly {
+    readonly playerId: PlayerId;
+    readonly targetClubId: ClubId;
+    readonly prospectClass: ContextualProspectClass;
+  }[];
 }
 
 /** One generated candidate at the content boundary, before engine acceptance. */
@@ -313,6 +323,7 @@ export function createAnnualWorldIntakeCandidateProviders(
       candidates,
     });
     const generated: AnnualWorldYouthIntakeCandidate[] = [];
+    const generatedSourceByPlayerId = new Map<PlayerId, CareerIntakeGeneratedPlayer>();
 
     for (const clubId of context.careerState.gameState.clubIds) {
       const club = context.careerState.gameState.clubs[clubId];
@@ -337,6 +348,10 @@ export function createAnnualWorldIntakeCandidateProviders(
         ratingScale,
       });
       for (const candidate of batch.generatedPlayers) {
+        if (generatedSourceByPlayerId.has(candidate.player.id)) {
+          throw new Error(`Duplicate annual intake prospect provenance ${candidate.player.id}`);
+        }
+        generatedSourceByPlayerId.set(candidate.player.id, candidate);
         generated.push({
           targetClubId: clubId,
           player: candidate.player,
@@ -361,6 +376,22 @@ export function createAnnualWorldIntakeCandidateProviders(
           allocation.potentialSixPlayerKeys.includes(String(candidate.player.id))
         )
         .map((candidate) => candidate.player.id),
+      generatedYouthProspectClasses: context.careerState.gameState.clubIds.flatMap(
+        (clubId) => {
+          const batch = generated.filter(({ targetClubId }) => targetClubId === clubId);
+          return batch.map(({ player }) => {
+            const source = generatedSourceByPlayerId.get(player.id);
+            if (source === undefined) {
+              throw new Error(`Annual intake prospect provenance lost ${player.id}`);
+            }
+            return {
+              playerId: player.id,
+              targetClubId: clubId,
+              prospectClass: contextualProspectClassForArchetype(source.archetypeKey),
+            };
+          });
+        },
+      ),
     };
     return youthCandidates;
   };

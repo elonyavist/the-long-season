@@ -1,3 +1,5 @@
+import type { ContextualProspectClass } from "@game/content";
+
 import {
   isCareerGeneratedOrigin,
   type GenerationalOrigin,
@@ -580,6 +582,231 @@ export interface LeaderCeilingDistanceWorldFacts {
     readonly positiveShortfallMaximum: number | "not_observed";
   }[];
   readonly reconciliationFailureCount: number;
+}
+
+export const ACADEMY_PROSPECT_CLASSES = [
+  "routine",
+  "interesting",
+  "serious",
+  "rare",
+] as const satisfies readonly ContextualProspectClass[];
+
+export interface AcademyProspectClassWorldFacts {
+  readonly worldSeed: string;
+  readonly competitionCount: number;
+  readonly counts: Readonly<Record<ContextualProspectClass, AcademyProspectClassCounts>>;
+  readonly firstDivisionCounts:
+    Readonly<Record<ContextualProspectClass, AcademyProspectClassCounts>>;
+  readonly reconciliationFailureCount: number;
+}
+
+export interface AcademyProspectClassCounts {
+  readonly generated: number;
+  readonly activeSeasonTen: number;
+  readonly representedSeasonTen: number;
+  readonly leader: number;
+  readonly belowLeaderQuality: number;
+  readonly storedCeilingBelowLeader: number;
+  readonly sufficientCeilingNotRealized: number;
+}
+
+/** Joins accepted generation provenance to the canonical season-ten lanes. */
+export function academyProspectClassWorldFacts(input: {
+  readonly worldSeed: string;
+  readonly provenance: readonly {
+    readonly playerId: string;
+    readonly prospectClass: ContextualProspectClass;
+    readonly generatedSeasonNumber: number;
+    readonly generationDivision: "first_division" | "second_division" | "third_division";
+  }[];
+  readonly playerSeasons: readonly OwnerAttributionPlayerSeasonFact[];
+  readonly playerOrigins: readonly {
+    readonly playerId: string;
+    readonly origin: GenerationalOrigin;
+    readonly generatedSeasonNumber: number;
+  }[];
+}): AcademyProspectClassWorldFacts {
+  const conversion = deriveLeaderConversionWorld({
+    worldSeed: input.worldSeed,
+    playerSeasons: input.playerSeasons,
+    playerOrigins: input.playerOrigins,
+    cohort: "mature_by_season_six",
+  });
+  const counts = emptyAcademyProspectClassCounts();
+  const firstDivisionCounts = emptyAcademyProspectClassCounts();
+  const originByPlayerId = new Map(input.playerOrigins.map((row) => [row.playerId, row]));
+  const activeSeasonTen = new Set(
+    input.playerSeasons.filter(({ seasonNumber }) => seasonNumber === 10)
+      .map(({ playerId }) => playerId),
+  );
+  const representedByPlayerId = new Map(
+    conversion.representedPlayers.map((row) => [row.playerId, row]),
+  );
+  const observedIds = new Set<string>();
+  let reconciliationFailureCount = conversion.facts.reconciliationFailureCount;
+
+  for (const row of input.provenance) {
+    if (row.generatedSeasonNumber > 6) continue;
+    if (observedIds.has(row.playerId)) reconciliationFailureCount += 1;
+    observedIds.add(row.playerId);
+    const origin = originByPlayerId.get(row.playerId);
+    if (
+      origin?.origin !== "annual_academy_intake"
+      || origin.generatedSeasonNumber !== row.generatedSeasonNumber
+    ) reconciliationFailureCount += 1;
+    incrementProspectClassCounts(counts[row.prospectClass], row, activeSeasonTen,
+      representedByPlayerId.get(row.playerId));
+    if (row.generationDivision === "first_division") {
+      incrementProspectClassCounts(firstDivisionCounts[row.prospectClass], row,
+        activeSeasonTen, representedByPlayerId.get(row.playerId));
+    }
+  }
+  return {
+    worldSeed: input.worldSeed,
+    competitionCount: conversion.facts.competitionCount,
+    counts,
+    firstDivisionCounts,
+    reconciliationFailureCount,
+  };
+}
+
+/** Applies the preregistered L6.20 source-class majority rule. */
+export function evaluateAcademyProspectClassConversion(input: {
+  readonly worlds: readonly AcademyProspectClassWorldFacts[];
+  readonly seasonCount: number;
+}) {
+  const counts = combineAcademyProspectClassCounts(input.worlds, "counts");
+  const firstDivisionCounts = combineAcademyProspectClassCounts(
+    input.worlds,
+    "firstDivisionCounts",
+  );
+  const competitionCount = input.worlds.reduce(
+    (total, world) => total + world.competitionCount,
+    0,
+  );
+  const reconciliationFailureCount = input.worlds.reduce(
+    (total, world) => total + world.reconciliationFailureCount,
+    0,
+  );
+  const unreachableClasses = ACADEMY_PROSPECT_CLASSES.filter(
+    (prospectClass) => counts[prospectClass].generated === 0,
+  );
+  const storedCeilingBelowCount = ACADEMY_PROSPECT_CLASSES.reduce(
+    (total, prospectClass) => total
+      + firstDivisionCounts[prospectClass].storedCeilingBelowLeader,
+    0,
+  );
+  const belowQualityCount = ACADEMY_PROSPECT_CLASSES.reduce(
+    (total, prospectClass) => total + firstDivisionCounts[prospectClass].belowLeaderQuality,
+    0,
+  );
+  const sufficientCeilingNotRealizedCount = ACADEMY_PROSPECT_CLASSES.reduce(
+    (total, prospectClass) => total
+      + firstDivisionCounts[prospectClass].sufficientCeilingNotRealized,
+    0,
+  );
+  const shares = Object.fromEntries(ACADEMY_PROSPECT_CLASSES.map((prospectClass) => [
+    prospectClass,
+    storedCeilingBelowCount === 0
+      ? 0
+      : firstDivisionCounts[prospectClass].storedCeilingBelowLeader
+        / storedCeilingBelowCount,
+  ])) as Record<ContextualProspectClass, number>;
+  const highShare = shares.serious + shares.rare;
+  const postCeilingShare = belowQualityCount === 0
+    ? 0
+    : sufficientCeilingNotRealizedCount / belowQualityCount;
+  const structuralFailure = input.worlds.length !== 7
+    || input.seasonCount !== 10
+    || competitionCount !== 21
+    || storedCeilingBelowCount === 0
+    || reconciliationFailureCount > 0
+    || unreachableClasses.length > 0;
+  const owner = postCeilingShare >= 0.50
+    ? "post_ceiling_conversion" as const
+    : shares.routine >= 0.50
+      ? "routine_to_interesting_transition" as const
+      : shares.interesting >= 0.50
+        ? "interesting_ceiling_distribution" as const
+        : highShare >= 0.50
+          ? "high_ceiling_distribution" as const
+          : "mixed" as const;
+  return {
+    decision: structuralFailure
+      ? "STOP_RETHINK" as const
+      : owner === "mixed"
+        ? "MIXED" as const
+        : "OWNER_IDENTIFIED" as const,
+    owner: structuralFailure ? "structural_reconciliation" as const : owner,
+    counts,
+    firstDivisionCounts,
+    firstDivisionStoredCeilingBelowShares: shares,
+    highCeilingCombinedShare: highShare,
+    postCeilingShare,
+    competitionCount,
+    reconciliationFailureCount,
+    unreachableClasses,
+    worlds: input.worlds,
+  };
+}
+
+type MutableAcademyProspectClassCounts = {
+  -readonly [Key in keyof AcademyProspectClassCounts]: AcademyProspectClassCounts[Key];
+};
+
+function emptyAcademyProspectClassCounts(): Record<
+  ContextualProspectClass,
+  MutableAcademyProspectClassCounts
+> {
+  return Object.fromEntries(ACADEMY_PROSPECT_CLASSES.map((prospectClass) => [
+    prospectClass,
+    {
+      generated: 0,
+      activeSeasonTen: 0,
+      representedSeasonTen: 0,
+      leader: 0,
+      belowLeaderQuality: 0,
+      storedCeilingBelowLeader: 0,
+      sufficientCeilingNotRealized: 0,
+    },
+  ])) as Record<ContextualProspectClass, MutableAcademyProspectClassCounts>;
+}
+
+function incrementProspectClassCounts(
+  counts: MutableAcademyProspectClassCounts,
+  provenance: { readonly playerId: string },
+  activeSeasonTen: ReadonlySet<string>,
+  represented: RepresentedGeneratedPlayerFact | undefined,
+): void {
+  counts.generated += 1;
+  if (activeSeasonTen.has(provenance.playerId)) counts.activeSeasonTen += 1;
+  if (represented === undefined) return;
+  counts.representedSeasonTen += 1;
+  if (represented.stage === "season_ten_leader") counts.leader += 1;
+  if (represented.stage !== "below_role_leader_quality") return;
+  counts.belowLeaderQuality += 1;
+  if (represented.currentAbility + represented.potentialRoom < represented.qualityFloor) {
+    counts.storedCeilingBelowLeader += 1;
+  } else {
+    counts.sufficientCeilingNotRealized += 1;
+  }
+}
+
+function combineAcademyProspectClassCounts(
+  worlds: readonly AcademyProspectClassWorldFacts[],
+  key: "counts" | "firstDivisionCounts",
+): Record<ContextualProspectClass, AcademyProspectClassCounts> {
+  const combined = emptyAcademyProspectClassCounts();
+  for (const world of worlds) {
+    for (const prospectClass of ACADEMY_PROSPECT_CLASSES) {
+      const source = world[key][prospectClass];
+      const target = combined[prospectClass];
+      for (const metric of Object.keys(source) as (keyof AcademyProspectClassCounts)[]) {
+        target[metric] += source[metric];
+      }
+    }
+  }
+  return combined;
 }
 
 /** Reuses the leader conversion join to measure stored-ceiling distance. */
