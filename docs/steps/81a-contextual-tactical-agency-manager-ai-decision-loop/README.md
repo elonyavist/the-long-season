@@ -312,7 +312,7 @@ contexts; it never owns the analytic diversity gate.
 | 06B29Z | [stationary ceiling target distribution](06b29z-checkpoint-l6-29-stationary-ceiling-target-distribution.md) | no | Done: cached instrument invalid |
 | 06B29Z1 | [generation-time stationary ceiling distribution](06b29z1-checkpoint-l6-29a-generation-time-stationary-ceiling.md) | no | Done: routine owner |
 | 06B29Z2 | [competition-role stationary ceiling quota](06b29z2-competition-role-stationary-ceiling-quota.md) | yes | Done: `STOP / RETHINK`; removed |
-| 06B29Z3 | [routine-youth stationary runway](06b29z3-routine-youth-stationary-runway.md) | yes | Active: stable authored candidate |
+| 06B29Z3 | [routine-youth stationary runway](06b29z3-routine-youth-stationary-runway.md) | yes | Done: `GO` in-sample and OOS |
 | 06C | [Checkpoint B2 conditioned tactical ceiling](06c-checkpoint-b2-conditioned-tactical-ceiling.md) | no | GO authorizes 07 |
 | 07 | [player task execution](07-player-task-execution.md) | yes | Step 08 |
 | 08 | [squad identity and lateral execution](08-squad-identity-and-lateral-execution.md) | yes | Step 09 |

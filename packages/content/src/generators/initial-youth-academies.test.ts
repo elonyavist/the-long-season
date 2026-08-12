@@ -38,6 +38,7 @@ import {
 } from "./player-potential-rarity.ts";
 import { ContextualProspectJointProfileError } from "./player-prospect-joint-profile.ts";
 import { primaryRoleForPosition } from "./player-role-identity.ts";
+import { routineYouthStationaryRunwayTarget } from "./routine-youth-stationary-runway.ts";
 
 const CAREER_START_EPOCH_DAY = fromISO("2026-08-01");
 
@@ -86,6 +87,49 @@ test("a real generated division reaches all roles and balances every flank", () 
 
 test("generateInitialYouthAcademies is deterministic for the same seed", () => {
   assert.deepEqual(generateInitialYouthAcademies(input("stable-academy")), generateInitialYouthAcademies(input("stable-academy")));
+});
+
+test("the routine-youth runway preserves academy identities and current ability while only raising selected ceilings", () => {
+  const baseInput = divisionInput("academy-stationary-runway");
+  const control = generateInitialYouthAcademies({
+    ...baseInput,
+    useRoutineYouthStationaryRunway: false,
+  });
+  const candidate = generateInitialYouthAcademies({
+    ...baseInput,
+    useRoutineYouthStationaryRunway: true,
+  });
+  let changedPotentialCount = 0;
+  let effectiveAssignmentCount = 0;
+
+  assert.deepEqual(candidate.playerIds, control.playerIds);
+  for (const id of control.playerIds) {
+    const before = control.players[id];
+    const after = candidate.players[id];
+    assert.ok(before !== undefined && after !== undefined);
+    assert.equal(candidate.playerArchetypes[id], control.playerArchetypes[id]);
+    assert.deepEqual(after.abilities, before.abilities);
+    assert.deepEqual(after.naturalPositions, before.naturalPositions);
+    assert.equal(after.primaryRole, before.primaryRole);
+    assert.equal(after.birthDate, before.birthDate);
+    const profile = getPlayerRoleProfile(before.primaryRole);
+    const beforePotential = Number(rolePotentialAbility(before.potential, profile));
+    const afterPotential = Number(rolePotentialAbility(after.potential, profile));
+    assert.equal(afterPotential >= beforePotential, true);
+    const target = candidate.playerArchetypes[id] === "normal_youth"
+      ? routineYouthStationaryRunwayTarget({
+          worldSeed: baseInput.worldSeed,
+          playerKey: String(id),
+          division: "third_division",
+          role: before.primaryRole,
+        })
+      : undefined;
+    if (target !== undefined && target > beforePotential) effectiveAssignmentCount += 1;
+    if (afterPotential !== beforePotential) changedPotentialCount += 1;
+  }
+
+  assert.equal(changedPotentialCount, effectiveAssignmentCount);
+  assert.equal(changedPotentialCount > 0, true);
 });
 
 test("generateInitialYouthAcademies exposes deterministic youth-development levels", () => {

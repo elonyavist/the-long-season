@@ -55,15 +55,15 @@ test("CLI builds the canonical three-division topology and shared identity hash"
   );
   // RE-RECORDED for Phase 81A squad identities and Step 06A's competition-
   // balanced assignment and the linked v10 projection bundle:
-  // `b12d5dd0` -> `620ad19b` -> `f1527230` -> `958f692d` -> `0268597d` -> `aca4502a` -> `ee653cba` -> `cf92db55` -> `da43409b`.
-  // The last move is Step 06B16's v9 market policy and soft academy blueprint. This
+  // `b12d5dd0` -> `620ad19b` -> `f1527230` -> `958f692d` -> `0268597d` -> `aca4502a` -> `ee653cba` -> `cf92db55` -> `da43409b` -> `a9a6a37e`.
+  // The last move is L6.31's adopted ordinary-youth stationary runway. This
   // is a continuity record - it pins that CLI and web build the *same* world,
   // not that the world has a particular shape - and giving each club its own
   // depth chart changes every generated player's position, so the hash was
   // always going to move. The same value is asserted in
   // `apps/web/src/runtime/web-career-runtime.test.ts`; the pair only means
   // something while both say the same thing, so they move together or not at all.
-  assert.equal(canonicalCareerIdentityHash(state), "da43409b");
+  assert.equal(canonicalCareerIdentityHash(state), "a9a6a37e");
 });
 
 test("CLI rejects a career with a mismatched immutable calibration version", () => {

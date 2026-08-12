@@ -109,6 +109,10 @@ export const SIMULATION_REPORT_PROFILE_IDS = [
   "phase81a-renewal-ladder-l6-26-cached",
   "phase81a-population-stationarity-l6-27-cached",
   "phase81a-generation-time-stationary-l6-29a-7x10",
+  "phase81a-routine-youth-runway-l6-31-control-7x10",
+  "phase81a-routine-youth-runway-l6-31-candidate-7x10",
+  "phase81a-routine-youth-runway-l6-31-oos-control-7x10",
+  "phase81a-routine-youth-runway-l6-31-oos-candidate-7x10",
   "phase81a-renewal-ablation-l6-1-control-7x10",
   "phase81a-renewal-ablation-l6-1-market-7x10",
   "phase81a-renewal-ablation-l6-1-blueprint-7x10",
@@ -179,6 +183,10 @@ const CAREER_PROFILE_CHECKPOINT_KIND = {
   "phase81a-renewal-ladder-l6-26-cached": "renewal_ladder_l6_26",
   "phase81a-population-stationarity-l6-27-cached": "population_stationarity_l6_27",
   "phase81a-generation-time-stationary-l6-29a-7x10": "generation_time_stationary_l6_29a",
+  "phase81a-routine-youth-runway-l6-31-control-7x10": "routine_youth_runway_l6_31",
+  "phase81a-routine-youth-runway-l6-31-candidate-7x10": "routine_youth_runway_l6_31",
+  "phase81a-routine-youth-runway-l6-31-oos-control-7x10": "routine_youth_runway_l6_31",
+  "phase81a-routine-youth-runway-l6-31-oos-candidate-7x10": "routine_youth_runway_l6_31",
   "phase81a-renewal-ablation-l6-1-control-7x10": "renewal_ablation_l6_1",
   "phase81a-renewal-ablation-l6-1-market-7x10": "renewal_ablation_l6_1",
   "phase81a-renewal-ablation-l6-1-blueprint-7x10": "renewal_ablation_l6_1",
@@ -244,6 +252,10 @@ const CAREER_PROFILE_CACHE_SUFFIX = {
   "phase81a-renewal-ladder-l6-26-cached": "-facts-v1",
   "phase81a-population-stationarity-l6-27-cached": "-facts-v1",
   "phase81a-generation-time-stationary-l6-29a-7x10": "-facts-v1",
+  "phase81a-routine-youth-runway-l6-31-control-7x10": "-facts-v2",
+  "phase81a-routine-youth-runway-l6-31-candidate-7x10": "-facts-v2",
+  "phase81a-routine-youth-runway-l6-31-oos-control-7x10": "-facts-v2",
+  "phase81a-routine-youth-runway-l6-31-oos-candidate-7x10": "-facts-v2",
   "phase81a-renewal-ablation-l6-1-control-7x10": "-facts-v2",
   "phase81a-renewal-ablation-l6-1-market-7x10": "-facts-v2",
   "phase81a-renewal-ablation-l6-1-blueprint-7x10": "-facts-v2",
@@ -858,6 +870,66 @@ export const SIMULATION_REPORT_PROFILES = {
       includedSectionIds: CAREER_SECTION_IDS,
       detail: "diagnostic",
       seedPrefix: "phase81a-academy-prospect-class-l6-20-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-routine-youth-runway-l6-31-control-7x10": {
+    id: "phase81a-routine-youth-runway-l6-31-control-7x10",
+    titleKey: "simulationReport.profile.phase81aRoutineYouthRunwayL6_31Control.title",
+    descriptionKey: "simulationReport.profile.phase81aRoutineYouthRunwayL6_31Control.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-routine-youth-runway-l6-31-control-7x10",
+      worldCount: 7,
+      seasonCount: 10,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-academy-prospect-class-l6-20-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-routine-youth-runway-l6-31-candidate-7x10": {
+    id: "phase81a-routine-youth-runway-l6-31-candidate-7x10",
+    titleKey: "simulationReport.profile.phase81aRoutineYouthRunwayL6_31Candidate.title",
+    descriptionKey: "simulationReport.profile.phase81aRoutineYouthRunwayL6_31Candidate.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-routine-youth-runway-l6-31-candidate-7x10",
+      worldCount: 7,
+      seasonCount: 10,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-academy-prospect-class-l6-20-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-routine-youth-runway-l6-31-oos-control-7x10": {
+    id: "phase81a-routine-youth-runway-l6-31-oos-control-7x10",
+    titleKey: "simulationReport.profile.phase81aRoutineYouthRunwayL6_31Control.title",
+    descriptionKey: "simulationReport.profile.phase81aRoutineYouthRunwayL6_31Control.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-routine-youth-runway-l6-31-oos-control-7x10",
+      worldCount: 7,
+      seasonCount: 10,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-routine-youth-runway-l6-31-oos-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-routine-youth-runway-l6-31-oos-candidate-7x10": {
+    id: "phase81a-routine-youth-runway-l6-31-oos-candidate-7x10",
+    titleKey: "simulationReport.profile.phase81aRoutineYouthRunwayL6_31Candidate.title",
+    descriptionKey: "simulationReport.profile.phase81aRoutineYouthRunwayL6_31Candidate.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-routine-youth-runway-l6-31-oos-candidate-7x10",
+      worldCount: 7,
+      seasonCount: 10,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-routine-youth-runway-l6-31-oos-v1",
       workerCount: 7,
     },
   },
@@ -1692,6 +1764,11 @@ async function leagueDiversityExecution(
       readonly profileId: string;
       readonly checkpointDirectoryPath: string;
     };
+    readonly routineYouthRunwayMode?: "control" | "candidate";
+    readonly routineYouthRunwayComparison?: {
+      readonly profileId: string;
+      readonly checkpointDirectoryPath: string;
+    };
   };
 }> {
   if (profileId === null || !Object.hasOwn(CAREER_PROFILE_CHECKPOINT_KIND, profileId)) return {};
@@ -1741,6 +1818,26 @@ async function leagueDiversityExecution(
           ),
         }
       : undefined;
+  const routineYouthRunwayMode =
+    careerProfileId === "phase81a-routine-youth-runway-l6-31-control-7x10"
+      || careerProfileId === "phase81a-routine-youth-runway-l6-31-oos-control-7x10"
+      ? "control" as const
+      : careerProfileId === "phase81a-routine-youth-runway-l6-31-candidate-7x10"
+        || careerProfileId === "phase81a-routine-youth-runway-l6-31-oos-candidate-7x10"
+        ? "candidate" as const
+        : undefined;
+  const routineYouthRunwayComparison = routineYouthRunwayMode === "candidate"
+    ? {
+        profileId: careerProfileId === "phase81a-routine-youth-runway-l6-31-oos-candidate-7x10"
+          ? "phase81a-routine-youth-runway-l6-31-oos-control-7x10"
+          : "phase81a-routine-youth-runway-l6-31-control-7x10",
+        checkpointDirectoryPath: await resolveWorkspaceOutputPath(
+          careerProfileId === "phase81a-routine-youth-runway-l6-31-oos-candidate-7x10"
+            ? "saves/long-run-checkpoints/phase81a-routine-youth-runway-l6-31-oos-control-7x10-facts-v2"
+            : "saves/long-run-checkpoints/phase81a-routine-youth-runway-l6-31-control-7x10-facts-v2",
+        ),
+      }
+    : undefined;
   return {
     leagueDiversityProfile: {
       profileId: cacheIdentityProfileId,
@@ -1759,6 +1856,10 @@ async function leagueDiversityExecution(
       ...(generatedLifecycleComparison === undefined
         ? {}
         : { generatedLifecycleComparison }),
+      ...(routineYouthRunwayMode === undefined ? {} : { routineYouthRunwayMode }),
+      ...(routineYouthRunwayComparison === undefined
+        ? {}
+        : { routineYouthRunwayComparison }),
     },
   };
 }

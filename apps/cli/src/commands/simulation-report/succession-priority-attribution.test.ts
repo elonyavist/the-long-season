@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
+import { routineYouthStationaryRunwayTarget } from "@game/content";
+
 import {
   academyProspectClassWorldFacts,
   deriveSuccessionDownstreamPlayerOutcome,
@@ -10,6 +12,7 @@ import {
   evaluateRenewalLadder,
   evaluatePopulationStationarity,
   evaluateGenerationTimeStationaryCeiling,
+  evaluateRoutineYouthStationaryRunway,
   evaluateLeaderConversionFunnel,
   evaluateLeaderCeilingDistance,
   evaluateLeaderQualityFeasibility,
@@ -29,7 +32,48 @@ import {
   type RenewalLadderWorldFacts,
   type PopulationStationarityWorldFacts,
   type GenerationTimeStationaryWorldFacts,
+  type RoutineYouthRunwayArmWorldFacts,
 } from "./succession-priority-attribution.ts";
+
+test("routine-youth runway reaches GO only with exact purity and all paired material gates", () => {
+  const worlds = Array.from({ length: 7 }, (_, index) => {
+    const worldSeed = `runway-pair-world-${index + 1}`;
+    const playerId = selectedRunwayPlayerId(worldSeed);
+    return {
+      control: runwayArmWorld(worldSeed, playerId, false),
+      candidate: runwayArmWorld(worldSeed, playerId, true),
+    };
+  });
+  const result = evaluateRoutineYouthStationaryRunway({
+    control: worlds.map(({ control }) => control),
+    candidate: worlds.map(({ candidate }) => candidate),
+    seasonCount: 10,
+    controlIntegratedFailedGateKeys: ["players:existing"],
+    candidateIntegratedFailedGateKeys: ["players:existing"],
+  });
+
+  assert.equal(result.decision, "GO");
+  assert.equal(result.purity.failureCount, 0);
+  assert.equal(result.purity.changedPotentialCount, 7);
+  assert.equal(result.directionWorldCounts.generatedLeader, 7);
+
+  const contaminated = worlds.map(({ candidate }, index) => index === 0
+    ? {
+        ...candidate,
+        candidates: candidate.candidates.map((row) => ({
+          ...row,
+          currentProfileHash: "contaminated",
+        })),
+      }
+    : candidate);
+  assert.equal(evaluateRoutineYouthStationaryRunway({
+    control: worlds.map(({ control }) => control),
+    candidate: contaminated,
+    seasonCount: 10,
+    controlIntegratedFailedGateKeys: [],
+    candidateIntegratedFailedGateKeys: [],
+  }).decision, "STOP_RETHINK");
+});
 
 test("bounded succession passes only with paired renewal and guardrails", () => {
   const legacy = arm(0.08, 0.25, 0.52, 0.82, 1_000);
@@ -877,25 +921,28 @@ function lifecycleWorlds(input: {
 function leaderLaneWorld(input: {
   readonly worldSeed: string;
   readonly counts: GeneratedLeaderLaneWorldFacts["counts"];
+  readonly generatedLeaderLaneCount?: number;
 }): GeneratedLeaderLaneWorldFacts {
   const observationCount = Object.values(input.counts).reduce((total, count) => total + count, 0);
+  const generatedLeaderLaneCount = input.generatedLeaderLaneCount ?? 10;
   return {
     worldSeed: input.worldSeed,
     competitionCount: 3,
     leaderLaneSlotCount: 60,
-    generatedLeaderLaneCount: 10,
+    generatedLeaderLaneCount,
     qualityReadyNonLeaderLaneCount: observationCount,
     counts: input.counts,
     laneCounts: [
       {
         lane: "scorer",
-        generatedLeaderCount: 5,
+        generatedLeaderCount: Math.floor(generatedLeaderLaneCount / 2),
         qualityReadyNonLeaderCount: observationCount,
         counts: input.counts,
       },
       {
         lane: "creator",
-        generatedLeaderCount: 5,
+        generatedLeaderCount:
+          generatedLeaderLaneCount - Math.floor(generatedLeaderLaneCount / 2),
         qualityReadyNonLeaderCount: observationCount,
         counts: input.counts,
       },
@@ -907,6 +954,80 @@ function leaderLaneWorld(input: {
     }],
     reconciliationFailureCount: 0,
     unclassifiableCount: 0,
+  };
+}
+
+function selectedRunwayPlayerId(worldSeed: string): string {
+  for (let index = 0; index < 10_000; index += 1) {
+    const playerId = `player:runway-${index}`;
+    if (routineYouthStationaryRunwayTarget({
+      worldSeed,
+      playerKey: playerId,
+      division: "second_division",
+      role: "central_midfielder",
+    }) !== undefined) return playerId;
+  }
+  throw new Error(`No reachable runway player for ${worldSeed}`);
+}
+
+function runwayArmWorld(
+  worldSeed: string,
+  playerId: string,
+  candidate: boolean,
+): RoutineYouthRunwayArmWorldFacts {
+  const target = routineYouthStationaryRunwayTarget({
+    worldSeed,
+    playerKey: playerId,
+    division: "second_division",
+    role: "central_midfielder",
+  });
+  assert.notEqual(target, undefined);
+  return {
+    worldSeed,
+    candidates: [{
+      playerId,
+      targetClubId: "club:runway",
+      prospectClass: "routine",
+      generatedSeasonNumber: 1,
+      generationDivision: "second_division",
+      competitionId: "competition:ita-2",
+      role: "central_midfielder",
+      currentAbility: 7,
+      storedCeiling: candidate ? target! : 8,
+      age: 17,
+      currentProfileHash: "current",
+      potentialProfileHash: candidate ? "candidate-potential" : "control-potential",
+    }],
+    generationTime: generationStationarityWorld(worldSeed, {
+      routine: [6, 4],
+      interesting: [6, 4],
+      serious: [6, 4],
+      rare: [6, 4],
+    }),
+    population: stationarityWorld(worldSeed, candidate
+      ? {
+          stationary_ready: 20,
+          development_realization_gap: 10,
+          ceiling_supply_gap: 70,
+          reference_not_observed: 0,
+        }
+      : {
+          stationary_ready: 10,
+          development_realization_gap: 0,
+          ceiling_supply_gap: 90,
+          reference_not_observed: 0,
+        }),
+    leaderLane: leaderLaneWorld({
+      worldSeed,
+      generatedLeaderLaneCount: candidate ? 13 : 10,
+      counts: {
+        quality_depth: 1,
+        selection_volume: 1,
+        actor_access: 1,
+        occasion_conversion: 1,
+        rank_cutoff: 1,
+      },
+    }),
   };
 }
 

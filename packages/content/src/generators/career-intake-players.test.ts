@@ -419,6 +419,58 @@ test("the annual blueprint seam preserves ordinary output and deterministically 
   assert.notDeepEqual(legacy.seniorRoles, ordinary.seniorRoles);
 });
 
+test("the annual runway seam changes only selected academy potential", () => {
+  const careerState = annualProviderCareerState();
+  const run = (useRoutineYouthStationaryRunway: boolean) => {
+    const providers = createAnnualWorldIntakeCandidateProviders({
+      worldSeed: "annual-runway-seam",
+      seasonIndex: 1,
+      seniorCandidatesPerClub: 1,
+      useRoutineYouthStationaryRunway,
+    });
+    const context = {
+      careerState,
+      seasonId: seasonId("season:annual-runway-seam"),
+      intakeDate: careerState.gameState.calendar.currentDate,
+    } as const;
+    const academy = providers.createYouthIntakeCandidates({
+      ...context,
+      activePlayerStock: activePlayerStockFixture(careerState),
+    });
+    return {
+      academy,
+      senior: providers.createSeniorIntakeCandidates(context),
+      diagnostics: providers.diagnostics(),
+    };
+  };
+  const control = run(false);
+  const candidate = run(true);
+  let changedPotentialCount = 0;
+
+  assert.deepEqual(candidate.senior, control.senior);
+  assert.deepEqual(
+    candidate.diagnostics.generatedStoredCeilingSixPlayerIds,
+    control.diagnostics.generatedStoredCeilingSixPlayerIds,
+  );
+  assert.equal(candidate.academy.length, control.academy.length);
+  for (let index = 0; index < control.academy.length; index += 1) {
+    const before = control.academy[index];
+    const after = candidate.academy[index];
+    assert.ok(before !== undefined && after !== undefined);
+    assert.equal(after.targetClubId, before.targetClubId);
+    assert.equal(after.player.id, before.player.id);
+    assert.equal(after.player.birthDate, before.player.birthDate);
+    assert.equal(after.player.primaryRole, before.player.primaryRole);
+    assert.deepEqual(after.player.abilities, before.player.abilities);
+    const role = getPlayerRoleProfile(before.player.primaryRole);
+    const beforePotential = Number(rolePotentialAbility(before.player.potential, role));
+    const afterPotential = Number(rolePotentialAbility(after.player.potential, role));
+    assert.equal(afterPotential >= beforePotential, true);
+    if (afterPotential !== beforePotential) changedPotentialCount += 1;
+  }
+  assert.equal(changedPotentialCount > 0, true);
+});
+
 test("shared annual providers count a reserved ceiling-six promotion before intake", () => {
   const careerState = annualProviderCareerStateWithExceptionalPromotion();
   const activePlayerStock = activePlayerStockFixture(careerState);

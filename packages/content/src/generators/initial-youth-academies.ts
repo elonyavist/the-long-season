@@ -53,6 +53,7 @@ import {
   type AnnualIntakeRoleSlotKind,
 } from "./annual-intake-role-plan.ts";
 import { assignGeneratedSquadIdentityRoles } from "./squad-identity.ts";
+import { routineYouthStationaryRunwayTarget } from "./routine-youth-stationary-runway.ts";
 
 /** Exact academy size chosen by Phase 33. */
 export const INITIAL_YOUTH_PLAYERS_PER_CLUB = 11;
@@ -97,6 +98,11 @@ export interface GenerateInitialYouthAcademiesInput {
    * identity blueprint enabled. Phase 81A closeout owns its removal.
    */
   readonly useSquadIdentityRoleBlueprint?: boolean;
+  /**
+   * Analysis seam for the Phase 81A routine-youth runway. Ordinary worlds use
+   * the candidate; the paired checkpoint explicitly disables the control arm.
+   */
+  readonly useRoutineYouthStationaryRunway?: boolean;
   /** Optional count override for focused tests; production uses Phase 32 target. */
   readonly youthPlayersPerClub?: number;
   /** Optional league nation, defaulting to the current Italian demo world. */
@@ -143,6 +149,8 @@ export interface GenerateSeasonalYouthIntakePlayersInput {
   readonly leagueNation?: LeagueNationCode;
   /** Exact positions assigned by the competition-scoped refill planner. */
   readonly targetPositions: readonly PlayerPosition[];
+  /** Analysis-only paired-control seam; Phase 81A closeout owns removal. */
+  readonly useRoutineYouthStationaryRunway?: boolean;
   /** World-level assignments selected before per-club intake generation. */
   readonly potentialSixPlayerIds?: readonly PlayerId[];
   /** Validated scale used only for assigned potential-six floors. */
@@ -255,10 +263,12 @@ export function generateInitialYouthAcademies(input: GenerateInitialYouthAcademi
         division: clubContext.category,
         clubTier: clubContext.competitiveTier,
         ratingScale: input.ratingScale ?? defaultPlayerRatingScale,
-        ceilingConstraint: youthCeilingConstraint({
-          forcePotentialSix,
-          reconstructPotentialBelowSix,
-        }),
+      ceilingConstraint: youthCeilingConstraint({
+        forcePotentialSix,
+        reconstructPotentialBelowSix,
+      }),
+      useRoutineYouthStationaryRunway:
+        input.useRoutineYouthStationaryRunway !== false,
       });
 
       players[id] = generatedPlayer.player;
@@ -356,6 +366,8 @@ export function generateSeasonalYouthIntakePlayers(input: GenerateSeasonalYouthI
       clubTier: input.clubContext.competitiveTier,
       ratingScale: input.ratingScale ?? defaultPlayerRatingScale,
       ceilingConstraint: youthCeilingConstraint({ forcePotentialSix }),
+      useRoutineYouthStationaryRunway:
+        input.useRoutineYouthStationaryRunway !== false,
     });
 
     generatedPlayers.push({
@@ -385,6 +397,7 @@ interface YouthPlayerGenerationFacts {
   readonly ratingScale: PlayerRatingScaleConfig;
   /** Absolute-ceiling constraint allocated before this root builds the profile. */
   readonly ceilingConstraint: ContextualProspectCeilingConstraint;
+  readonly useRoutineYouthStationaryRunway: boolean;
 }
 
 /**
@@ -417,6 +430,16 @@ function buildYouthPlayerFromJointProfile(
   input: YouthPlayerGenerationFacts,
 ): CreatedPlayer {
   const primaryRole = primaryRoleForPosition(input.position);
+  const runwayTarget = input.useRoutineYouthStationaryRunway
+    && input.archetypeKey === "normal_youth"
+    && input.ceilingConstraint.kind === "policy"
+    ? routineYouthStationaryRunwayTarget({
+        worldSeed: input.worldSeed,
+        playerKey: String(input.id),
+        division: input.division,
+        role: primaryRole,
+      })
+    : undefined;
   const profile = buildContextualProspectJointProfile({
     seed: input.worldSeed,
     playerKey: String(input.id),
@@ -432,6 +455,9 @@ function buildYouthPlayerFromJointProfile(
     ),
     ceilingConstraint: input.ceilingConstraint,
     slotDepthAdjustment: youthDevelopmentCurrentBoost(input.youthDevelopmentLevel),
+    ...(runwayTarget === undefined
+      ? {}
+      : { routineYouthMinimumRolePotentialAbility: runwayTarget }),
   });
 
   return assembleYouthPlayer(input, profile);

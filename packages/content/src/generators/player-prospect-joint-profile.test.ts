@@ -319,6 +319,39 @@ test("routine youth keep the plateau-capable policy instead of receiving a force
   assert.equal(isPotentialAtLeastCurrent(profile.current, profile.potential), true);
 });
 
+test("a selected routine-youth runway raises only potential through the canonical allocator", () => {
+  const baseline = jointInput({
+    division: "second_division",
+    clubTier: "mid_table",
+    ageYears: 17,
+    role: "central_midfielder",
+    archetypeKey: "normal_youth",
+  });
+  const control = buildContextualProspectJointProfile(baseline);
+  const candidate = buildContextualProspectJointProfile({
+    ...baseline,
+    routineYouthMinimumRolePotentialAbility: 11.75,
+  });
+  const roleProfile = getPlayerRoleProfile("central_midfielder");
+
+  assert.deepEqual(candidate.current, control.current);
+  assert.equal(
+    Number(rolePotentialAbility(candidate.potential, roleProfile)) >= 11.75,
+    true,
+  );
+  assert.equal(isPotentialAtLeastCurrent(candidate.current, candidate.potential), true);
+});
+
+test("a routine-youth runway target cannot leak into another archetype", () => {
+  assert.throws(
+    () => buildContextualProspectJointProfile({
+      ...jointInput({ archetypeKey: "senior_regular" }),
+      routineYouthMinimumRolePotentialAbility: 11.5,
+    }),
+    /cannot apply to archetype senior_regular/,
+  );
+});
+
 function jointInput(overrides: Partial<{
   readonly division: ClubCategory;
   readonly clubTier: PlayerGenerationClubTier;

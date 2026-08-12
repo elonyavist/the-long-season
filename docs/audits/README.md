@@ -16,6 +16,11 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_L6_31_ROUTINE_YOUTH_STATIONARY_RUNWAY.md` — **`GO`
+  twice.** Stable ordinary-youth ceilings raise ready replacement share by
+  `+0.1363` in-sample and `+0.1034` out-of-sample, with exact immediate purity,
+  leader gains in `6/7` worlds and no new integrated failure.
+
 - `PHASE_81A_CHECKPOINT_L6_30_STATIONARY_CEILING_QUOTA.md` — **`STOP /
   RETHINK`; candidate removed.** The quota improves ready share by `0.0632` and
   generated leaders by `0.0690`, but misses the frozen transition gates and

@@ -225,6 +225,11 @@ export interface CareerWorldInspection {
   /** Phase 81A exact squad-use stages; ordinary reports never retain them. */
   readonly collectSquadUseDiagnostics?: boolean;
   /**
+   * Analysis-only L6.31 arm. Undefined keeps the product candidate enabled;
+   * false reconstructs the exact pre-runway academy generation path.
+   */
+  readonly useRoutineYouthStationaryRunway?: boolean;
+  /**
    * Analysis-only 06B19 factorial arm. This is orchestration metadata, never
    * saved game state; Phase 81A closeout owns removal of both switches.
    */
@@ -1379,6 +1384,12 @@ export function createCareerWorldFacts(
 ): CareerWorldFacts {
   const league = createFakeDomesticWorld({
     worldSeed: seed,
+    ...(inspection?.useRoutineYouthStationaryRunway === undefined
+      ? {}
+      : {
+          useRoutineYouthStationaryRunway:
+            inspection.useRoutineYouthStationaryRunway,
+        }),
     ...(inspection?.renewalAblationPolicy === undefined
       ? {}
       : {
@@ -4652,6 +4663,12 @@ function advanceCareerForReport(
     worldSeed,
     seasonIndex: context.seasonNumber - 1,
     seniorCandidatesPerClub: LONG_RUN_INTAKE_CANDIDATES_PER_CLUB,
+    ...(inspection?.useRoutineYouthStationaryRunway === undefined
+      ? {}
+      : {
+          useRoutineYouthStationaryRunway:
+            inspection.useRoutineYouthStationaryRunway,
+        }),
     ...(inspection?.renewalAblationPolicy === undefined
       ? {}
       : {

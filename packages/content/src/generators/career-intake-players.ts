@@ -266,6 +266,8 @@ export interface CreateAnnualWorldIntakeCandidateProvidersInput {
    * role balancing used before Step 06B16; closeout owns removal.
    */
   readonly useSquadIdentityRoleBlueprint?: boolean;
+  /** Analysis-only paired-control seam; Phase 81A closeout owns removal. */
+  readonly useRoutineYouthStationaryRunway?: boolean;
 }
 
 /**
@@ -345,6 +347,8 @@ export function createAnnualWorldIntakeCandidateProviders(
         referenceDate: context.intakeDate,
         targetPositions: targetPositionsByClubId[clubId]!,
         potentialSixPlayerIds: allocation.potentialSixPlayerKeys.map(playerId),
+        useRoutineYouthStationaryRunway:
+          input.useRoutineYouthStationaryRunway !== false,
         ratingScale,
       });
       for (const candidate of batch.generatedPlayers) {

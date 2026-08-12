@@ -1,4 +1,7 @@
-import type { ContextualProspectClass } from "@game/content";
+import {
+  routineYouthStationaryRunwayTarget,
+  type ContextualProspectClass,
+} from "@game/content";
 
 import {
   isCareerGeneratedOrigin,
@@ -1607,6 +1610,356 @@ export function evaluateGenerationTimeStationaryCeiling(input: {
     unknownOriginCount,
     referenceCellCount,
     worlds: input.worlds,
+  };
+}
+
+/** Generation-boundary row retained for the paired routine-youth checkpoint. */
+export interface RoutineYouthRunwayCandidateFact extends GenerationTimeStationaryCeilingFact {
+  readonly targetClubId: string;
+  readonly age: number;
+  readonly currentProfileHash: string;
+  readonly potentialProfileHash: string;
+}
+
+/** All three frozen outcome readers for one arm and world. */
+export interface RoutineYouthRunwayArmWorldFacts {
+  readonly worldSeed: string;
+  readonly candidates: readonly RoutineYouthRunwayCandidateFact[];
+  readonly generationTime: GenerationTimeStationaryWorldFacts;
+  readonly population: PopulationStationarityWorldFacts;
+  readonly leaderLane: GeneratedLeaderLaneWorldFacts;
+}
+
+/**
+ * Validates a freshly simulated control before it can become paired evidence.
+ *
+ * A control is not asked to pass the candidate's material targets. It is asked
+ * to be a complete seven-world, ten-season baseline with reconciled readers;
+ * anything weaker cannot authorize the candidate comparison.
+ */
+export function evaluateRoutineYouthRunwayControl(input: {
+  readonly worlds: readonly RoutineYouthRunwayArmWorldFacts[];
+  readonly seasonCount: number;
+  readonly integratedFailedGateKeys: readonly string[];
+}) {
+  const structuralFailure = routineYouthRunwayArmStructuralFailure(
+    input.worlds,
+    input.seasonCount,
+  );
+  return {
+    decision: structuralFailure ? "STOP_RETHINK" as const : "GO" as const,
+    purpose: "paired_control" as const,
+    metrics: routineYouthRunwayArmMetrics(input.worlds),
+    integratedFailedGateKeys: [...input.integratedFailedGateKeys].sort(),
+    structuralFailure,
+    worlds: input.worlds,
+  };
+}
+
+/** Applies the frozen L6.31 purity and material gates to paired fresh worlds. */
+export function evaluateRoutineYouthStationaryRunway(input: {
+  readonly control: readonly RoutineYouthRunwayArmWorldFacts[];
+  readonly candidate: readonly RoutineYouthRunwayArmWorldFacts[];
+  readonly seasonCount: number;
+  readonly controlIntegratedFailedGateKeys: readonly string[];
+  readonly candidateIntegratedFailedGateKeys: readonly string[];
+}) {
+  const controlBySeed = new Map(input.control.map((world) => [world.worldSeed, world]));
+  const purityWorlds = input.candidate.map((candidate) => {
+    const control = controlBySeed.get(candidate.worldSeed);
+    return control === undefined
+      ? missingRoutineYouthRunwayControl(candidate.worldSeed)
+      : routineYouthRunwayPurityWorld(control, candidate);
+  });
+  const controlMetrics = routineYouthRunwayArmMetrics(input.control);
+  const candidateMetrics = routineYouthRunwayArmMetrics(input.candidate);
+  const newIntegratedFailures = input.candidateIntegratedFailedGateKeys
+    .filter((key) => !input.controlIntegratedFailedGateKeys.includes(key))
+    .sort();
+  const structuralFailure = routineYouthRunwayArmStructuralFailure(
+    input.control,
+    input.seasonCount,
+  ) || routineYouthRunwayArmStructuralFailure(input.candidate, input.seasonCount)
+    || purityWorlds.some((world) => world.failureCount > 0)
+    || new Set(input.control.map(({ worldSeed }) => worldSeed)).size !== input.control.length
+    || input.control.some((world) => !input.candidate.some(
+      (candidate) => candidate.worldSeed === world.worldSeed,
+    ));
+  const generationHeld = candidateMetrics.generationCapableShare >= 0.48
+    && candidateMetrics.generationCapableWorldCount >= 5;
+  const readyDelta = candidateMetrics.stationaryReadyShare
+    - controlMetrics.stationaryReadyShare;
+  const ceilingGapReduction = controlMetrics.ceilingGapShare
+    - candidateMetrics.ceilingGapShare;
+  const leaderDelta = candidateMetrics.generatedLeaderShare
+    - controlMetrics.generatedLeaderShare;
+  const readyDirectionWorldCount = pairedDirectionWorldCount(
+    input.control,
+    input.candidate,
+    (world) => routineYouthRunwayWorldMetrics(world).stationaryReadyShare,
+  );
+  const ceilingDirectionWorldCount = pairedDirectionWorldCount(
+    input.control,
+    input.candidate,
+    (world) => -routineYouthRunwayWorldMetrics(world).ceilingGapShare,
+  );
+  const leaderDirectionWorldCount = pairedDirectionWorldCount(
+    input.control,
+    input.candidate,
+    (world) => routineYouthRunwayWorldMetrics(world).generatedLeaderShare,
+  );
+  const materialHeld = generationHeld
+    && readyDelta >= 0.08
+    && ceilingGapReduction >= 0.08
+    && leaderDelta >= 0.03
+    && readyDirectionWorldCount >= 5
+    && ceilingDirectionWorldCount >= 5
+    && leaderDirectionWorldCount >= 5
+    && newIntegratedFailures.length === 0;
+  return {
+    decision: structuralFailure
+      ? "STOP_RETHINK" as const
+      : materialHeld
+        ? "GO" as const
+        : "REFINE" as const,
+    control: controlMetrics,
+    candidate: candidateMetrics,
+    deltas: {
+      stationaryReadyShare: readyDelta,
+      ceilingGapReduction,
+      generatedLeaderShare: leaderDelta,
+    },
+    directionWorldCounts: {
+      stationaryReady: readyDirectionWorldCount,
+      ceilingGapReduction: ceilingDirectionWorldCount,
+      generatedLeader: leaderDirectionWorldCount,
+    },
+    gates: {
+      generationHeld,
+      stationaryReadyHeld: readyDelta >= 0.08 && readyDirectionWorldCount >= 5,
+      ceilingGapHeld: ceilingGapReduction >= 0.08 && ceilingDirectionWorldCount >= 5,
+      generatedLeaderHeld: leaderDelta >= 0.03 && leaderDirectionWorldCount >= 5,
+      integratedHeld: newIntegratedFailures.length === 0,
+    },
+    newIntegratedFailures,
+    purity: {
+      failureCount: purityWorlds.reduce((sum, world) => sum + world.failureCount, 0),
+      changedPotentialCount: purityWorlds.reduce(
+        (sum, world) => sum + world.changedPotentialCount,
+        0,
+      ),
+      effectiveAssignmentCount: purityWorlds.reduce(
+        (sum, world) => sum + world.effectiveAssignmentCount,
+        0,
+      ),
+      worlds: purityWorlds,
+    },
+    structuralFailure,
+  };
+}
+
+function routineYouthRunwayArmStructuralFailure(
+  worlds: readonly RoutineYouthRunwayArmWorldFacts[],
+  seasonCount: number,
+): boolean {
+  return worlds.length !== 7
+    || new Set(worlds.map(({ worldSeed }) => worldSeed)).size !== 7
+    || seasonCount !== 10
+    || worlds.some((world) =>
+      world.generationTime.reconciliationFailureCount > 0
+      || world.generationTime.unknownOriginCount > 0
+      || world.population.reconciliationFailureCount > 0
+      || world.population.unknownOriginCount > 0
+      || world.leaderLane.reconciliationFailureCount > 0
+      || world.leaderLane.unclassifiableCount > 0
+    );
+}
+
+function routineYouthRunwayArmMetrics(
+  worlds: readonly RoutineYouthRunwayArmWorldFacts[],
+) {
+  const perWorld = worlds.map(routineYouthRunwayWorldMetrics);
+  const generationCapableCount = worlds.reduce(
+    (sum, world) => sum + sumGenerationTimeStationaryCounts(
+      world.generationTime.counts,
+      "stationaryCapable",
+    ),
+    0,
+  );
+  const generationClassifiedCount = worlds.reduce(
+    (sum, world) => sum + sumGenerationTimeStationaryCounts(
+      world.generationTime.counts,
+      "stationaryCapable",
+    ) + sumGenerationTimeStationaryCounts(
+      world.generationTime.counts,
+      "belowStationaryCeiling",
+    ),
+    0,
+  );
+  const stationaryReadyCount = worlds.reduce(
+    (sum, world) => sum + world.population.counts.stationary_ready,
+    0,
+  );
+  const ceilingGapCount = worlds.reduce(
+    (sum, world) => sum + world.population.counts.ceiling_supply_gap,
+    0,
+  );
+  const replacementCount = worlds.reduce(
+    (sum, world) => sum + world.population.replacementPlayerCount,
+    0,
+  );
+  const generatedLeaderCount = worlds.reduce(
+    (sum, world) => sum + world.leaderLane.generatedLeaderLaneCount,
+    0,
+  );
+  const leaderSlotCount = worlds.reduce(
+    (sum, world) => sum + world.leaderLane.leaderLaneSlotCount,
+    0,
+  );
+  return {
+    generationCapableShare: generationClassifiedCount === 0
+      ? 0
+      : generationCapableCount / generationClassifiedCount,
+    generationCapableWorldCount: perWorld.filter(
+      ({ generationCapableShare }) => generationCapableShare >= 0.48,
+    ).length,
+    stationaryReadyShare: replacementCount === 0
+      ? 0
+      : stationaryReadyCount / replacementCount,
+    ceilingGapShare: replacementCount === 0 ? 0 : ceilingGapCount / replacementCount,
+    generatedLeaderShare: leaderSlotCount === 0
+      ? 0
+      : generatedLeaderCount / leaderSlotCount,
+    counts: {
+      generationCapableCount,
+      generationClassifiedCount,
+      stationaryReadyCount,
+      ceilingGapCount,
+      replacementCount,
+      generatedLeaderCount,
+      leaderSlotCount,
+    },
+    worlds: perWorld,
+  };
+}
+
+function routineYouthRunwayWorldMetrics(world: RoutineYouthRunwayArmWorldFacts) {
+  const generationCapableCount = sumGenerationTimeStationaryCounts(
+    world.generationTime.counts,
+    "stationaryCapable",
+  );
+  const generationClassifiedCount = generationCapableCount
+    + sumGenerationTimeStationaryCounts(
+      world.generationTime.counts,
+      "belowStationaryCeiling",
+    );
+  return {
+    worldSeed: world.worldSeed,
+    generationCapableShare: generationClassifiedCount === 0
+      ? 0
+      : generationCapableCount / generationClassifiedCount,
+    stationaryReadyShare: world.population.replacementPlayerCount === 0
+      ? 0
+      : world.population.counts.stationary_ready
+        / world.population.replacementPlayerCount,
+    ceilingGapShare: world.population.replacementPlayerCount === 0
+      ? 0
+      : world.population.counts.ceiling_supply_gap
+        / world.population.replacementPlayerCount,
+    generatedLeaderShare: world.leaderLane.leaderLaneSlotCount === 0
+      ? 0
+      : world.leaderLane.generatedLeaderLaneCount
+        / world.leaderLane.leaderLaneSlotCount,
+  };
+}
+
+function pairedDirectionWorldCount(
+  control: readonly RoutineYouthRunwayArmWorldFacts[],
+  candidate: readonly RoutineYouthRunwayArmWorldFacts[],
+  read: (world: RoutineYouthRunwayArmWorldFacts) => number,
+): number {
+  const controlBySeed = new Map(control.map((world) => [world.worldSeed, world]));
+  return candidate.filter((world) => {
+    const baseline = controlBySeed.get(world.worldSeed);
+    return baseline !== undefined && read(world) > read(baseline);
+  }).length;
+}
+
+function routineYouthRunwayPurityWorld(
+  control: RoutineYouthRunwayArmWorldFacts,
+  candidate: RoutineYouthRunwayArmWorldFacts,
+) {
+  const controlRows = control.candidates
+    .filter(({ generatedSeasonNumber }) => generatedSeasonNumber === 1)
+    .sort((left, right) => left.playerId.localeCompare(right.playerId));
+  const candidateRows = candidate.candidates
+    .filter(({ generatedSeasonNumber }) => generatedSeasonNumber === 1)
+    .sort((left, right) => left.playerId.localeCompare(right.playerId));
+  let failureCount = Number(controlRows.length !== candidateRows.length);
+  let changedPotentialCount = 0;
+  let effectiveAssignmentCount = 0;
+  for (let index = 0; index < Math.max(controlRows.length, candidateRows.length); index += 1) {
+    const before = controlRows[index];
+    const after = candidateRows[index];
+    if (before === undefined || after === undefined) {
+      failureCount += 1;
+      continue;
+    }
+    const immutableBefore = routineYouthRunwayImmutableSignature(before);
+    const immutableAfter = routineYouthRunwayImmutableSignature(after);
+    if (immutableBefore !== immutableAfter) failureCount += 1;
+    if (after.storedCeiling < before.storedCeiling) failureCount += 1;
+    const changed = after.potentialProfileHash !== before.potentialProfileHash;
+    if (changed) changedPotentialCount += 1;
+    const target = before.prospectClass === "routine"
+      ? routineYouthStationaryRunwayTarget({
+          worldSeed: control.worldSeed,
+          playerKey: before.playerId,
+          division: before.generationDivision,
+          role: before.role,
+        })
+      : undefined;
+    const effective = target !== undefined && target > before.storedCeiling;
+    if (effective) effectiveAssignmentCount += 1;
+    if (changed !== effective) failureCount += 1;
+    if (effective && after.storedCeiling < target) failureCount += 1;
+    if (before.prospectClass !== "routine" && changed) failureCount += 1;
+  }
+  return {
+    worldSeed: control.worldSeed,
+    controlCount: controlRows.length,
+    candidateCount: candidateRows.length,
+    changedPotentialCount,
+    effectiveAssignmentCount,
+    failureCount,
+  };
+}
+
+function routineYouthRunwayImmutableSignature(
+  row: RoutineYouthRunwayCandidateFact,
+): string {
+  return [
+    row.playerId,
+    row.targetClubId,
+    row.prospectClass,
+    row.generatedSeasonNumber,
+    row.generationDivision,
+    row.competitionId,
+    row.role,
+    row.age,
+    row.currentAbility,
+    row.currentProfileHash,
+  ].join("|");
+}
+
+function missingRoutineYouthRunwayControl(worldSeed: string) {
+  return {
+    worldSeed,
+    controlCount: 0,
+    candidateCount: 0,
+    changedPotentialCount: 0,
+    effectiveAssignmentCount: 0,
+    failureCount: 1,
   };
 }
 

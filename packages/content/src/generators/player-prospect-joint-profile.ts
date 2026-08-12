@@ -77,6 +77,12 @@ export interface BuildContextualProspectJointProfileInput {
   readonly ceilingConstraint: ContextualProspectCeilingConstraint;
   /** Small squad-depth adjustment applied inside the resolved current bands. */
   readonly slotDepthAdjustment?: number;
+  /**
+   * Stable authored floor for a selected `normal_youth` academy lane.
+   * Composition roots decide the lane; this owner only allocates it without
+   * creating a second potential formula.
+   */
+  readonly routineYouthMinimumRolePotentialAbility?: number;
 }
 
 /** Successful current-and-potential construction for a routine player. */
@@ -424,6 +430,14 @@ export function deriveContextualProspectCurrentEnvelope(
 function buildRoutineJointProfile(
   input: BuildContextualProspectJointProfileInput,
 ): RoutinePlayerJointProfile {
+  if (
+    input.routineYouthMinimumRolePotentialAbility !== undefined
+    && input.archetypeKey !== "normal_youth"
+  ) {
+    throw new Error(
+      `Routine-youth runway cannot apply to archetype ${input.archetypeKey}`,
+    );
+  }
   const current = buildRoutineCurrentPlayerProfile({
     ...currentProfileInput(input),
     archetypeKey: routineArchetypeKey(input.archetypeKey),
@@ -442,7 +456,15 @@ function buildRoutineJointProfile(
   let potential: PlayerAbilities;
   switch (input.ceilingConstraint.kind) {
     case "policy":
-      potential = allocateReachablePotential(potentialInput);
+      potential = allocateReachablePotential({
+        ...potentialInput,
+        ...(input.routineYouthMinimumRolePotentialAbility === undefined
+          ? {}
+          : {
+              minimumRolePotentialAbility:
+                input.routineYouthMinimumRolePotentialAbility,
+            }),
+      });
       break;
     case "at_least_rating":
       potential = allocateReachablePotential({

@@ -163,6 +163,8 @@ export interface FakeDomesticWorldOptions {
    * worlds keep the blueprint enabled; Phase 81A closeout owns removal.
    */
   readonly useSquadIdentityRoleBlueprint?: boolean;
+  /** Analysis-only paired-control seam; Phase 81A closeout owns removal. */
+  readonly useRoutineYouthStationaryRunway?: boolean;
 }
 
 /**
@@ -208,6 +210,9 @@ export function createFakeDomesticWorld(
     competitionKeyByClubId,
     useSquadIdentityRoleBlueprint:
       options.useSquadIdentityRoleBlueprint !== false,
+    // Exceptional allocation must see the pre-runway candidate population;
+    // otherwise an ordinary lane could move a nationally budgeted six-star ID.
+    useRoutineYouthStationaryRunway: false,
     ratingScale: playerRatingScale,
   });
   const exceptionalAllocation = buildInitialWorldExceptionalAllocation({
@@ -305,6 +310,8 @@ export function createFakeDomesticWorld(
     competitionKeyByClubId,
     useSquadIdentityRoleBlueprint:
       options.useSquadIdentityRoleBlueprint !== false,
+    useRoutineYouthStationaryRunway:
+      options.useRoutineYouthStationaryRunway !== false,
     potentialSixPlayerIds: exceptionalAllocation.potentialSixPlayerKeys
       .filter((key) =>
         exceptionalAllocation.assignmentsByPlayerKey[key]?.source === "constructed"

@@ -151,6 +151,22 @@ test("the blueprint-off analysis seam is deterministic and leaves ordinary world
   );
 });
 
+test("the runway control seam changes academy potential without changing opening senior squads", () => {
+  const candidate = createFakeDomesticWorld({ worldSeed: "runway-world-seam" });
+  const control = createFakeDomesticWorld({
+    worldSeed: "runway-world-seam",
+    useRoutineYouthStationaryRunway: false,
+  });
+
+  assert.deepEqual(candidate.players, control.players);
+  assert.deepEqual(candidate.playerIds, control.playerIds);
+  assert.deepEqual(candidate.initialYouthAcademies.playerIds, control.initialYouthAcademies.playerIds);
+  assert.notDeepEqual(
+    candidate.initialYouthAcademies.players,
+    control.initialYouthAcademies.players,
+  );
+});
+
 test("initial six-star budgets are exact and current champions are credible", () => {
   const world = createFakeDomesticWorld({ worldSeed: "three-tier-rarity" });
   const allPlayers = [

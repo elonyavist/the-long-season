@@ -930,6 +930,55 @@ describe("simulation-report planner", () => {
       .toThrow(/refuses measurement overrides/);
   });
 
+  it("freezes both L6.31 runway arms to the same seven-world population", () => {
+    const profileIds = [
+      "phase81a-routine-youth-runway-l6-31-control-7x10",
+      "phase81a-routine-youth-runway-l6-31-candidate-7x10",
+    ] as const;
+    const plans = profileIds.map((profileId) => createSimulationReportPlan({
+      profileId,
+      workerCount: 7,
+    }));
+
+    for (const plan of plans) {
+      expect(plan.measurementRequest).toMatchObject({
+        worldCount: 7,
+        seasonCount: 10,
+        workerCount: 7,
+        seedPrefix: "phase81a-academy-prospect-class-l6-20-v1",
+      });
+    }
+    expect(plans[0]?.measurementRequest.seedPrefix)
+      .toBe(plans[1]?.measurementRequest.seedPrefix);
+    expect(() => createSimulationReportPlan({
+      profileId: profileIds[1],
+      seasonCount: 9,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
+  it("freezes disjoint L6.31 out-of-sample arms to one paired population", () => {
+    const profileIds = [
+      "phase81a-routine-youth-runway-l6-31-oos-control-7x10",
+      "phase81a-routine-youth-runway-l6-31-oos-candidate-7x10",
+    ] as const;
+    const plans = profileIds.map((profileId) => createSimulationReportPlan({
+      profileId,
+      workerCount: 7,
+    }));
+    for (const plan of plans) {
+      expect(plan.measurementRequest).toMatchObject({
+        worldCount: 7,
+        seasonCount: 10,
+        workerCount: 7,
+        seedPrefix: "phase81a-routine-youth-runway-l6-31-oos-v1",
+      });
+    }
+    expect(plans[0]?.measurementRequest.seedPrefix)
+      .toBe(plans[1]?.measurementRequest.seedPrefix);
+    expect(plans[0]?.measurementRequest.seedPrefix)
+      .not.toBe("phase81a-academy-prospect-class-l6-20-v1");
+  });
+
 
   it("plans no audit work when a custom request lacks the locked shape population", () => {
     const plan = createSimulationReportPlan({

@@ -23,10 +23,10 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **L6.30 `STOP / RETHINK`:** the removed quota improves stationary
-  share `0.3069 -> 0.4232`, ready share by `0.0632` and generated leaders by
-  `0.0690`, but misses material gates and changes later intake/exceptional
-  stock. 06B29Z3 tests a stable individual routine-youth runway instead.
+- Phase 81A **L6.31 `GO` twice:** the adopted stable routine-youth runway raises
+  ready replacements `+0.1363` in-sample and `+0.1034` OOS, ceiling-gap
+  reduction `0.2127/0.1698` and generated leaders `+0.0810/+0.0905`; exact
+  immediate purity, zero new integrated red. The mutable L6.30 quota is gone.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;
   conversion `0.7260` and ordinary assisted share `0.7540` remain healthy.
 - Phase 81A **L6.3G `REFINE`:** `8000` yields `1.4692/1.4645` direct-free-kick

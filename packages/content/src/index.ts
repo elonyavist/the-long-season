@@ -15,6 +15,7 @@ export * from "./generators/initial-youth-academies.ts";
 export * from "./generators/league-system.ts";
 export * from "./generators/player-generation-bands.ts";
 export * from "./generators/player-potential-rarity.ts";
+export * from "./generators/routine-youth-stationary-runway.ts";
 export * from "./generators/player-rarity-budget.ts";
 export * from "./generators/player-role-identity.ts";
 export * from "./generators/annual-intake-role-plan.ts";
