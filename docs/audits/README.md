@@ -16,6 +16,10 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_L6_17_ACADEMY_CEILING_CANDIDATE.md` - **`REFINE`;
+  candidate removed.** Doubling serious-prospect frequency barely moves ceiling
+  insufficiency, worsens mature quality supply and lowers generated leaders.
+
 - `PHASE_81A_CHECKPOINT_L6_16_LEADER_QUALITY_FEASIBILITY.md` -
   **OWNER_IDENTIFIED: generated_ceiling_supply.** `1,030/1,116` mature quality
   failures cannot reach their role-local leader floor even at stored ceiling;
