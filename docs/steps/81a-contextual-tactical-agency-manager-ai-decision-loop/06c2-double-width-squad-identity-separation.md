@@ -53,6 +53,7 @@ Only these position changes are authorized inside the existing 22-slot chart:
 - this step document
 - `06c1a-formation-identity-family-concentration-attribution.md`
 - `README.md`
+- `06c3-contextual-lateral-route-leverage.md`
 
 ## Required Checks
 
