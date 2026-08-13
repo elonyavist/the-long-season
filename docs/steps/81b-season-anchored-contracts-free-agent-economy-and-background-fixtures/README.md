@@ -2,10 +2,10 @@
 
 ## Status
 
-**Draft.** Originally numbered Phase 81A by the 2026-08-02 phase-order
-decision, then renumbered Phase 81B on 2026-08-07 when contextual tactical
-agency became the immediate successor to Phase 81. Do not start until the new
-Phase 81A is Done.
+**Ready, not started.** Originally numbered Phase 81A by the 2026-08-02
+phase-order decision, then renumbered Phase 81B on 2026-08-07 when contextual
+tactical agency became the immediate successor to Phase 81. Phase 81A is now
+Done; Step 01 is the only next action.
 
 Phase implementation also requires the blocking findings in
 [`00-pre-implementation-analysis-prerequisite.md`](00-pre-implementation-analysis-prerequisite.md)

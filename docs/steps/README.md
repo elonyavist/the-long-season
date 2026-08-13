@@ -146,34 +146,23 @@ Provide an open, incremental, and iterative execution guide for the project: one
   cohort belongs to Phase 81 Step 15 and must use checkpoints, `50` stable
   shards, and exactly `7` workers.
 
-## Active Rework Continuation
+## Completed Rework Continuation
 
 - `docs/steps/81a-contextual-tactical-agency-manager-ai-decision-loop/`
-- Status: Active. Checkpoint A2 recorded a conditional `GO`; Step 03C is next,
-  followed by Step 03D. They consolidate every simulation report behind one
-  modular `simulation-report` CLI entrypoint before engine Step 04 resumes.
-- It first removes duplicate tactical ownership and establishes a reproducible
-  real-career before-state. Every two implementation steps are followed by a
-  mandatory checkpoint with a recorded `GO`, `REFINE`, or `STOP` decision.
-- It then introduces conserved tactical contribution budgets, contested routes,
-  `lateralFocus`, player-specific execution, generated-squad identity, one
-  shared `OpponentRead` for manager and AI, canonical tactical chapters and a
-  post-match preparation choice whose consequence begins with the next match.
-  Step 14 persists all four concerns under the phase's single beta reset.
-- The accepted effects are `+0.045` for reading the context correctly,
-  `-0.045` for committing to the wrong read and `0` for a neutral policy. No
-  formation or tactic owns an intrinsic advantage; value comes from players,
-  opponent and information actually available.
-- Checkpoint B is the structural investment gate. It must pass the complete
-  analytic signature space and a separately seeded, preregistered replay before
-  player, manager or AI layers may start.
-- Contract: `docs/audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md`.
+- Status: Done. Checkpoint F accepted the smaller option-B product without
+  relabelling the failed structural/materiality gates. Club role identity drives
+  formation variety; pre-match AI uses its own available squad; live AI reacts
+  to match state; canonical tactical facts and chapters survive reload.
+- Reports: `docs/audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_REPORT.md` and
+  `docs/audits/PHASE_81A_INTEGRATED_COHORT.md`.
 
 ## Planned Continuation
 
 - `docs/steps/81b-season-anchored-contracts-free-agent-economy-and-background-fixtures/`
-- Status: Planned. Originally numbered Phase 81A; renumbered Phase 81B when the
-  tactical-agency successor was inserted ahead of it.
+- Status: Ready, not started. Step 01 must measure and replace the draft numeric
+  assumptions before any implementation. Originally numbered Phase 81A;
+  renumbered Phase 81B when the tactical-agency successor was inserted ahead of
+  it.
 - It owns three measured defects and two features. Contract expiry is anchored
   to the season boundary through one named owner, replacing
   `startsOn + durationYears * 365` and the `0..120` day generation scatter; the

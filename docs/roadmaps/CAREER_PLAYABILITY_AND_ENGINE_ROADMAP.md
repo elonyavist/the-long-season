@@ -17,8 +17,8 @@ The 2026-08-02 phase-order decision resolves that block and reorders the rest.
 Match scoring is outside Phase 80A's player-model scope, so the monitor
 transfers unchanged to Phase 81, which owns the match engine and whose Step 06
 replaces the opportunity generation that produces those goals. **Phase 81 is now
-Done and that monitor is closed at cohort scale**; Phase 81A is now the active
-contextual tactical-agency successor. The former Phase 81A becomes Phase 81B;
+Done and that monitor is closed at cohort scale**; Phase 81A has now also closed
+on its smaller option-B tactical-agency contract. The former Phase 81A becomes Phase 81B;
 market work remains Phase 82A and Phase 82B. Two checkpointed
 cohorts were planned: Phase 81's over the accepted engine, **run by its Step 15
 and not re-run**, and Phase 82B Step 09 over the completed market. Phase 79 Step
@@ -2093,13 +2093,11 @@ longer the execution order. Read them in this sequence instead:
    `young_stored_ceiling_six_stock_arrival_category_placement` (`50/50`),
    `contract_finance_structural_integrity` (`13/50`) and
    `preliminary_agreement_integrity` (`12/50`).
-2. **Phase 81A** - contextual tactical agency for manager and AI. It conserves
-   tactical contribution budgets, makes routes and flanks genuinely contested,
-   grounds execution in the players available, gives manager and AI the same
-   fallible opponent facts, and adds durable post-match consequence through one
-   Step 14 persistence integration and beta reset. Six
-   checkpoints after at most two implementation steps each decide `GO`,
-   `REFINE`, or `STOP` before more scope opens.
+2. **Phase 81A** - Done on option B. Tactical budgets are conserved, formation
+   choice follows club role identity and available players, live AI reacts to
+   match state, and canonical tactical facts survive one persistence reset.
+   Opponent-aware pre-match planning and post-match gameplay preparation were
+   explicitly deferred after the larger materiality thesis failed.
 3. **Phase 81B** - season-anchored contracts, free-agent economy and background
    fixtures. Expiry anchored to the season boundary through one named owner,
    offered terms in months inside the accepted `18-30` band, an AI free-agent
@@ -2116,13 +2114,15 @@ Primary dependency: Phase 81 Done.
 
 Status:
 
-- Accepted and active. Step 01 is the only active step.
+- Done. Checkpoint F accepted option B; reports are
+  `docs/audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_REPORT.md` and
+  `docs/audits/PHASE_81A_INTEGRATED_COHORT.md`.
 
 Purpose:
 
-- Make tactical decisions create upside or downside from the actual players,
-  opponent and available information, never from a formation or tactic that is
-  intrinsically superior.
+- Make tactical decisions depend on actual players and current state, never on
+  a formation or tactic that is intrinsically superior. The accepted MVP keeps
+  pre-match AI opponent-blind.
 
 Documentation:
 
@@ -2136,8 +2136,9 @@ still in place and its carried goal-rate monitor inside band.
 
 Status:
 
-- Planned. Created by the 2026-08-02 phase-order decision and renumbered from
-  Phase 81A when the tactical-agency successor was inserted ahead of it.
+- Ready, not started. Step 01 measures the draft bands before implementation.
+  Created by the 2026-08-02 phase-order decision and renumbered from Phase 81A
+  when the tactical-agency successor was inserted ahead of it.
 
 Purpose:
 

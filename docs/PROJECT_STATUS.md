@@ -11,41 +11,25 @@ active step. Nothing else.
 
 ## Current State
 
-Phases 0 through 81 are complete; what they delivered is in the code and `docs/audits/`.
+Phases 0 through 81A are complete; what they delivered is in the code and
+`docs/audits/`.
 
-**Phase 81A - Contextual Tactical Agency - is active**, under
-`docs/steps/81a-contextual-tactical-agency-manager-ai-decision-loop/`, governed by
-`docs/audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md`.
+**Phase 81A - Contextual Tactical Agency - is Done.** Checkpoint F accepted the
+smaller option-B product without relabelling the failed historical
+structural/materiality gates. Reports:
+`docs/audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_REPORT.md` and
+`docs/audits/PHASE_81A_INTEGRATED_COHORT.md`.
 
-The former contract/free-agent/background-fixture plan is Phase 81B, Draft under
+The former contract/free-agent/background-fixture plan is Phase 81B, Ready under
 `docs/steps/81b-season-anchored-contracts-free-agent-economy-and-background-fixtures/`;
-Step 07 closes on a `750 x 10` with exactly `7` workers.
+Step 01 is next and Step 07 closes on a `750 x 10` with exactly `7` workers.
 
-## Current Active Step
+## Next Action
 
-- Phase 81A **Checkpoint E is `GO`; Step 16 is active.** Fresh `7 x 2` option-B
-  careers cover `25,704` team-matches: all live reasons reachable, zero
-  fallback/reconciliation failure, exact tactical reload; A12 defers preparation.
-- **L6.31 integrated replay is green twice:** runway improves ready replacements
-  `+0.1106/+0.1057` and generated leaders `+0.0690/+0.0500`, no new red.
-- Phase 81A **L6.3F `GO`:** `3500` yields `0.2624` penalties/match; conversion
-  `0.7260` and ordinary assisted share `0.7540` remain healthy.
-- Phase 81A **L6.3G `REFINE`:** `8000` yields `1.4692/1.4645` direct-free-kick
-  candidates and `8250` `0.8688/0.8366` versus real `1.1529`; use rounded `7500`.
-- Phase 81A **L6.5 `REFINE`:** priority raises division replacement
-  `0.4767 -> 0.5604` but lowers local `0.0698 -> 0.0549`; only `16-18%` of
-  acquisitions are 21-29, about `64%` 33-plus. Generic expansion stays closed.
-- Step 03A Done; hard-cap probe **`FOUND`**, `21/21` reconciled. Its temporary
-  projection hold is resolved by 06B7F1. Checkpoint A's `STOP / RETHINK` and
-  frozen before-state stand.
-- **`AiSquadSelectionResult.catalogChoice` says how close the shape decision was**,
-  absent when a caller imposed one. Four ephemeral facts from the canonical walk -
-  never a second ranking, never persisted, never rebuilt. **`tiedAtBestCount === 1`
-  proves catalog-reorder invariance**; no replay can add to it.
-- **A gate written only in the phase-level block runs once, at the end.** Put
-  `pnpm web:visual:qa` in the per-step block of any step touching web or
-  persistence. Its `wide journey` assertion is timing-sensitive; one flake hides
-  `33` tests. Unowned.
+- Phase 81B Step 01 is the only next action. It must measure and replace the
+  draft contract/free-agent numeric assumptions before implementation.
+- Phase 81A's final fresh `7 x 2` is byte-identical at closeout; L6.31 remains
+  green in both paired `7 x 10` sets; the tactical-shape report is `PASS`.
 - **`pnpm cli simulation-report` is the only report entrypoint.** Use
   `--list-modules`, `--list-profiles`, `--help`, or `--from-report=<json>`;
   relative output resolves from the workspace root.
@@ -71,9 +55,9 @@ Five findings have no owner. None is a licence to widen anything.
 
 ### Do Not Start
 
-- Phase 81B, 82A and 82B stay Planned or Draft: their numeric decisions predate
-  their own measurement and remain entry-gated. Phase 79 Steps 14-15 stay
-  Reopened and unclaimed. Phase 81A is the only active phase.
+- Phase 81B is Ready but not started; its Step 01 numeric baseline is mandatory
+  before behaviour. Phases 82A and 82B remain Draft and entry-gated. Phase 79
+  Steps 14-15 stay Reopened and unclaimed.
 
 ### Checkpoint A: STOP / RETHINK, And What It Falsified (81A Step 03)
 

@@ -2,6 +2,23 @@
 
 ## Status
 
+**Done.** Checkpoint F records `GO` for the smaller option-B product accepted by
+Amendments A11/A12. The canonical tactical-shape report is `PASS`; the fresh
+Checkpoint E `7 x 2` rebuild is byte-identical; L6.31 renewal remains green in
+both paired seed sets; and Step 14 is the phase's only coordinated persistence
+reset. The final reports are
+[`PHASE_81A_INTEGRATED_COHORT.md`](../../audits/PHASE_81A_INTEGRATED_COHORT.md)
+and
+[`PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_REPORT.md`](../../audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_REPORT.md).
+
+Phase 81B Step 01 is the only next action, but it is not started by this phase.
+
+## Historical Execution Record
+
+The record below explains how the phase reached option B. Its intermediate
+"next", "open" and "closed" statements are historical evidence, not current
+project status.
+
 **Structural redesign authorized after Checkpoint B.** Steps 01-06 are Done;
 Checkpoints A2/U1/U2 and the Step 05 low-block exit recorded `GO`, but
 Checkpoint B recorded `STOP / RETHINK` on 2026-08-08. Design Contract Amendment
@@ -143,11 +160,11 @@ into this phase.
 ## User-Facing Goal
 
 Make tactical decisions capable of helping or hurting because they fit the
-available players and exploit or expose something in the opponent. In the MVP,
-the manager may use opponent evidence while the AI chooses from its own squad
-and current match state. Both must make explainable decisions without any
-formation or tactic being best by definition; a future opponent-aware AI must
-consume the manager's same evidence rather than hidden facts.
+available players and current match state. In the option-B MVP, pre-match
+selection is grounded in the club's own available squad; live decisions react
+to score, time, fatigue, injury and dismissal. No formation or tactic is best by
+definition. Any future opponent-aware AI must consume the manager's same visible
+evidence rather than hidden facts.
 
 ## Entry Gate
 
@@ -405,7 +422,7 @@ contexts; it never owns the analytic diversity gate.
 | 14 | [single tactical persistence integration](14-post-match-preparation-choice.md) | save/report | Done: one beta reset; exact round-trip |
 | 14B | [post-match preparation product decision](14b-post-match-preparation-product-decision.md) | no | Done: preparation deferred by A12 |
 | 15 | [Checkpoint E option-B multi-match continuity](15-checkpoint-e-multi-match-consequence.md) | no | Done: `GO`; 16 open |
-| 16 | [integrated cohort and phase closeout](16-integrated-cohort-and-phase-closeout.md) | no | Ready: Phase 81B handoff |
+| 16 | [integrated cohort and phase closeout](16-integrated-cohort-and-phase-closeout.md) | no | Done: option-B Checkpoint F `GO` |
 
 No later step starts while its preceding checkpoint is unresolved.
 
@@ -570,22 +587,16 @@ graphify update .
 
 ## Phase Exit
 
-- Checkpoints A-E and final F are all GO.
-- Structural oracle ceiling and exposure meet `+0.045/-0.045`; context-free
-  expected delta remains zero.
-- Manager agency realizes the structural ceiling from observable information.
-  Amendment A1 requires the exact D population and MVP AI acceptance gate to be
-  preregistered by Amendment A7 before Step 10; the historical shared-read D is
-  retained only as the future opponent-aware contract.
-- The contribution of `formation_history` is re-preregistered with that revised
-  D/E design before implementation; its historical AI-parity wording is
-  superseded.
-- Player profiles and squad identity can reverse the preferred choice.
-- Catalog order cannot choose a formation.
+- Checkpoint F is `GO` for the option-B contract. Historical Checkpoint B and
+  season-point materiality failures remain recorded rather than relabelled.
+- Player roles and squad identity reverse preferred shapes; catalog order does
+  not choose them.
 - `low_block` reduces conceded xG by at least `8%` with own-loss/defensive-gain
   ratio at most `2.0`.
 - The three original dominance gates retain their exact semantics and pass.
-- Post-match preparation is useful and harmful in reachable real contexts.
+- Pre-match AI remains opponent-blind and every accepted live reaction is
+  reachable on the fresh `7 x 2`.
+- Post-match gameplay preparation is explicitly `not_implemented_in_mvp`.
 - Integrated replay, save/load, determinism, localization, browser, package,
   and repository gates pass.
 - Phase report names residual findings and hands control to Phase 81B.

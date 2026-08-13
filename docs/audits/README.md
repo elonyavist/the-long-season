@@ -16,6 +16,14 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_REPORT.md` — final thesis verdict and
+  option-B product boundary: own-squad pre-match selection, state-reactive live
+  AI, durable explanation, explicit historical failures and Phase 81B handoff.
+
+- `PHASE_81A_INTEGRATED_COHORT.md` — **Checkpoint F `GO`.** Current tactical
+  invariants, byte-identical E replay, paired L6.31 renewal and current-schema
+  persistence integrated without creating a duplicate final evaluator.
+
 - `PHASE_81A_CHECKPOINT_E_OPTION_B_CONTINUITY.md` — **`GO`.** Fresh `7 x 2`
   option-B careers cover `25,704` team-matches with all live reasons reachable,
   zero fallback/reconciliation failure and exact tactical reload evidence.

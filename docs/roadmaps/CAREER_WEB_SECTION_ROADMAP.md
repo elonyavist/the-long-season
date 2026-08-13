@@ -15,10 +15,11 @@ constraining future work, not by being recent.
 
 ## Current Baseline
 
-Phases 0 through 81 are complete. Phase 81 - Phase-Aware Tactical Shape And
-Manager Decision Engine - closed 2026-08-07 on
-`docs/audits/PHASE_81_PHASE_AWARE_TACTICAL_SHAPE_ENGINE_REPORT.md`; contextual
-tactical agency in Phase 81A is the next owner. Live constraints are in
+Phases 0 through 81A are complete. Phase 81A closed on the smaller option-B
+contract: own-squad pre-match selection, state-reactive live AI and durable
+tactical explanation. Its final reports are
+`docs/audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_REPORT.md` and
+`docs/audits/PHASE_81A_INTEGRATED_COHORT.md`. Live constraints are in
 `docs/PROJECT_STATUS.md`.
 
 Phase 69's single fixed web identity supersedes the earlier three-skin
@@ -197,21 +198,19 @@ workers.
 
 ### Phase 81A - Contextual Tactical Agency, Manager And AI Decision Loop
 
-Accepted and active. Step 01 is the only active step. The web work in this phase
-exposes the manager's opponent read, presents canonical tactical chapters and
-offers the same bounded post-match preparation choices that the AI may use.
-Step 14 persists their raw facts together under one beta reset. React never
-reconstructs tactical logic.
+Done. The option-B MVP presents canonical tactical chapters and preserves raw
+kickoff, command and shot facts under one beta reset. React never reconstructs
+tactical logic. Opponent-aware pre-match AI and post-match gameplay preparation
+remain explicit future work, not hidden incomplete branches.
 
 The full execution and checkpoint contract is under
 `docs/steps/81a-contextual-tactical-agency-manager-ai-decision-loop/`.
 
 ### Phase 81B - Season-Anchored Contracts, Free-Agent Economy And Background Fixtures
 
-Draft. Renumbered from Phase 81A. Do not start until the new Phase 81A is Done.
-Its numeric decisions - the free-agent peak band, the contract ladder, the
-drain requirement - were made before measurement and must be revised against
-the earlier phases' evidence.
+Ready, not started. Renumbered from Phase 81A. Its numeric decisions - the
+free-agent peak band, the contract ladder and the drain requirement - were made
+before measurement; Step 01 must revise and freeze them before implementation.
 
 Owns: contract expiry anchored to the season boundary, offered terms in months,
 an AI free-agent signing policy, background fixtures inside
