@@ -23,9 +23,9 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **06C12 `REFINE` before replay:** both larger matrices pass, but one
-  real club admits one weak fit through the selector's duplicate coverage rule.
-  06C12A makes domain coverage canonical, then repeats the locked profile.
+- Phase 81A **06C12A `GO`, owner replicated:** domain coverage removes the sole
+  weak-fit row; all `84/84` populations pass. Larger sets both name
+  `result_resolution` (`R^2=0.3838/0.3714`); 06C13 decomposes before correction.
 - **L6.31 stays green twice:** routine-youth runway improves ready replacements
   `+0.1363/+0.1034`, leaders `+0.0810/+0.0905`, with exact immediate purity.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;

@@ -2,6 +2,7 @@ import {
   evaluatePositionSuitability,
   FORMATIONS,
   getPlayerRoleProfile,
+  isCoveringSuitability,
   roleCurrentAbility,
   scorePlayerForFormationSlot,
   type ClubId,
@@ -307,7 +308,7 @@ class SlotCandidateCache {
     this.rosterPlayerIds = rosterPlayerIds;
   }
 
-  /** Returns every fieldable candidate for one slot, best first. */
+  /** Returns every credible ordinary candidate for one slot, best first. */
   public rankedFor(slot: FormationSlot): readonly AiCandidateScore[] {
     const slotKind = `${slot.playerRole}|${slot.side ?? ""}`;
     const cached = this.rankedBySlotKind.get(slotKind);
@@ -317,7 +318,7 @@ class SlotCandidateCache {
 
     const usable = this.rosterPlayerIds
       .map((playerId) => candidateForSlot(this.input, playerId, slot))
-      .filter((candidate) => isUsableSuitability(candidate.suitability))
+      .filter((candidate) => isCoveringSuitability(candidate.suitability))
       .sort(compareCandidateScores);
     const ranked = usable.length > 0 || slot.playerRole !== "goalkeeper"
       ? usable
@@ -824,11 +825,6 @@ function playerRoleForSlot(slot: FormationSlot): PlayerRole {
     case "striker":
       return "striker";
   }
-}
-
-/** Weak fits remain valid emergency coverage; only invalid fits are unusable. */
-function isUsableSuitability(suitability: PositionSuitability): boolean {
-  return suitability !== "invalid";
 }
 
 function boundedFitnessModifier(fitness: number): number {

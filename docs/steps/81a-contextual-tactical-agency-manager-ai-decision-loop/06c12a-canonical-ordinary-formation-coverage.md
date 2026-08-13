@@ -2,8 +2,8 @@
 
 ## Status
 
-Planned. Step 06C12 found one real ordinary selection with a weak positional
-fit and withheld downstream attribution.
+Done: `GO`. Canonical ordinary coverage removes the real weak-fit row; the
+unchanged replication names `result_resolution` twice.
 
 ## Goal
 
@@ -82,3 +82,15 @@ graphify update .
 One canonical predicate owns ordinary coverage, the real failed row is green,
 emergency selection remains reachable, and the independent downstream
 replication completes without population suppression.
+
+## Result
+
+The selector's private widened predicate is deleted. Its ordinary catalog walk
+now consumes `isCoveringSuitability(...)`; imposed and emergency shapes keep
+their existing all-candidate retry. Targeted selector tests remain `21/21`.
+
+The locked replication passes all `84/84` population rows and both structural
+sets. Its downstream `R^2` is `0.38381/0.37142`, naming
+`result_resolution` twice with both classifier branches reachable. Materiality
+remains red at `+0.01784/-0.02003` and `+0.02079/-0.01583`; Step 06C13 must
+decompose resolution before any gameplay change.

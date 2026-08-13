@@ -129,3 +129,10 @@ The domain says `weak` is not covering suitability, while the free selector's
 private ordinary predicate accepts it. The emergency retry already owns
 non-covering lineups. Step 06C12A removes that duplicate semantic and reruns
 this exact profile; no downstream replay or owner is read before then.
+
+## Retry After 06C12A
+
+All `84/84` population rows pass. The complete locked replay names
+`result_resolution` in both untouched sets at pooled `R^2 0.38381/0.37142`,
+with both classifier branches reachable. This discharges the replication fork;
+Step 06C13 owns causal decomposition inside result resolution.

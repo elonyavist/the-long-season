@@ -16,6 +16,11 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CANONICAL_ORDINARY_FORMATION_COVERAGE.md` — **`GO`; downstream
+  owner replicated.** Ordinary selection now uses domain coverage; all `84/84`
+  rows pass and the larger replay names `result_resolution` twice at
+  `R^2=0.3838/0.3714`. Step 06C13 decomposes before changing variance.
+
 - `PHASE_81A_DOWNSTREAM_OWNER_REPLICATION.md` — **`REFINE` before replay.**
   Both larger structural sets pass, but one real free selection admits one
   weak fit because the selector duplicates and widens domain coverage semantics.

@@ -436,7 +436,8 @@ test("choosing a shape is unaffected: the same squad picks one it can fill", () 
   assert.equal(selection.lineup.length, 11);
   assert.notEqual(selection.formation.key, "4-4-2");
   assert.equal(
-    selection.reasons.some((reason) => reason.suitability === "invalid"),
+    selection.reasons.some((reason) =>
+      reason.suitability === "weak" || reason.suitability === "invalid"),
     false,
   );
 });
