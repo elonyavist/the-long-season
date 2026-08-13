@@ -16,6 +16,10 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_LATERAL_PLAYER_EXECUTION.md` — Step 08 mechanism `GO`, B2 still
+  `REFINE`. Player quality, side capacity and focus already form one canonical
+  chain; adding another lateral multiplier would duplicate the decision.
+
 - `PHASE_81A_PLAYER_TASK_EXECUTION.md` — implementation accepted, unchanged B2
   still `REFINE`. Real attributes now execute tasks without moving department
   strength; xG range improves in both untouched sets. Step 08 owns lateral

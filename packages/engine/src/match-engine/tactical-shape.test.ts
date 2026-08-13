@@ -185,6 +185,21 @@ test("mirroring a lineup mirrors its profile exactly", () => {
   assert.equal(mirrored.build_up, original.build_up);
 });
 
+test("swapping player quality across one symmetric shape mirrors lateral execution", () => {
+  const slots: readonly PitchSlot[] = [
+    ["left_winger", "left"],
+    ["right_winger", "right"],
+  ];
+  const leftLed = profileFor(slots, { outfieldAbilityByIndex: [18, 6] }).capacities;
+  const rightLed = profileFor(slots, { outfieldAbilityByIndex: [6, 18] }).capacities;
+
+  assert.equal(leftLed.left_progression, rightLed.right_progression);
+  assert.equal(leftLed.right_progression, rightLed.left_progression);
+  assert.equal(leftLed.left_coverage, rightLed.right_coverage);
+  assert.equal(leftLed.right_coverage, rightLed.left_coverage);
+  assert.equal(leftLed.central_progression, rightLed.central_progression);
+});
+
 test("a lineup with nobody on the left has no left flank at all", () => {
   const allRight = profileFor([
     ["goalkeeper", "center"],
@@ -466,6 +481,7 @@ function mirrorSlot([role, side]: PitchSlot): PitchSlot {
 
 interface QualityOptions {
   readonly outfieldAbility?: number;
+  readonly outfieldAbilityByIndex?: readonly number[];
   readonly goalkeeperAbility?: number;
   /**
    * Natural positions given to every outfield player.
@@ -521,7 +537,9 @@ function strengthInput(slots: readonly PitchSlot[], quality: QualityOptions = {}
     lineup.push(createLineupSlot({ slotId: `slot:${index}`, playerId: id, canonicalRole: role, side }));
     players[id] = makePlayer(
       id,
-      role === "goalkeeper" ? goalkeeperAbility : outfieldAbility,
+      role === "goalkeeper"
+        ? goalkeeperAbility
+        : (quality.outfieldAbilityByIndex?.[index] ?? outfieldAbility),
       role === "goalkeeper"
         ? [NATURAL_POSITION_FOR_ROLE.goalkeeper]
         : (quality.outfieldNaturalPositions ?? [NATURAL_POSITION_FOR_ROLE[role]]),

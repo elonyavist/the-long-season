@@ -368,6 +368,46 @@ test("left and right focus are exact mirrors over every causal route fact", () =
   }
 });
 
+test("the productive focus follows player execution and opponent weakness under mirroring", () => {
+  const leftLed = tacticalShapeProfileFixture({
+    overrides: { left_progression: 0.8, right_progression: 0.2 },
+  });
+  const opponentWeakRight = tacticalShapeProfileFixture({
+    overrides: { right_coverage: 0.2, left_coverage: 0.8 },
+  });
+  const leftResult = opportunityRouteSaturation(planFor({
+    ownShape: leftLed,
+    opponentShape: opponentWeakRight,
+    lateralFocus: "left",
+  }), "left");
+  const wrongRightResult = opportunityRouteSaturation(planFor({
+    ownShape: leftLed,
+    opponentShape: opponentWeakRight,
+    lateralFocus: "right",
+  }), "right");
+  assert.equal(leftResult > wrongRightResult, true);
+
+  const rightLed = tacticalShapeProfileFixture({
+    overrides: { left_progression: 0.2, right_progression: 0.8 },
+  });
+  const opponentWeakLeft = tacticalShapeProfileFixture({
+    overrides: { right_coverage: 0.8, left_coverage: 0.2 },
+  });
+  const rightResult = opportunityRouteSaturation(planFor({
+    ownShape: rightLed,
+    opponentShape: opponentWeakLeft,
+    lateralFocus: "right",
+  }), "right");
+  const wrongLeftResult = opportunityRouteSaturation(planFor({
+    ownShape: rightLed,
+    opponentShape: opponentWeakLeft,
+    lateralFocus: "left",
+  }), "left");
+  assert.equal(rightResult > wrongLeftResult, true);
+  assertMirrored(leftResult, rightResult);
+  assertMirrored(wrongRightResult, wrongLeftResult);
+});
+
 test("the strategic signature is deterministic, basis-point fixed and sensitive to a real reallocation", () => {
   const balanced = planFor({});
   const repeated = planFor({});

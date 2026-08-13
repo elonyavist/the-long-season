@@ -89,7 +89,8 @@ chosen. Its first run stopped before replay on one real weak-fit selection;
 goal-to-result are each coherent, so reducing football variance is rejected.
 Step 07 is now complete: real attributes execute conserved tactical tasks and
 raise xG range in both untouched sets, but B2 remains `REFINE`. Step 08 owns the
-remaining lateral execution before any target review.
+remaining lateral execution before any target review. Step 08 then proves the
+chain is already canonical and adds no duplicate multiplier; Step 09 is next.
 
 This phase is governed by
 [`PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md`](../../audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md).
@@ -346,7 +347,7 @@ contexts; it never owns the analytic diversity gate.
 | 06C12A | [canonical ordinary formation coverage](06c12a-canonical-ordinary-formation-coverage.md) | yes | Done: `GO`, resolution owner twice |
 | 06C13 | [result-resolution causal decomposition](06c13-result-resolution-causal-decomposition.md) | no | Done: `STOP / RETHINK`, no local resolver owner |
 | 07 | [player task execution](07-player-task-execution.md) | yes | Done: task identity accepted; Step 08 |
-| 08 | [squad identity and lateral execution](08-squad-identity-and-lateral-execution.md) | yes | Step 09 |
+| 08 | [squad identity and lateral execution](08-squad-identity-and-lateral-execution.md) | yes | Done: canonical chain; Step 09 |
 | 09 | [Checkpoint C player context](09-checkpoint-c-player-context.md) | no | GO authorizes 10 |
 | 10 | [manager opponent read](10-manager-opponent-read.md) | information | A1 rescope required before start |
 | 11 | [MVP AI policy - historical opponent-read plan superseded](11-ai-shared-opponent-read.md) | yes | A1 rescope required after B2 |
