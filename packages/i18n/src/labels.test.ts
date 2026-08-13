@@ -99,7 +99,7 @@ test("translates match preparation web labels in every supported language", () =
   assert.equal(translate("de", "career.matchPreparation.action.clear"), "Leeren");
   assert.equal(translate("es", "career.matchPreparation.action.fillGaps"), "Rellenar");
   assert.equal(translate("fr", "career.matchPreparation.action.clear"), "Vider");
-  assert.equal(translate("it", "career.matchPreparation.tactic.attacking"), "Offensiva");
+  assert.equal(translate("it", "career.matchPreparation.tactic.high_press"), "Pressing alto");
   assert.equal(translate("en", "career.matchPreparation.formation.4-2-3-1"), "4-2-3-1");
   assert.equal(translate("en", "career.matchPreparation.formation.5-2-2-1"), "5-2-2-1");
   assert.equal(translate("it", "career.matchPreparation.bench"), "Panchina");

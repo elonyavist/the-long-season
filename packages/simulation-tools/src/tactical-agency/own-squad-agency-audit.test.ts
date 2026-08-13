@@ -11,7 +11,15 @@ function schedule(
   identity: string,
   deltas: { readonly own: number; readonly mismatch: number; readonly blind: number },
 ): OwnSquadAgencyScheduleResult {
-  const policyIds = ["balanced:balanced", "attacking:left", "defensive:right", "attacking:right"];
+  const policyIds = [
+    "balanced:balanced",
+    "patient_possession:left",
+    "high_press:right",
+    "direct_transition:balanced",
+    "wide_overload:left",
+    "compact_counter:right",
+  ];
+  const identityIndex = Number(identity.split("-").at(-1));
   return {
     scheduleId: `schedule-${index}`,
     worldSeed: `world-${Math.floor(index / 8)}`,
@@ -31,7 +39,7 @@ function schedule(
       non_commit: 0,
       blind: deltas.blind,
     },
-    ownPolicyIds: Array.from({ length: 34 }, () => policyIds[index % policyIds.length] as string),
+    ownPolicyIds: Array.from({ length: 34 }, () => policyIds[identityIndex % policyIds.length] as string),
     formationKeys: Array.from({ length: 34 }, () => "4-4-2"),
     tiedAtBestCount: 0,
   };
@@ -67,7 +75,7 @@ test("passes the frozen paired season bands without pooling seed sets", () => {
 
   assert.equal(result.decision, "GO");
   assert.deepEqual(result.failed, []);
-  assert.equal(result.policy.distinctModalPolicyCount, 4);
+  assert.equal(result.policy.distinctModalPolicyCount, 6);
   assert.equal(result.policy.maximumModalPolicyShare, 0.25);
   assert.equal(result.policy.opponentSourceReadCount, 0);
   const blind = result.arms.find(({ arm }) => arm === "blind");

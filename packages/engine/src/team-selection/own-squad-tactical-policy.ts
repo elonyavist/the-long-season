@@ -48,13 +48,17 @@ export function evaluateOwnSquadTacticalPolicies(input: {
   const profileShare = input.policy.profileFitShareBasisPoints / 10_000;
   const candidates = input.policy.profiles.flatMap((profile) =>
     LATERAL_FOCUSES.map((lateralFocus): OwnSquadTacticalPolicyCandidate => {
-      const rawProfileFit = weightedProfileFit(input.shape.capacities, profile);
+      const relativeProfileFit = standardizedWeightedProfileFit(
+        input.shape.capacities,
+        profile,
+        input.policy,
+      );
       // A near-equivalent committed plan should not displace the genuine
       // non-commitment option merely because of floating-point-scale noise.
       // Content owns how much own-squad advantage is needed to commit.
       const profileFit = profile.profileKey === "balanced"
-        ? rawProfileFit
-        : rawProfileFit * (1 - input.policy.minimumCommitmentAdvantageBasisPoints / 10_000);
+        ? relativeProfileFit
+        : relativeProfileFit - input.policy.minimumCommitmentAdvantageBasisPoints / 10_000;
       const rawLateralFit = focusFit(input.shape.capacities, lateralFocus);
       const lateralFit = lateralFocus === "balanced"
         ? rawLateralFit
@@ -87,13 +91,28 @@ export function evaluateOwnSquadTacticalPolicies(input: {
   };
 }
 
-function weightedProfileFit(
+/**
+ * Reads one plan against task-specific ordinary levels and spreads.
+ *
+ * A raw `counter_threat` and raw `pressing_cohesion` are not cross-task units:
+ * their saturation policies give ordinary elevens different levels and
+ * dispersions. Content supplies the frozen selected-eleven reference and scale
+ * for each task. The current own eleven is standardized, then the conserved
+ * plan demand reads that relative profile. Every plan, including balanced,
+ * uses the same calculation; committed plans alone pay the versioned minimum
+ * edge. No live population, opponent fact, identity key or result enters.
+ */
+function standardizedWeightedProfileFit(
   capacities: Readonly<Record<TacticalShapeCapacity, number>>,
   profile: OwnSquadTacticProfileConfig,
+  policy: OwnSquadTacticalPolicyConfig,
 ): number {
   let total = 0;
   for (const capacity of TACTICAL_SHAPE_CAPACITIES) {
-    total += capacities[capacity] * profile.demandBasisPointsByCapacity[capacity] / 10_000;
+    const reference = policy.profileFitReferenceBasisPointsByCapacity[capacity] / 10_000;
+    const scale = policy.profileFitScaleBasisPointsByCapacity[capacity] / 10_000;
+    const standardizedCapacity = (capacities[capacity] - reference) / scale;
+    total += standardizedCapacity * profile.demandBasisPointsByCapacity[capacity] / 10_000;
   }
   return total;
 }

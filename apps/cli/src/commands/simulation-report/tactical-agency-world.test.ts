@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "vitest";
 
+import { matchTacticsCalibration } from "@game/content";
 import {
   deriveOpportunityRoutePlan,
   opportunityRouteBudget,
@@ -79,7 +80,8 @@ test("B2 selects every domestic club once and retains both directions of each fi
   assert.equal(reachabilityWorlds.some(({ matchups }) => matchups.some((matchup) =>
     tacticalAgencyShapeAsymmetryBasisPoints(matchup.own.shape, matchup.opponent.shape) >= 500)), true);
   const tacticalSelections = reachabilityWorlds.flatMap(({ clubSelections }) => clubSelections);
-  const selectedProfileCounts = Object.fromEntries(["balanced", "attacking", "defensive"].map((profileKey) => [
+  const profileKeys = matchTacticsCalibration.ownSquadTacticalPolicy.profiles.map(({ profileKey }) => profileKey);
+  const selectedProfileCounts = Object.fromEntries(profileKeys.map((profileKey) => [
     profileKey,
     tacticalSelections.filter(({ tacticalPolicy }) => tacticalPolicy.ownFit.profileKey === profileKey).length,
   ]));
@@ -96,10 +98,24 @@ test("B2 selects every domestic club once and retains both directions of each fi
     selectedProfileCounts,
     balancedMarginMinimum: Math.min(...balancedMargins),
     balancedMarginMaximum: Math.max(...balancedMargins),
+    profileFitRanges: Object.fromEntries(profileKeys.map((profileKey) => {
+      const fits = tacticalSelections.flatMap(({ tacticalPolicy }) => tacticalPolicy.candidates
+        .filter((candidate) => candidate.profileKey === profileKey && candidate.lateralFocus === "balanced")
+        .map(({ profileFit }) => profileFit));
+      return [profileKey, { minimum: Math.min(...fits), maximum: Math.max(...fits) }];
+    })),
   };
+  assert.deepEqual(selectedProfileCounts, {
+    balanced: 1,
+    patient_possession: 67,
+    high_press: 3,
+    direct_transition: 60,
+    wide_overload: 200,
+    compact_counter: 47,
+  });
   assert.deepEqual(
     new Set(tacticalSelections.map(({ tacticalPolicy }) => tacticalPolicy.ownFit.profileKey)),
-    new Set(["balanced", "attacking", "defensive"]),
+    new Set(profileKeys),
     JSON.stringify(reachabilityDiagnostic),
   );
   assert.deepEqual(
@@ -108,7 +124,7 @@ test("B2 selects every domestic club once and retains both directions of each fi
   );
   assert.equal(tacticalSelections.every(({ tacticalPolicy }) => tacticalPolicy.tiedAtBestCount === 1), true);
   assert.equal(tacticalSelections.every(({ tacticalPolicy }) =>
-    tacticalPolicy.candidates.length === 9
+    tacticalPolicy.candidates.length === profileKeys.length * 3
     && tacticalPolicy.candidates.includes(tacticalPolicy.ownFit)
     && tacticalPolicy.candidates.includes(tacticalPolicy.mismatch)
     && tacticalPolicy.candidates.includes(tacticalPolicy.nonCommit)

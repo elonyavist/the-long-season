@@ -1,4 +1,9 @@
-import type { FixtureId, LateralFocus, MatchTacticsCalibrationConfig } from "@game/domain";
+import {
+  OWN_SQUAD_TACTIC_PROFILE_KEYS,
+  type FixtureId,
+  type LateralFocus,
+  type MatchTacticsCalibrationConfig,
+} from "@game/domain";
 import {
   simulateMatch,
   type MatchEngineConfig,
@@ -303,7 +308,9 @@ function summarizePolicy(
   schedules: readonly OwnSquadAgencyScheduleResult[],
   declaredIdentityKeys: readonly string[],
 ): OwnSquadAgencyPolicySummary {
-  const selectedProfileCounts: Record<string, number> = { balanced: 0, attacking: 0, defensive: 0 };
+  const selectedProfileCounts = Object.fromEntries(
+    OWN_SQUAD_TACTIC_PROFILE_KEYS.map((profileKey) => [profileKey, 0]),
+  ) as Record<string, number>;
   const selectedFocusCounts: Record<string, number> = { left: 0, balanced: 0, right: 0 };
   const policyByIdentity = new Map(declaredIdentityKeys.map((identity) => [identity, new Map<string, number>()]));
   let tiedAtBestCount = 0;

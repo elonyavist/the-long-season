@@ -88,19 +88,32 @@ export function matchTacticsCalibrationFixture(): MatchTacticsCalibrationConfig 
     },
     ownSquadTacticalPolicy: {
       profileFitShareBasisPoints: 8_000,
+      profileFitReferenceBasisPointsByCapacity: fixtureCapacityValues(5_000),
+      profileFitScaleBasisPointsByCapacity: fixtureCapacityValues(1_000),
       minimumCommitmentAdvantageBasisPoints: 100,
       minimumLateralFocusAdvantageBasisPoints: 500,
       profiles: [
         ownSquadProfile("balanced", "balanced"),
-        ownSquadProfile("attacking", "attacking"),
-        ownSquadProfile("defensive", "defensive"),
+        ownSquadProfile("patient_possession", "balanced"),
+        ownSquadProfile("high_press", "attacking"),
+        ownSquadProfile("direct_transition", "balanced"),
+        ownSquadProfile("wide_overload", "attacking"),
+        ownSquadProfile("compact_counter", "defensive"),
       ],
     },
   };
 }
 
+function fixtureCapacityValues(
+  value: number,
+): Readonly<Record<TacticalShapeCapacity, number>> {
+  return Object.fromEntries(
+    TACTICAL_SHAPE_CAPACITIES.map((capacity) => [capacity, value]),
+  ) as Readonly<Record<TacticalShapeCapacity, number>>;
+}
+
 function ownSquadProfile(
-  profileKey: "balanced" | "attacking" | "defensive",
+  profileKey: MatchTacticsCalibrationConfig["ownSquadTacticalPolicy"]["profiles"][number]["profileKey"],
   mentality: "balanced" | "attacking" | "defensive",
 ): MatchTacticsCalibrationConfig["ownSquadTacticalPolicy"]["profiles"][number] {
   return {

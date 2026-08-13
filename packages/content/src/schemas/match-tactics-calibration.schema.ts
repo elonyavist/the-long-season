@@ -137,6 +137,13 @@ const ownSquadDemandSchema = v.strictObject(
 
 const ownSquadTacticalPolicySchema = v.strictObject({
   profileFitShareBasisPoints: basisPoints,
+  profileFitReferenceBasisPointsByCapacity: ownSquadDemandSchema,
+  profileFitScaleBasisPointsByCapacity: v.strictObject(
+    Object.fromEntries(TACTICAL_SHAPE_CAPACITIES.map((capacity) => [capacity, positiveBasisPoints])) as Record<
+      (typeof TACTICAL_SHAPE_CAPACITIES)[number],
+      typeof positiveBasisPoints
+    >,
+  ),
   minimumCommitmentAdvantageBasisPoints: positiveBasisPoints,
   minimumLateralFocusAdvantageBasisPoints: positiveBasisPoints,
   profiles: v.array(v.strictObject({

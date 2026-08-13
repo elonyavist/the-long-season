@@ -17,7 +17,7 @@ test("evaluates every profile and focus with stable order and explicit ties", ()
     policy: { ...input.policy, profiles: input.policy.profiles.toReversed() },
   });
 
-  assert.equal(first.candidates.length, 9);
+  assert.equal(first.candidates.length, 18);
   assert.deepEqual(first, reversed);
   assert.equal(first.tiedAtBestCount > 0, true);
   assert.equal(first.nonCommit.policyId, "balanced:balanced");
@@ -81,4 +81,69 @@ test("the policy reads every declared capacity and no opponent fact", () => {
       capacity,
     );
   }
+});
+
+test("a plan reads standardized own strengths through its conserved demand", () => {
+  const base = tacticalShapeProfileFixture();
+  const policy = matchTacticsCalibrationFixture().ownSquadTacticalPolicy;
+  const balanced = policy.profiles.find(({ profileKey }) => profileKey === "balanced");
+  const transition = policy.profiles.find(({ profileKey }) => profileKey === "direct_transition");
+  assert.ok(balanced);
+  assert.ok(transition);
+  const transitionDemand = {
+    ...transition.demandBasisPointsByCapacity,
+    build_up: transition.demandBasisPointsByCapacity.build_up - 500,
+    counter_threat: transition.demandBasisPointsByCapacity.counter_threat + 500,
+  };
+  const profiles = policy.profiles.map((profile) => profile.profileKey === "direct_transition"
+    ? { ...profile, demandBasisPointsByCapacity: transitionDemand }
+    : profile);
+  const capacities = Object.fromEntries(
+    TACTICAL_SHAPE_CAPACITIES.map((capacity) => [
+      capacity,
+      0.7 + (
+        transitionDemand[capacity]
+        - balanced.demandBasisPointsByCapacity[capacity]
+      ) / 20_000,
+    ]),
+  ) as typeof base.capacities;
+  const result = evaluateOwnSquadTacticalPolicies({
+    shape: { ...base, capacities },
+    policy: { ...policy, profiles },
+  });
+  const balancedCandidate = result.candidates.find(({ policyId }) => policyId === "balanced:balanced");
+  const transitionCandidate = result.candidates.find(({ policyId }) => policyId === "direct_transition:balanced");
+  assert.ok(balancedCandidate);
+  assert.ok(transitionCandidate);
+  assert.equal(transitionCandidate.profileFit > balancedCandidate.profileFit, true);
+});
+
+test("capacity reference and scale are active policy inputs", () => {
+  const base = tacticalShapeProfileFixture();
+  const shape = { ...base, capacities: { ...base.capacities, counter_threat: 0.7 } };
+  const policy = matchTacticsCalibrationFixture().ownSquadTacticalPolicy;
+  const baseline = evaluateOwnSquadTacticalPolicies({ shape, policy });
+  const referenced = evaluateOwnSquadTacticalPolicies({
+    shape,
+    policy: {
+      ...policy,
+      profileFitReferenceBasisPointsByCapacity: {
+        ...policy.profileFitReferenceBasisPointsByCapacity,
+        counter_threat: policy.profileFitReferenceBasisPointsByCapacity.counter_threat + 100,
+      },
+    },
+  });
+  const scaled = evaluateOwnSquadTacticalPolicies({
+    shape,
+    policy: {
+      ...policy,
+      profileFitScaleBasisPointsByCapacity: {
+        ...policy.profileFitScaleBasisPointsByCapacity,
+        counter_threat: policy.profileFitScaleBasisPointsByCapacity.counter_threat + 100,
+      },
+    },
+  });
+
+  assert.notDeepEqual(referenced.candidates, baseline.candidates);
+  assert.notDeepEqual(scaled.candidates, baseline.candidates);
 });

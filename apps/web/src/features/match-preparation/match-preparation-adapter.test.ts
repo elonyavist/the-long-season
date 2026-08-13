@@ -414,7 +414,7 @@ describe("match-preparation tactical consequences", () => {
     );
     const attacking = matchPreparationShapeReading(
       career,
-      selectMatchPreparationTactic(auto, "tactic:attacking"),
+      selectMatchPreparationTactic(auto, "tactic:high_press"),
     );
 
     expect(attacking?.shape).toStrictEqual(balanced?.shape);
@@ -544,7 +544,7 @@ describe("match-preparation tactical consequences", () => {
 
   it("keeps a curated shape quiet even under the most aggressive tactic profile", () => {
     // The press observation must be about the shape a manager built, not about
-    // his having picked Attacking. A curated eleven pressing hard is not a
+    // his having picked High Press. A curated eleven pressing hard is not a
     // mistake and must not be reported as one.
     const career = careerState("shape-press-quiet");
     const noisy: string[] = [];
@@ -552,7 +552,7 @@ describe("match-preparation tactical consequences", () => {
     for (const formation of CAREER_MATCH_PREPARATION_FORMATIONS) {
       const chosen = selectMatchPreparationFormation(createMatchPreparationDraft(career), formation.formationId);
       const auto = applyMatchPreparationSelectionAction(career, chosen, "auto");
-      const draft = selectMatchPreparationTactic(auto, "tactic:attacking");
+      const draft = selectMatchPreparationTactic(auto, "tactic:high_press");
       const view = buildMatchPreparationView(career, draft, matchPreparationShapeReading(career, draft));
       const observations = view.tacticalConsequences?.observations ?? [];
 

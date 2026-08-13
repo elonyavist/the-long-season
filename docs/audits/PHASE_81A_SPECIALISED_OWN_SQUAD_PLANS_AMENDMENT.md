@@ -49,8 +49,11 @@ order. Tactic values use the existing `0..1` inputs.
 | counter_threat | 800 | 300 | 1200 | 2500 | 600 | 1200 |
 | rest_defence | 700 | 1000 | 900 | 1800 | 800 | 1600 |
 
-Profile fit retains the existing conserved weighted-capacity calculation and
-`8000` basis-point share. Profile commitment requires a `100` basis-point edge.
+Profile fit retains the conserved demand rows and `8000` basis-point share.
+Amendment A9 supersedes only raw cross-capacity comparison: each capacity is
+standardised by one versioned reference/scale pair before the conserved dot
+product, and every profile is read relative to `balanced`. Profile commitment
+requires the same `100` basis-point edge.
 Lateral fit retains the canonical mirrored-capacity calculation, but commitment
 requires a `100`, not `500`, basis-point edge. The old threshold suppressed one
 side entirely in a real seven-world set; this replacement is frozen here as a
@@ -83,3 +86,7 @@ owner attribution; it never authorizes tuning plan values after output.
 Renewal remains `not_evaluated` in D2. The completed tactical engine must still
 rerun the L6.31 ready-replacement and generated-leader gates in Step 16's
 integrated `7 x 10`.
+
+The standardisation values, formula and development-only reachability account
+live in
+[`PHASE_81A_OWN_SQUAD_CAPACITY_STANDARDISATION_AMENDMENT.md`](./PHASE_81A_OWN_SQUAD_CAPACITY_STANDARDISATION_AMENDMENT.md).

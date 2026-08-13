@@ -683,7 +683,7 @@ test("a club the manager never meets still selects a typed eleven in a real shap
   assert.equal(new Set(stranger.teamContext.lineup.map((slot) => slot.playerId)).size, 11);
   assert.equal(stranger.benchPlayerIds.length > 0, true);
   assert.deepEqual(stranger.teamContext.tacticalDistribution, stranger.tacticalPolicy.ownFit.tactic);
-  assert.equal(stranger.tacticalPolicy.candidates.length, 9);
+  assert.equal(stranger.tacticalPolicy.candidates.length, 18);
 
   const changedOpponent = selectCareerAiTeam({
     careerState,

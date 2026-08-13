@@ -461,19 +461,30 @@ function validCalibration(): MatchTacticsCalibrationConfig {
     tacticalSemantics: validSemantics(),
     ownSquadTacticalPolicy: {
       profileFitShareBasisPoints: 8_000,
+      profileFitReferenceBasisPointsByCapacity: capacityValues(5_000),
+      profileFitScaleBasisPointsByCapacity: capacityValues(1_000),
       minimumCommitmentAdvantageBasisPoints: 100,
       minimumLateralFocusAdvantageBasisPoints: 500,
       profiles: [
         validOwnSquadProfile("balanced", "balanced"),
-        validOwnSquadProfile("attacking", "attacking"),
-        validOwnSquadProfile("defensive", "defensive"),
+        validOwnSquadProfile("patient_possession", "balanced"),
+        validOwnSquadProfile("high_press", "attacking"),
+        validOwnSquadProfile("direct_transition", "balanced"),
+        validOwnSquadProfile("wide_overload", "attacking"),
+        validOwnSquadProfile("compact_counter", "defensive"),
       ],
     },
   };
 }
 
+function capacityValues(value: number): Readonly<Record<TacticalShapeCapacity, number>> {
+  return Object.fromEntries(
+    TACTICAL_SHAPE_CAPACITIES.map((capacity) => [capacity, value]),
+  ) as Readonly<Record<TacticalShapeCapacity, number>>;
+}
+
 function validOwnSquadProfile(
-  profileKey: "balanced" | "attacking" | "defensive",
+  profileKey: MatchTacticsCalibrationConfig["ownSquadTacticalPolicy"]["profiles"][number]["profileKey"],
   mentality: "balanced" | "attacking" | "defensive",
 ): MatchTacticsCalibrationConfig["ownSquadTacticalPolicy"]["profiles"][number] {
   return {
@@ -727,6 +738,30 @@ test("own-squad policy commitment thresholds are positive bounded shares", () =>
       minimumLateralFocusAdvantageBasisPoints: 10_001,
     },
   }, "invalid_own_squad_demand");
+});
+
+test("own-squad policy requires a bounded reference and positive scale for every capacity", () => {
+  const base = validCalibration();
+  assertRejects({
+    ...base,
+    ownSquadTacticalPolicy: {
+      ...base.ownSquadTacticalPolicy,
+      profileFitScaleBasisPointsByCapacity: {
+        ...base.ownSquadTacticalPolicy.profileFitScaleBasisPointsByCapacity,
+        pressing_cohesion: 0,
+      },
+    },
+  }, "invalid_own_squad_standardisation");
+  assertRejects({
+    ...base,
+    ownSquadTacticalPolicy: {
+      ...base.ownSquadTacticalPolicy,
+      profileFitReferenceBasisPointsByCapacity: {
+        ...base.ownSquadTacticalPolicy.profileFitReferenceBasisPointsByCapacity,
+        counter_threat: 10_001,
+      },
+    },
+  }, "invalid_own_squad_standardisation");
 });
 
 test("own-squad policy requires the complete conserved profile vocabulary", () => {

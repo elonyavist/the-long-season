@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 8,
-  "version": "match-tactics-calibration-v10",
+  "schemaVersion": 9,
+  "version": "match-tactics-calibration-v11",
   "classification": "explicit_game_design_target",
   "chanceActorSelection": {
     "nonSetPieceAssistEligibilityBasisPoints": 7512,
@@ -280,8 +280,36 @@
   },
   "ownSquadTacticalPolicy": {
     "profileFitShareBasisPoints": 8000,
+    "profileFitReferenceBasisPointsByCapacity": {
+      "build_up": 5121,
+      "central_progression": 5380,
+      "left_progression": 5110,
+      "right_progression": 5143,
+      "final_third_presence": 5793,
+      "pressing_cohesion": 4985,
+      "central_coverage": 5499,
+      "left_coverage": 4828,
+      "right_coverage": 4856,
+      "box_protection": 5703,
+      "counter_threat": 5699,
+      "rest_defence": 5599
+    },
+    "profileFitScaleBasisPointsByCapacity": {
+      "build_up": 462,
+      "central_progression": 549,
+      "left_progression": 678,
+      "right_progression": 659,
+      "final_third_presence": 596,
+      "pressing_cohesion": 460,
+      "central_coverage": 455,
+      "left_coverage": 547,
+      "right_coverage": 550,
+      "box_protection": 429,
+      "counter_threat": 523,
+      "rest_defence": 440
+    },
     "minimumCommitmentAdvantageBasisPoints": 100,
-    "minimumLateralFocusAdvantageBasisPoints": 500,
+    "minimumLateralFocusAdvantageBasisPoints": 100,
     "profiles": [
       {
         "profileKey": "balanced",
@@ -302,39 +330,93 @@
         }
       },
       {
-        "profileKey": "attacking",
-        "tactic": { "mentality": "attacking", "pressing": 0.85, "directness": 0.75, "width": 0.8, "risk": 0.7 },
+        "profileKey": "patient_possession",
+        "tactic": { "mentality": "balanced", "pressing": 0.65, "directness": 0.2, "width": 0.55, "risk": 0.35 },
         "demandBasisPointsByCapacity": {
-          "build_up": 900,
-          "central_progression": 1100,
-          "left_progression": 950,
-          "right_progression": 950,
-          "final_third_presence": 1800,
+          "build_up": 1800,
+          "central_progression": 1700,
+          "left_progression": 500,
+          "right_progression": 500,
+          "final_third_presence": 900,
           "pressing_cohesion": 1100,
-          "central_coverage": 500,
-          "left_coverage": 300,
-          "right_coverage": 300,
-          "box_protection": 300,
-          "counter_threat": 1500,
-          "rest_defence": 300
+          "central_coverage": 800,
+          "left_coverage": 400,
+          "right_coverage": 400,
+          "box_protection": 600,
+          "counter_threat": 300,
+          "rest_defence": 1000
         }
       },
       {
-        "profileKey": "defensive",
-        "tactic": { "mentality": "defensive", "pressing": 0.35, "directness": 0.3, "width": 0.4, "risk": 0.2 },
+        "profileKey": "high_press",
+        "tactic": { "mentality": "attacking", "pressing": 0.9, "directness": 0.4, "width": 0.6, "risk": 0.7 },
         "demandBasisPointsByCapacity": {
-          "build_up": 800,
+          "build_up": 700,
+          "central_progression": 900,
+          "left_progression": 500,
+          "right_progression": 500,
+          "final_third_presence": 1600,
+          "pressing_cohesion": 2200,
+          "central_coverage": 600,
+          "left_coverage": 300,
+          "right_coverage": 300,
+          "box_protection": 300,
+          "counter_threat": 1200,
+          "rest_defence": 900
+        }
+      },
+      {
+        "profileKey": "direct_transition",
+        "tactic": { "mentality": "balanced", "pressing": 0.3, "directness": 0.9, "width": 0.5, "risk": 0.65 },
+        "demandBasisPointsByCapacity": {
+          "build_up": 300,
+          "central_progression": 700,
+          "left_progression": 350,
+          "right_progression": 350,
+          "final_third_presence": 1600,
+          "pressing_cohesion": 500,
+          "central_coverage": 500,
+          "left_coverage": 300,
+          "right_coverage": 300,
+          "box_protection": 800,
+          "counter_threat": 2500,
+          "rest_defence": 1800
+        }
+      },
+      {
+        "profileKey": "wide_overload",
+        "tactic": { "mentality": "attacking", "pressing": 0.55, "directness": 0.45, "width": 0.9, "risk": 0.65 },
+        "demandBasisPointsByCapacity": {
+          "build_up": 500,
           "central_progression": 500,
-          "left_progression": 400,
-          "right_progression": 400,
-          "final_third_presence": 400,
-          "pressing_cohesion": 600,
-          "central_coverage": 1200,
-          "left_coverage": 900,
-          "right_coverage": 900,
-          "box_protection": 1500,
-          "counter_threat": 900,
-          "rest_defence": 1500
+          "left_progression": 1600,
+          "right_progression": 1600,
+          "final_third_presence": 1700,
+          "pressing_cohesion": 700,
+          "central_coverage": 300,
+          "left_coverage": 700,
+          "right_coverage": 700,
+          "box_protection": 300,
+          "counter_threat": 600,
+          "rest_defence": 800
+        }
+      },
+      {
+        "profileKey": "compact_counter",
+        "tactic": { "mentality": "defensive", "pressing": 0.2, "directness": 0.75, "width": 0.3, "risk": 0.25 },
+        "demandBasisPointsByCapacity": {
+          "build_up": 400,
+          "central_progression": 400,
+          "left_progression": 300,
+          "right_progression": 300,
+          "final_third_presence": 500,
+          "pressing_cohesion": 500,
+          "central_coverage": 1400,
+          "left_coverage": 700,
+          "right_coverage": 700,
+          "box_protection": 2000,
+          "counter_threat": 1200,
+          "rest_defence": 1600
         }
       }
     ]

@@ -313,13 +313,22 @@ export const TACTIC_KNOBS = [
 ] as const satisfies readonly TacticKnob[];
 
 /** Stable own-squad plans available to both the manager and career AI. */
-export type OwnSquadTacticProfileKey = "balanced" | "attacking" | "defensive";
+export type OwnSquadTacticProfileKey =
+  | "balanced"
+  | "patient_possession"
+  | "high_press"
+  | "direct_transition"
+  | "wide_overload"
+  | "compact_counter";
 
 /** Deterministic policy order; stable IDs, rather than asset order, break ties. */
 export const OWN_SQUAD_TACTIC_PROFILE_KEYS = [
   "balanced",
-  "attacking",
-  "defensive",
+  "patient_possession",
+  "high_press",
+  "direct_transition",
+  "wide_overload",
+  "compact_counter",
 ] as const satisfies readonly OwnSquadTacticProfileKey[];
 
 /** One versioned plan and the capacities an own-squad selector asks of it. */
@@ -340,6 +349,10 @@ export interface OwnSquadTacticProfileConfig {
 export interface OwnSquadTacticalPolicyConfig {
   /** Share of total fit assigned to the full twelve-capacity profile. */
   readonly profileFitShareBasisPoints: number;
+  /** Ordinary selected-eleven level used to compare unlike capacity scales. */
+  readonly profileFitReferenceBasisPointsByCapacity: Readonly<Record<TacticalShapeCapacity, number>>;
+  /** Positive selected-eleven spread used to express relative specialization. */
+  readonly profileFitScaleBasisPointsByCapacity: Readonly<Record<TacticalShapeCapacity, number>>;
   /** Relative own-fit edge a committed profile must earn over non-commitment. */
   readonly minimumCommitmentAdvantageBasisPoints: number;
   /** Relative flank edge required before abandoning a balanced focus. */
@@ -714,6 +727,7 @@ export type MatchTacticsCalibrationErrorCode =
   | "invalid_coordination_multipliers"
   | "incomplete_own_squad_profiles"
   | "invalid_own_squad_tactic"
+  | "invalid_own_squad_standardisation"
   | "invalid_own_squad_demand"
   | "own_squad_demand_not_conserved";
 
@@ -796,6 +810,16 @@ export function validateOwnSquadTacticalPolicy(config: OwnSquadTacticalPolicyCon
       "invalid_own_squad_demand",
       `Own-squad minimum commitment advantage must be positive basis points: ${config.minimumCommitmentAdvantageBasisPoints}`,
     );
+  }
+  for (const capacity of TACTICAL_SHAPE_CAPACITIES) {
+    const reference = config.profileFitReferenceBasisPointsByCapacity[capacity];
+    const scale = config.profileFitScaleBasisPointsByCapacity[capacity];
+    if (!isBasisPointShare(reference) || !isBasisPointShare(scale) || scale === 0) {
+      throw new MatchTacticsCalibrationError(
+        "invalid_own_squad_standardisation",
+        `Own-squad profile-fit standardisation requires bounded reference and positive scale: ${capacity}=${reference}/${scale}`,
+      );
+    }
   }
   if (
     !isBasisPointShare(config.minimumLateralFocusAdvantageBasisPoints)
@@ -1159,7 +1183,7 @@ export function lateralChannelShares(
 }
 
 /** Schema version of the match-tactics calibration asset. */
-export const MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION = 8;
+export const MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION = 9;
 
 /**
  * Derives the exact budget allocated by one role row.

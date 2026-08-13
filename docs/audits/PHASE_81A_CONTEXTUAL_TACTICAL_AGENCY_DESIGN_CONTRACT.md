@@ -1980,3 +1980,22 @@ interpretabile. Un fallimento apre attribuzione, non tuning post-output.
 
 La specifica completa vive in
 [`PHASE_81A_SPECIALISED_OWN_SQUAD_PLANS_AMENDMENT.md`](./PHASE_81A_SPECIALISED_OWN_SQUAD_PLANS_AMENDMENT.md).
+
+## Amendment A9 - Own-Squad Capacity Standardisation
+
+Step 12B's authorised A/B development reachability lane falsified raw,
+cosine and catalog-relative comparisons before D2. The twelve capacities have
+task-specific ordinary levels and spreads, so raw comparison made transition
+and compact plans dominate even when another task was the club's relative
+strength.
+
+Profile fit now standardises each own-eleven capacity with one versioned
+reference and positive scale, applies the unchanged conserved demand rows, and
+scores all six plans through the same calculation. No opponent, identity,
+result estimate or direct bonus enters. The exact formula, basis-point values,
+rejected calculations and A/B reachability counts are frozen in
+[`PHASE_81A_OWN_SQUAD_CAPACITY_STANDARDISATION_AMENDMENT.md`](./PHASE_81A_OWN_SQUAD_CAPACITY_STANDARDISATION_AMENDMENT.md).
+
+D2 remains untouched and fail-closed. A/B reachability may validate vocabulary
+and wiring only; it cannot move the six plans, original point bands, fresh C/D
+seeds or historical guardrails.

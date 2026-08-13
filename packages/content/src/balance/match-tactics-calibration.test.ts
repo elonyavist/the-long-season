@@ -20,9 +20,46 @@ import { matchTacticsCalibration } from "./match-tactics-calibration.ts";
 
 test("the shipped calibration exposes one stable version and schema", () => {
   assert.equal(matchTacticsCalibration.schemaVersion, MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION);
-  assert.equal(matchTacticsCalibration.version, "match-tactics-calibration-v10");
+  assert.equal(matchTacticsCalibration.version, "match-tactics-calibration-v11");
   assert.equal(matchTacticsCalibration.classification, "explicit_game_design_target");
   assert.equal(matchTacticsCalibration.version.length > 0, true);
+});
+
+test("own-squad fit uses the frozen task-specific selected-eleven scales", () => {
+  assert.deepEqual(
+    matchTacticsCalibration.ownSquadTacticalPolicy.profileFitReferenceBasisPointsByCapacity,
+    {
+      build_up: 5_121,
+      central_progression: 5_380,
+      left_progression: 5_110,
+      right_progression: 5_143,
+      final_third_presence: 5_793,
+      pressing_cohesion: 4_985,
+      central_coverage: 5_499,
+      left_coverage: 4_828,
+      right_coverage: 4_856,
+      box_protection: 5_703,
+      counter_threat: 5_699,
+      rest_defence: 5_599,
+    },
+  );
+  assert.deepEqual(
+    matchTacticsCalibration.ownSquadTacticalPolicy.profileFitScaleBasisPointsByCapacity,
+    {
+      build_up: 462,
+      central_progression: 549,
+      left_progression: 678,
+      right_progression: 659,
+      final_third_presence: 596,
+      pressing_cohesion: 460,
+      central_coverage: 455,
+      left_coverage: 547,
+      right_coverage: 550,
+      box_protection: 429,
+      counter_threat: 523,
+      rest_defence: 440,
+    },
+  );
 });
 
 test("the shipped route-volume conversion is the exact migrated 1.6 multiplier", () => {

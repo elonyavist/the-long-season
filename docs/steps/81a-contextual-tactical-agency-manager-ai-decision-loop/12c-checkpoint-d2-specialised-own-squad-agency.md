@@ -2,7 +2,8 @@
 
 ## Status
 
-Blocked until Step 12B is green and committed.
+**Ready.** Step 12B is green; both D2 populations remain ungenerated and
+uninspected.
 
 ## Goal
 

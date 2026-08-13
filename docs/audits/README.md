@@ -16,6 +16,11 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_OWN_SQUAD_CAPACITY_STANDARDISATION_AMENDMENT.md` — Amendment A9.
+  Freezes the own-eleven capacity references, positive scales and relative-fit
+  formula after A/B reachability falsified raw-scale comparison; D2 stays
+  untouched and fail-closed.
+
 - `PHASE_81A_SPECIALISED_OWN_SQUAD_PLANS_AMENDMENT.md` — Amendment A8. Product
   option B: six frozen own-squad plans, no opponent reads, unchanged season-point
   bands and fresh powered D2 populations before implementation.

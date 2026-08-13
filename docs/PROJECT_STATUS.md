@@ -23,10 +23,10 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **Step 12A active:** Checkpoint D stopped at `+0.4018/+0.4643` own
-  fit. Product option B is accepted: six specialised own-squad plans, no
-  opponent reads, unchanged point bands and two fresh powered D2 sets are
-  frozen before implementation. Steps 13-16 remain closed until D2 GO.
+- Phase 81A **Step 12B Done:** six specialised own-squad plans share one
+  manager/AI owner and all are reachable (`1/67/3/60/200/47`) on the A/B lane.
+  A9 standardises unlike capacity scales; no D2 seed was inspected. Step 12C
+  is open on two fresh `7`-world sets; Steps 13-16 require D2 GO.
 - **L6.31 stays green twice:** routine-youth runway improves ready replacements
   `+0.1363/+0.1034`, leaders `+0.0810/+0.0905`, with exact immediate purity.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;
