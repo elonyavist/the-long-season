@@ -23,10 +23,9 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **Step 12F is `REFINE`; its candidate is removed:** fresh E/F move
-  xG and goals correctly, but reach only `+0.3571/+0.5580` own-fit points and
-  `-0.8259/-0.2299` mismatch points. Step 13 is blocked on the product choice:
-  retain the point floor and redesign route/task execution (recommended), or accept a smaller MVP effect.
+- Phase 81A **Step 12G is Done; 12H is active:** A10 retains the point floor and
+  freezes route/task-quality execution at `300 bp` before fresh G/H output.
+  Step 12F's generic-volume candidate remains rejected and fully removed.
 - **L6.31 stays green twice:** runway improves ready replacements
   `+0.1363/+0.1034` and leaders `+0.0810/+0.0905`.
 - Phase 81A **L6.3F `GO`:** `3500` yields `0.2624` penalties/match; conversion

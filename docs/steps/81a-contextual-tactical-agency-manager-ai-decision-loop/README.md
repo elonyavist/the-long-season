@@ -112,8 +112,10 @@ does not make it reliably worse because named demand has no match reader. Step
 12E froze a `750 bp` execution candidate; Step 12F then rejected and removed
 it. Both fresh sets move xG and goals correctly but miss every frozen
 season-point magnitude. Step 13 is closed on the product choice between a
-route/task-quality redesign and an explicitly smaller MVP effect. L6.31 is not
-promoted without its required integrated rerun.
+route/task-quality redesign and an explicitly smaller MVP effect. Amendment A10
+retains the meaningful point floor and freezes the route/task-quality redesign
+at `300 bp` before fresh G/H output; Step 12H owns implementation. L6.31 is
+not promoted without its required integrated rerun.
 
 This phase is governed by
 [`PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md`](../../audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md).
@@ -382,7 +384,9 @@ contexts; it never owns the analytic diversity gate.
 | 12D | [Checkpoint D2 translation attribution](12d-checkpoint-d2-translation-attribution.md) | no | Done: `plan_execution_not_established` |
 | 12E | [canonical own-squad plan execution contract](12e-canonical-own-squad-plan-execution-contract.md) | no | Done: `750 bp`, fresh E/F frozen |
 | 12F | [canonical own-squad plan execution](12f-canonical-own-squad-plan-execution.md) | yes | Done: `REFINE`; candidate removed |
-| 13 | [tactical chapters and canonical explanation](13-tactical-chapters-and-canonical-explanation.md) | report/UI | Blocked on product amendment |
+| 12G | [route/task plan execution contract](12g-route-task-plan-execution-contract.md) | no | Done: A10 frozen |
+| 12H | [route/task plan execution and checkpoint](12h-route-task-plan-execution-and-checkpoint.md) | yes | Ready; fresh G/H |
+| 13 | [tactical chapters and canonical explanation](13-tactical-chapters-and-canonical-explanation.md) | report/UI | Blocked on 12H |
 | 14 | [preparation and single persistence integration](14-post-match-preparation-choice.md) | next-match state/save | Step 15 |
 | 15 | [Checkpoint E multi-match consequence](15-checkpoint-e-multi-match-consequence.md) | no | GO authorizes 16 |
 | 16 | [integrated cohort and phase closeout](16-integrated-cohort-and-phase-closeout.md) | no | Phase 81B handoff |

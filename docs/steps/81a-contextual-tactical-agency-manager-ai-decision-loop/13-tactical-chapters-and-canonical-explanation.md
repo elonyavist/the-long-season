@@ -2,13 +2,11 @@
 
 ## Status
 
-Blocked. Product option B remains frozen, but Step 12F rejected and removed its
-generic opportunity-volume execution link: xG and goals moved correctly while
-the frozen season-point magnitude failed in both fresh sets. A product amendment
-must now choose between retaining the meaningful point floor and authorizing a
-route/task-quality redesign, or accepting a smaller MVP effect. The previously
-planned implementation scope is retained below for review, not authorized
-execution.
+Blocked. Amendment A10 retains product option B's meaningful point floor and
+freezes a route/task-quality redesign after Step 12F removed the weak generic
+volume link. Step 12H must pass both fresh G/H sets before this step opens. The
+previously planned implementation scope is retained below for review, not
+authorized execution.
 
 ## Goal
 
