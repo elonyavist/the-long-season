@@ -2,7 +2,7 @@
 
 ## Status
 
-Closed until Step 10 is Done.
+Ready after Step 10.
 
 ## Goal
 
@@ -24,6 +24,11 @@ formation bonus or second match loop.
   current team state. A content row of non-negative demand weights must conserve
   exactly `10,000` basis points per profile; focus scoring derives from the
   canonical left/right capacities and owns no second route mapping.
+- "Current state" means only effects active in the canonical derived capacities
+  (currently fitness). Do not let the AI read raw form or morale while those
+  facts are neutral in match strength: that would optimize a signal the match
+  does not consume. The evaluator contract remains ready for them when a
+  separately calibrated content curve activates them.
 - Score fit, not predicted result. The evaluator returns all candidate facts,
   the strict maximum, strict minimum, non-commitment and stable blind candidate.
   Stable complete-policy ID is the final tie-break. Catalog order must not decide

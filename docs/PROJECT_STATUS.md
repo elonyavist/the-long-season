@@ -23,9 +23,9 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **Step 09A Done; Step 10 open:** Amendment A7 freezes own-squad
-  season agency at bounded `3/1/0` point deltas; historical adversarial
-  `+0.045/-0.045` remains failed future scope, not a lowered target.
+- Phase 81A **Step 10 Done; Step 11 open:** the existing manager read is
+  canonical, opponent-free and fitness-sensitive, with no score/recommendation.
+  Shipped form/morale curves do not exist; Step 11 cannot optimize inert state.
 - **L6.31 stays green twice:** routine-youth runway improves ready replacements
   `+0.1363/+0.1034`, leaders `+0.0810/+0.0905`, with exact immediate purity.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;

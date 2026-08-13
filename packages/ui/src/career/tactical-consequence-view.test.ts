@@ -206,6 +206,21 @@ describe("buildTacticalConsequenceView", () => {
     expect(buildTacticalConsequenceView(reading)).toStrictEqual(buildTacticalConsequenceView(reading));
   });
 
+  it("returns qualitative facts without an implicit ranking or recommendation", () => {
+    const view = buildTacticalConsequenceView(ordinaryReading({
+      box_protection: 0.4,
+      final_third_presence: 1.9,
+    }));
+
+    expect(Object.keys(view).toSorted()).toStrictEqual(["observations", "summaryKey"]);
+    expect(Object.keys(view.observations[0] ?? {}).toSorted()).toStrictEqual([
+      "kind",
+      "kindLabelKey",
+      "labelKey",
+      "observationKey",
+    ]);
+  });
+
   it("says both true things when the little width there is sits on one side", () => {
     const view = buildTacticalConsequenceView(ordinaryReading({
       left_progression: 0,
@@ -330,4 +345,3 @@ describe("pressing without cover", () => {
     }
   });
 });
-

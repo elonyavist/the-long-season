@@ -94,7 +94,10 @@ chain is already canonical and adds no duplicate multiplier. Checkpoint C
 records `REFINE: product_premise_review`: all player-context and structural
 gates pass, while the historical adversarial `+0.045/-0.045` target alone is
 red. Amendment A7 now freezes the accepted own-squad MVP contract and rewrites
-Steps 10-12; Steps 07-08 are not reopened. Step 10 is next.
+Steps 10-12; Steps 07-08 are not reopened. Step 10 is Done: the existing manager
+read is canonical, opponent-free, fitness-sensitive and recommendation-free;
+its test-first review also corrected the false premise that shipped content
+already activates form and morale. Step 11 is next.
 
 This phase is governed by
 [`PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md`](../../audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md).

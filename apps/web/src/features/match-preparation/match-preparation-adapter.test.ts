@@ -345,6 +345,82 @@ describe("match-preparation tactical consequences", () => {
     expect(view.tacticalConsequences).toBeDefined();
   });
 
+  it("reads configured fitness while leaving unconfigured form and morale neutral", () => {
+    const career = careerState("shape-player-state");
+    const draft = applyMatchPreparationSelectionAction(career, createMatchPreparationDraft(career), "auto");
+    const baseline = matchPreparationShapeReading(career, draft);
+    if (baseline === undefined) throw new Error("Expected complete preparation reading");
+
+    const unfit = matchPreparationShapeReading(
+      careerWithSelectedState(career, draft, "fitness", 0),
+      draft,
+    );
+    const poorForm = matchPreparationShapeReading(
+      careerWithSelectedState(career, draft, "form", 0),
+      draft,
+    );
+    const poorMorale = matchPreparationShapeReading(
+      careerWithSelectedState(career, draft, "morale", 0),
+      draft,
+    );
+
+    expect(unfit?.shape).not.toStrictEqual(baseline.shape);
+    expect(poorForm?.shape).toStrictEqual(baseline.shape);
+    expect(poorMorale?.shape).toStrictEqual(baseline.shape);
+
+    expect(matchPreparationShapeReading(career, draft)).toStrictEqual(baseline);
+  });
+
+  it("does not let next-opponent facts enter the own-squad reading", () => {
+    const career = careerState("shape-opponent-free");
+    const draft = applyMatchPreparationSelectionAction(career, createMatchPreparationDraft(career), "auto");
+    const nextFixture = findNextCareerFixture(career);
+    if (nextFixture.status !== "found") throw new Error("Expected next fixture");
+    const opponentClubId = nextFixture.fixture.homeClubId === career.selectedClubId
+      ? nextFixture.fixture.awayClubId
+      : nextFixture.fixture.homeClubId;
+    const opponentPlayerIds = new Set<string>(career.gameState.clubs[opponentClubId]?.playerIds ?? []);
+    const opponentChanged: WebCareerState = {
+      ...career,
+      gameState: {
+        ...career.gameState,
+        playerStates: Object.fromEntries(
+          Object.entries(career.gameState.playerStates).map(([playerId, state]) => [
+            playerId,
+            opponentPlayerIds.has(playerId)
+              ? {
+                  fitness: 0 as typeof state.fitness,
+                  form: 0 as typeof state.form,
+                  morale: 0 as typeof state.morale,
+                }
+              : state,
+          ]),
+        ) as WebCareerState["gameState"]["playerStates"],
+      },
+    };
+
+    // Opponent formation and tactic cannot leak either: they are deliberately
+    // absent from this function's inputs and belong to no preparation draft.
+    expect(matchPreparationShapeReading(opponentChanged, draft))
+      .toStrictEqual(matchPreparationShapeReading(career, draft));
+  });
+
+  it("changes tactic consequences without changing the selected eleven's capacities", () => {
+    const career = careerState("shape-tactic-isolation");
+    const auto = applyMatchPreparationSelectionAction(career, createMatchPreparationDraft(career), "auto");
+    const balanced = matchPreparationShapeReading(
+      career,
+      selectMatchPreparationTactic(auto, "tactic:balanced"),
+    );
+    const attacking = matchPreparationShapeReading(
+      career,
+      selectMatchPreparationTactic(auto, "tactic:attacking"),
+    );
+
+    expect(attacking?.shape).toStrictEqual(balanced?.shape);
+    expect(attacking?.tactic).not.toStrictEqual(balanced?.tactic);
+  });
+
   it("keeps every selectable curated formation quiet with a real generated squad", () => {
     // The shipped calibration, the shipped generator, and the same auto
     // selection a manager gets from the button. A curated shape filled by a
@@ -494,6 +570,32 @@ function careerState(suffix: string) {
     saveId: `save:adapter-${suffix}` as WebCareerSaveId,
     worldSeed: `adapter-${suffix}-seed`,
   });
+}
+
+function careerWithSelectedState(
+  career: WebCareerState,
+  draft: ReturnType<typeof createMatchPreparationDraft>,
+  stateKey: "fitness" | "form" | "morale",
+  value: number,
+): WebCareerState {
+  const selectedPlayerIds = new Set(
+    draft.tacticalBoardDraft.slots.flatMap((slot) => slot.playerId === null ? [] : [slot.playerId]),
+  );
+
+  return {
+    ...career,
+    gameState: {
+      ...career.gameState,
+      playerStates: Object.fromEntries(
+        Object.entries(career.gameState.playerStates).map(([playerId, state]) => [
+          playerId,
+          selectedPlayerIds.has(playerId)
+            ? { ...state, [stateKey]: value as typeof state[typeof stateKey] }
+            : state,
+        ]),
+      ) as WebCareerState["gameState"]["playerStates"],
+    },
+  };
 }
 
 type WebPlayerAbilities = WebCareerState["gameState"]["players"][keyof WebCareerState["gameState"]["players"]]["abilities"];

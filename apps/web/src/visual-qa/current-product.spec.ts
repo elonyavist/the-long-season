@@ -913,17 +913,23 @@ test("desktop Market presents window, budget, targets, and a public inspection p
     expect(await controlBoundaryContrast(
       desktop.locator(".tls-market-table .tls-icon-button").first(),
     )).toBeGreaterThanOrEqual(3);
-    expect(await foregroundContrast(
-      desktop.locator(".tls-player-rating-star[data-fill='empty']").first(),
-      ".tls-market-table tbody tr",
-    )).toBeGreaterThanOrEqual(3);
-    // Pagination caps the visible rows, so filtering is proven by the matching
-    // total the pagination summary reports, not by the rendered row count.
-    const unfilteredTargetCount = await matchingMarketTargetCount(desktop);
     const divisionFilter = desktop.getByRole("combobox", {
       name: "Division",
       exact: true,
     });
+    // The market opens on its strongest targets, so an empty star is no longer
+    // guaranteed on page one. Select a real lower-division population instead
+    // of weakening the contrast assertion when that rendered state is absent.
+    await divisionFilter.selectOption("third_division");
+    await expect(desktop.locator(".tls-player-rating-star[data-fill='empty']").first()).toBeVisible();
+    expect(await foregroundContrast(
+      desktop.locator(".tls-player-rating-star[data-fill='empty']").first(),
+      ".tls-market-table tbody tr",
+    )).toBeGreaterThanOrEqual(3);
+    await divisionFilter.selectOption("all");
+    // Pagination caps the visible rows, so filtering is proven by the matching
+    // total the pagination summary reports, not by the rendered row count.
+    const unfilteredTargetCount = await matchingMarketTargetCount(desktop);
     await divisionFilter.selectOption("first_division");
     const firstDivisionTargetCount = await matchingMarketTargetCount(desktop);
     expect(await targetRows.count()).toBeGreaterThan(0);
