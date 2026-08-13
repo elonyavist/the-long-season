@@ -2,7 +2,10 @@
 
 ## Status
 
-**Ready.** Step 12G froze Amendment A10 before implementation.
+**Done: `STOP / RETHINK`.** Both fresh sets missed the frozen point magnitude;
+the entire candidate was removed and shipped match tactics remain v11/schema 9.
+The user then selected the smaller own-squad MVP as product option B. Step 12I
+owns that explicit product amendment before Step 13 may open.
 
 ## Goal
 
@@ -44,6 +47,10 @@ populations without changing the frozen product target.
 - `packages/engine/src/career/career-ai-team-selection.test.ts`
 - `packages/engine/src/use-cases/simulate-season.ts`
 - `packages/engine/src/use-cases/simulate-season.test.ts`
+- `packages/engine/src/team-selection/ai-in-game-decisions.ts`. A lineup-only
+  rebuild must retain the named plan, while an explicit live tactic change must
+  become free-form; otherwise automatic substitutions silently disable the plan.
+- `packages/engine/src/team-selection/ai-in-game-decisions.test.ts`
 - `packages/simulation-tools/src/tactical-agency/own-squad-agency-audit.ts`
 - `packages/simulation-tools/src/tactical-agency/own-squad-agency-audit.test.ts`
 - `packages/simulation-tools/src/index.ts`
@@ -54,10 +61,14 @@ populations without changing the frozen product target.
 - `apps/cli/src/commands/simulation-report/report-planner.test.ts`
 - `packages/i18n/src/labels.ts`
 - `docs/audits/PHASE_81A_ROUTE_TASK_EXECUTION.md` **(new)**
+- `docs/audits/PHASE_81A_MVP_AGENCY_ACCEPTANCE_AMENDMENT.md` **(new)**. The
+  rejected checkpoint forces the product boundary; this records the user's
+  option-B decision without recasting the red gate as green.
 - `docs/audits/README.md`
 - `docs/PROJECT_STATUS.md`
 - the phase `README.md`
 - this step document
+- `12i-own-squad-mvp-acceptance.md` **(new)**
 - `13-tactical-chapters-and-canonical-explanation.md`
 
 ## Required Checks
@@ -91,3 +102,26 @@ The named plan reaches selected-route quality through one canonical derivation;
 manual/non-commit replay stays exact; positive and negative route edges are
 reachable; G/H decide independently; and the final tree contains no rejected
 candidate residue.
+
+## Outcome
+
+The checkpoint ran alone with exactly seven workers for `774,654 ms`, wrote
+`simulation-out/phase81a-route-task-execution.json` with report hash
+`a7e6c3b21d51889120c186529a76cd71`, and exited `1`.
+
+| set | own-fit points | mismatch points | spread | own-fit net xG | mismatch net xG |
+|---|---:|---:|---:|---:|---:|
+| G | +1.0446 | +0.0960 | 0.9487 | +1.1289 | -0.5787 |
+| H | +0.9353 | -0.1429 | 1.0781 | +1.3365 | -0.4192 |
+| frozen target | +1.5..+6.0 | -6.0..-1.5 | >=3.0 | positive interval | negative interval |
+
+The xG intervals exclude zero in the intended opposite directions, goal
+difference moves materially, blind and non-commit remain neutral, replay is
+exact, both route-edge signs are reachable, and every structural guardrail
+holds. Points remain too small in both independent sets. `balanced` is absent
+from canonical selections in both sets and `high_press` is absent in H, so the
+fresh-population reachability reader is red as declared.
+
+The `300 bp` coefficient was not raised, the target was not moved, and no third
+candidate was introduced. Match context, calibration, report profile, labels,
+tests and route/task execution code were all removed in the same step.

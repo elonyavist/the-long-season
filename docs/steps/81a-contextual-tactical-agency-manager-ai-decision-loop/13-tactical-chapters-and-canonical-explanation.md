@@ -2,11 +2,10 @@
 
 ## Status
 
-Blocked. Amendment A10 retains product option B's meaningful point floor and
-freezes a route/task-quality redesign after Step 12F removed the weak generic
-volume link. Step 12H must pass both fresh G/H sets before this step opens. The
-previously planned implementation scope is retained below for review, not
-authorized execution.
+**Ready.** Step 12H rejected and removed the route/task-quality candidate. The
+user then selected the smaller-effect own-squad MVP in Step 12I. This step may
+explain canonical facts, but must not claim a causal point gain, guaranteed
+superiority or an opponent-aware AI decision.
 
 ## Goal
 

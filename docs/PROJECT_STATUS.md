@@ -23,9 +23,10 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **Step 12G is Done; 12H is active:** A10 retains the point floor and
-  freezes route/task-quality execution at `300 bp` before fresh G/H output.
-  Step 12F's generic-volume candidate remains rejected and fully removed.
+- Phase 81A **Step 12H is `STOP / RETHINK`; 12I is Done; Step 13 is Ready.**
+  Route/task execution moved xG correctly but missed point magnitude twice and
+  was removed. User-selected option B accepts the smaller own-squad MVP without
+  rewriting red gates; AI remains opponent-blind before matches.
 - **L6.31 stays green twice:** runway improves ready replacements
   `+0.1363/+0.1034` and leaders `+0.0810/+0.0905`.
 - Phase 81A **L6.3F `GO`:** `3500` yields `0.2624` penalties/match; conversion

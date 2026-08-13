@@ -16,6 +16,15 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_MVP_AGENCY_ACCEPTANCE_AMENDMENT.md` — Amendment A11. The user
+  accepts the smaller own-squad option-B MVP after both execution candidates
+  fail and are removed. Failed gates remain failed; Step 13 may explain only
+  canonical facts and cannot claim a causal point gain.
+
+- `PHASE_81A_ROUTE_TASK_EXECUTION.md` — **`STOP / RETHINK`; candidate rejected
+  and removed.** Fresh G/H sets move xG in opposite intended directions while
+  points miss every frozen magnitude band. Shipped tactics remain v11/schema 9.
+
 - `PHASE_81A_OWN_SQUAD_PLAN_EXECUTION.md` — **`REFINE`; candidate
   rejected and removed.** Fresh E/F sets move xG and goals in the intended
   directions but miss the frozen season-point magnitude. Step 13 stays closed
