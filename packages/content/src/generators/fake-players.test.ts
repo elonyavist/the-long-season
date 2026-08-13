@@ -17,6 +17,7 @@ import {
 import { completedCivilYears, fromISO } from "@game/shared";
 
 import { playerRatingScale } from "../balance/player-economy-calibration.ts";
+import { matchTacticsCalibration } from "../balance/match-tactics-calibration.ts";
 import { fakePlayerId, generateFakeClubs } from "./fake-clubs.ts";
 import { generateFakePlayersForClubs } from "./fake-players.ts";
 import { getGeneratedPlayerArchetype, type GeneratedPlayerArchetypeKey } from "./player-archetypes.ts";
@@ -55,6 +56,32 @@ test("different fake player seeds produce visible squad variation with stable ID
   assert.equal(second.playerIds[9], playerId);
   assert.notEqual(`${firstPlayer.firstName} ${firstPlayer.lastName}`, `${secondPlayer.firstName} ${secondPlayer.lastName}`);
   assert.notEqual(Number(firstPlayer.abilities.technical.finishing), Number(secondPlayer.abilities.technical.finishing));
+});
+
+test("real generated outfield players invert their ordering across tactical tasks", () => {
+  const clubs = generateFakeClubs();
+  const generated = generateFakePlayersForClubs(clubs.clubIds, {
+    seed: "tactical-task-specialization",
+  });
+  const outfield = generated.playerIds
+    .map((id) => requiredPlayer(generated.players[id]))
+    .filter(({ primaryRole }) => primaryRole !== "goalkeeper");
+  const buildProfile = {
+    weights: matchTacticsCalibration.tacticalShape
+      .taskAbilityWeightsBasisPointsByTask.build_up,
+  };
+  const coverProfile = {
+    weights: matchTacticsCalibration.tacticalShape
+      .taskAbilityWeightsBasisPointsByTask.central_coverage,
+  };
+  const inversion = outfield.some((left, leftIndex) => outfield.some((right, rightIndex) =>
+    leftIndex < rightIndex
+    && Number(roleCurrentAbility(left.abilities, buildProfile))
+      > Number(roleCurrentAbility(right.abilities, buildProfile))
+    && Number(roleCurrentAbility(left.abilities, coverProfile))
+      < Number(roleCurrentAbility(right.abilities, coverProfile))));
+
+  assert.equal(inversion, true);
 });
 
 test("fake player IDs stay stable while display names become fictional names", () => {

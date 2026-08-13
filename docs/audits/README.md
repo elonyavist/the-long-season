@@ -16,6 +16,11 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_PLAYER_TASK_EXECUTION.md` — implementation accepted, unchanged B2
+  still `REFINE`. Real attributes now execute tasks without moving department
+  strength; xG range improves in both untouched sets. Step 08 owns lateral
+  execution before any target review.
+
 - `PHASE_81A_RESULT_RESOLUTION_DECOMPOSITION.md` — **`STOP / RETHINK`.** Both
   canonical stages are individually coherent, but the composed xG-state model
   remains below `R^2=0.5`; no randomness reduction is authorized. The next

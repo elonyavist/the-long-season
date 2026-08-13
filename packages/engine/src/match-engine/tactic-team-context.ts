@@ -19,7 +19,7 @@ import type {
 } from "./match-context.ts";
 import {
   createLineupSlot,
-  deriveLineupSlotScores,
+  deriveLineupSlotTacticalEvaluations,
   roleWeightKeyForCanonicalRole,
   teamStrengthFromSlotScores,
   TeamStrengthError,
@@ -116,7 +116,10 @@ export interface TeamShapeAndStrength {
  */
 export function deriveTeamShapeAndStrength(input: DeriveTeamShapeAndStrengthInput): TeamShapeAndStrength {
   const { matchTacticsCalibration, ...strengthInput } = input;
-  const slotScores = deriveLineupSlotScores(strengthInput);
+  const slotScores = deriveLineupSlotTacticalEvaluations({
+    ...strengthInput,
+    calibration: matchTacticsCalibration,
+  });
 
   return {
     strength: teamStrengthFromSlotScores(slotScores),

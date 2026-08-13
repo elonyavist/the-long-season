@@ -33,7 +33,6 @@ import { createFakeGameplayConfig, type FakeGameplayConfig } from "./gameplay-co
 const FAKE_LEAGUE_COMPETITION_ID = competitionId("competition:demo-third-division");
 
 export type {
-  FakeAbilityWeightKey,
   FakeGameplayConfig,
   FakeMatchEngineConfig,
   FakePlayerStateMultiplierCurves,

@@ -3,6 +3,7 @@ import * as v from "valibot";
 import {
   CANONICAL_PLAYER_ROLES,
   MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION,
+  PLAYER_ABILITY_KEYS,
   POSITION_SUITABILITIES,
   TACTIC_KNOBS,
   TACTIC_MENTALITIES,
@@ -42,12 +43,26 @@ const taskAllocationsSchema = v.strictObject(
   >,
 );
 
+const taskAbilityWeightsSchema = v.record(
+  v.picklist(PLAYER_ABILITY_KEYS),
+  nonNegativeInteger,
+);
+
 const tacticalShapeSchema = v.strictObject({
   outfieldRoleBudgetBasisPoints: positiveInteger,
   taskAllocationBasisPointsByRole: v.strictObject(
     Object.fromEntries(CANONICAL_PLAYER_ROLES.map((role) => [role, taskAllocationsSchema])) as Record<
       (typeof CANONICAL_PLAYER_ROLES)[number],
       typeof taskAllocationsSchema
+    >,
+  ),
+  taskAbilityWeightsBasisPointsByTask: v.strictObject(
+    Object.fromEntries(TACTICAL_SHAPE_TASKS.map((task) => [
+      task,
+      v.record(v.picklist(PLAYER_ABILITY_KEYS), nonNegativeInteger),
+    ])) as Record<
+      (typeof TACTICAL_SHAPE_TASKS)[number],
+      typeof taskAbilityWeightsSchema
     >,
   ),
   marginalContributionBasisPointsByRank: v.array(basisPoints),

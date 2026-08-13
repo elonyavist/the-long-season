@@ -20,7 +20,7 @@ import { matchTacticsCalibration } from "./match-tactics-calibration.ts";
 
 test("the shipped calibration exposes one stable version and schema", () => {
   assert.equal(matchTacticsCalibration.schemaVersion, MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION);
-  assert.equal(matchTacticsCalibration.version, "match-tactics-calibration-v8");
+  assert.equal(matchTacticsCalibration.version, "match-tactics-calibration-v9");
   assert.equal(matchTacticsCalibration.classification, "explicit_game_design_target");
   assert.equal(matchTacticsCalibration.version.length > 0, true);
 });
@@ -73,6 +73,16 @@ test("the marginal ladder covers every rank a lineup can fill", () => {
     matchTacticsCalibration.tacticalShape.marginalContributionBasisPointsByRank.length,
     TACTICAL_SHAPE_MAXIMUM_CONTRIBUTORS,
   );
+});
+
+test("every shipped task allocates one full unit across multiple outfield attributes", () => {
+  for (const task of TACTICAL_SHAPE_TASKS) {
+    const weights = matchTacticsCalibration.tacticalShape.taskAbilityWeightsBasisPointsByTask[task];
+    const values = Object.entries(weights);
+    assert.equal(values.reduce((sum, [, value]) => sum + value, 0), 10_000, task);
+    assert.equal(values.filter(([, value]) => value > 0).length >= 2, true, task);
+    assert.equal(values.some(([key]) => key.startsWith("goalkeeping.")), false, task);
+  }
 });
 
 test("each task's best specialist is a role that owns it in football", () => {

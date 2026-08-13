@@ -1,36 +1,6 @@
-import type { MatchTacticsCalibrationConfig } from "@game/domain";
+import type { MatchTacticsCalibrationConfig, PlayerAbilityKey } from "@game/domain";
 
 import { matchTacticsCalibration } from "../balance/match-tactics-calibration.ts";
-
-/**
- * Ability weight keys mirrored as data so content does not import engine code.
- */
-export type FakeAbilityWeightKey =
-  | "goalkeeping.footwork"
-  | "goalkeeping.goalkeeperPositioning"
-  | "goalkeeping.handling"
-  | "goalkeeping.reflexes"
-  | "goalkeeping.rushingOut"
-  | "mental.anticipation"
-  | "mental.composure"
-  | "mental.determination"
-  | "mental.leadership"
-  | "mental.positioning"
-  | "mental.vision"
-  | "physical.agility"
-  | "physical.heading"
-  | "physical.pace"
-  | "physical.stamina"
-  | "physical.strength"
-  | "technical.crossing"
-  | "technical.dribbling"
-  | "technical.finishing"
-  | "technical.freeKicks"
-  | "technical.longPassing"
-  | "technical.passing"
-  | "technical.penalties"
-  | "technical.tackling"
-  | "technical.technique";
 
 /** Team-strength department key mirrored as content data. */
 export type FakeTeamStrengthDepartment = "attack" | "defense" | "goalkeeper" | "midfield";
@@ -39,7 +9,7 @@ export type FakeTeamStrengthDepartment = "attack" | "defense" | "goalkeeper" | "
 export interface FakeRoleWeightProfile {
   readonly roleKey: string;
   readonly department: FakeTeamStrengthDepartment;
-  readonly abilityWeights: Readonly<Partial<Record<FakeAbilityWeightKey, number>>>;
+  readonly abilityWeights: Readonly<Partial<Record<PlayerAbilityKey, number>>>;
 }
 
 /** State multiplier curve point emitted without importing engine code. */

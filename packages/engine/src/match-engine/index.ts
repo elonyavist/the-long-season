@@ -204,6 +204,7 @@ export {
 export {
   createLineupSlot,
   deriveLineupSlotScores,
+  deriveLineupSlotTacticalEvaluations,
   deriveTeamStrength,
   roleWeightKeyForCanonicalRole,
   ROLE_WEIGHT_KEY_BY_CANONICAL_ROLE,
@@ -214,6 +215,7 @@ export {
   type DeriveTeamStrengthInput,
   type LineupSlot,
   type LineupSlotScore,
+  type LineupSlotTacticalEvaluation,
   type PlayerStateMultiplierCurves,
   type RoleWeightProfile,
   type StateMultiplierCurve,
@@ -221,6 +223,11 @@ export {
   type TeamStrengthDepartment,
   type TeamStrengthErrorCode,
 } from "./team-strength.ts";
+
+export {
+  deriveTacticalTaskExecution,
+  type TacticalTaskExecution,
+} from "./tactical-task-execution.ts";
 
 export {
   assertValidTacticalShapeProfile,

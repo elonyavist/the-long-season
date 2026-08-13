@@ -357,6 +357,28 @@ test("every task states whether suitability may touch it", () => {
   assert.equal(kinds.includes("coordination"), true);
 });
 
+test("task ability weights conserve one unit and reject goalkeeper leakage", () => {
+  const valid = validShape().taskAbilityWeightsBasisPointsByTask;
+  assertRejects(
+    withShape({
+      taskAbilityWeightsBasisPointsByTask: {
+        ...valid,
+        build_up: { "technical.passing": 9_998, "mental.anticipation": 1 },
+      },
+    }),
+    "invalid_task_ability_weights",
+  );
+  assertRejects(
+    withShape({
+      taskAbilityWeightsBasisPointsByTask: {
+        ...valid,
+        build_up: { "technical.passing": 5_000, "goalkeeping.footwork": 5_000 },
+      },
+    }),
+    "invalid_task_ability_weights",
+  );
+});
+
 test("playing a man in his own position is the neutral reference", () => {
   assertRejects(
     withShape({
@@ -516,6 +538,12 @@ function validShape(): TacticalShapeCalibrationConfig {
     taskAllocationBasisPointsByRole: Object.fromEntries(
       CANONICAL_PLAYER_ROLES.map((role) => [role, role === "goalkeeper" ? taskWeights(0) : taskWeights(2_000)]),
     ) as Readonly<Record<CanonicalPlayerRole, Readonly<Record<TacticalShapeTask, number>>>>,
+    taskAbilityWeightsBasisPointsByTask: Object.fromEntries(
+      TACTICAL_SHAPE_TASKS.map((task) => [task, {
+        "technical.passing": 5_000,
+        "mental.anticipation": 5_000,
+      }]),
+    ) as TacticalShapeCalibrationConfig["taskAbilityWeightsBasisPointsByTask"],
     marginalContributionBasisPointsByRank: decreasingLadder(),
     coordinationMultiplierBasisPointsBySuitability: coordinationMultipliers(),
     channelPolicy: { halfChannelOwnShareBasisPoints: 7_500 },

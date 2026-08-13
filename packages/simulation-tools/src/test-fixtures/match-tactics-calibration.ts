@@ -49,6 +49,7 @@ export function matchTacticsCalibrationFixture(): MatchTacticsCalibrationConfig 
       taskAllocationBasisPointsByRole: Object.fromEntries(
         CANONICAL_PLAYER_ROLES.map((role) => [role, role === "goalkeeper" ? zeroTasks : taskValuesFor(role)]),
       ) as Readonly<Record<CanonicalPlayerRole, Readonly<Record<TacticalShapeTask, number>>>>,
+      taskAbilityWeightsBasisPointsByTask: fixtureTaskAbilityWeights(),
       marginalContributionBasisPointsByRank: Array.from({ length: 11 }, (_, rank) => 10_000 - rank * 800),
       coordinationMultiplierBasisPointsBySuitability: {
         natural: 10_000,
@@ -127,6 +128,17 @@ const ATTACKING_ROLES = new Set<CanonicalPlayerRole>([
 ]);
 
 const FIXTURE_OUTFIELD_ROLE_BUDGET = 42_000;
+
+function fixtureTaskAbilityWeights(): MatchTacticsCalibrationConfig["tacticalShape"]["taskAbilityWeightsBasisPointsByTask"] {
+  const row = {
+    "technical.passing": 2_500,
+    "technical.technique": 2_500,
+    "mental.anticipation": 2_500,
+    "mental.positioning": 2_500,
+  } as const;
+  return Object.fromEntries(TACTICAL_SHAPE_TASKS.map((task) => [task, row])) as
+    MatchTacticsCalibrationConfig["tacticalShape"]["taskAbilityWeightsBasisPointsByTask"];
+}
 
 const DEPARTMENT_TASK_PROFILE: Readonly<
   Record<"defence" | "midfield" | "attack", Readonly<Record<TacticalShapeTask, number>>>

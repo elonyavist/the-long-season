@@ -16,6 +16,7 @@ import {
 
 import {
   deriveLineupSlotScores,
+  deriveLineupSlotTacticalEvaluations,
   deriveTeamStrength,
   roleWeightKeyForCanonicalRole,
   ROLE_WEIGHT_KEY_BY_CANONICAL_ROLE,
@@ -25,6 +26,7 @@ import {
   type LineupSlot,
   type RoleWeightProfile,
 } from "./team-strength.ts";
+import { matchTacticsCalibrationFixture } from "../test-fixtures/match-tactics-calibration.ts";
 
 /**
  * Team-strength tests lock down pure aggregate strength calculation before
@@ -36,6 +38,25 @@ test("stronger ability values produce higher strength", () => {
   const strongInput = onePlayerInput(makePlayer(playerId("player:000001"), 14));
 
   assert.equal(deriveTeamStrength(strongInput).overall > deriveTeamStrength(weakInput).overall, true);
+});
+
+test("task execution leaves department slot scores byte-identical", () => {
+  const input = departmentInput({
+    attacker: makePlayer(playerId("player:task-attacker"), 12, { finishing: 18 }),
+    defender: makePlayer(playerId("player:task-defender"), 12, { tackling: 18 }),
+    midfielder: makePlayer(playerId("player:task-midfielder"), 12, { passing: 18 }),
+    goalkeeper: makePlayer(playerId("player:task-goalkeeper"), 12, { reflexes: 18 }),
+  });
+  const scalar = deriveLineupSlotScores(input);
+  const tactical = deriveLineupSlotTacticalEvaluations({
+    ...input,
+    calibration: matchTacticsCalibrationFixture(),
+  });
+
+  assert.deepEqual(
+    tactical.map(({ taskExecutionByTask: _taskExecutionByTask, ...score }) => score),
+    scalar,
+  );
 });
 
 test("department weights affect the correct department", () => {

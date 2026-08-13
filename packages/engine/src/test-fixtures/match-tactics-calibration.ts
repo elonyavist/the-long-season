@@ -5,6 +5,7 @@ import {
   TACTICAL_SHAPE_TASKS,
   type CanonicalPlayerRole,
   type MatchTacticsCalibrationConfig,
+  type PlayerAbilityKey,
   type TacticalMatchupCalibrationConfig,
   type TacticalSemanticsCalibrationConfig,
   type TacticalShapeCapacity,
@@ -76,6 +77,7 @@ export function matchTacticsCalibrationFixture(): MatchTacticsCalibrationConfig 
           central_progression: 4_000,
         }),
       },
+      taskAbilityWeightsBasisPointsByTask: fixtureTaskAbilityWeights(),
       marginalContributionBasisPointsByRank: [10_000, 7_000, 5_000, 3_600, 2_600, 1_900, 1_400, 1_000, 700, 500, 350],
       coordinationMultiplierBasisPointsBySuitability: {
         natural: 10_000,
@@ -140,6 +142,28 @@ const FIXTURE_TACTICAL_SEMANTICS = {
 } as const satisfies TacticalSemanticsCalibrationConfig;
 
 const FIXTURE_OUTFIELD_ROLE_BUDGET = 42_000;
+
+function fixtureTaskAbilityWeights(): MatchTacticsCalibrationConfig["tacticalShape"]["taskAbilityWeightsBasisPointsByTask"] {
+  return {
+    build_up: taskAbilityRow("technical.passing", "technical.longPassing"),
+    central_progression: taskAbilityRow("technical.passing", "technical.dribbling"),
+    lateral_progression: taskAbilityRow("technical.crossing", "physical.pace"),
+    final_third_presence: taskAbilityRow("technical.finishing", "mental.composure"),
+    pressing_cohesion: taskAbilityRow("physical.stamina", "mental.determination"),
+    central_coverage: taskAbilityRow("technical.tackling", "mental.positioning"),
+    lateral_coverage: taskAbilityRow("technical.tackling", "physical.pace"),
+    box_protection: taskAbilityRow("mental.positioning", "physical.heading"),
+    counter_threat: taskAbilityRow("physical.pace", "technical.dribbling"),
+    rest_defence: taskAbilityRow("mental.positioning", "mental.anticipation"),
+  };
+}
+
+function taskAbilityRow(
+  first: PlayerAbilityKey,
+  second: PlayerAbilityKey,
+): Readonly<Partial<Record<PlayerAbilityKey, number>>> {
+  return { [first]: 5_000, [second]: 5_000 };
+}
 
 const FULL_BACK_ALLOCATIONS = taskAllocations({
   build_up: 5_500,
@@ -257,6 +281,7 @@ export function flatMatchTacticsCalibrationFixture(input: {
       taskAllocationBasisPointsByRole: Object.fromEntries(
         CANONICAL_PLAYER_ROLES.map((role) => [role, role === "goalkeeper" ? zeroTasks : flatTasks]),
       ) as Readonly<Record<CanonicalPlayerRole, Readonly<Record<TacticalShapeTask, number>>>>,
+      taskAbilityWeightsBasisPointsByTask: fixtureTaskAbilityWeights(),
       marginalContributionBasisPointsByRank: Array.from({ length: 11 }, (_, rank) => 10_000 - rank * 800),
       coordinationMultiplierBasisPointsBySuitability: {
         natural: 10_000,

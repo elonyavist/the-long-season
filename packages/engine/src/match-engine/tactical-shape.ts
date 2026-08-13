@@ -9,7 +9,7 @@ import {
   type TacticalShapeTask,
 } from "@game/domain";
 
-import type { LineupSlotScore } from "./team-strength.ts";
+import type { LineupSlotTacticalEvaluation } from "./team-strength.ts";
 
 /**
  * What one side can do, derived from its shape alone.
@@ -34,7 +34,7 @@ export interface TacticalShapeProfile {
 /** Input for deriving one side's intrinsic tactical shape. */
 export interface DeriveTacticalShapeProfileInput {
   /** Every lineup slot with its already-derived quality, in lineup order. */
-  readonly slotScores: readonly LineupSlotScore[];
+  readonly slotScores: readonly LineupSlotTacticalEvaluation[];
   /** Versioned calibration supplied by the caller; the engine owns no numbers. */
   readonly calibration: MatchTacticsCalibrationConfig;
 }
@@ -118,7 +118,7 @@ export function deriveTacticalShapeProfile(input: DeriveTacticalShapeProfileInpu
   for (const capacity of TACTICAL_SHAPE_CAPACITIES) {
     const { task, flank } = TACTICAL_SHAPE_CAPACITY_SOURCE[capacity];
     const isCoordination = TACTICAL_SHAPE_TASK_KIND[task] === "coordination";
-    const contributions = slotScores.map(({ slot, score, suitability }, index): RankedContribution => {
+    const contributions = slotScores.map(({ slot, taskExecutionByTask, suitability }, index): RankedContribution => {
       const allocation = shape.taskAllocationBasisPointsByRole[slot.canonicalRole][task] / 10_000;
       const channelShare =
         flank === "none" ? 1 : lateralChannelShares(slot.side, shape.channelPolicy)[flank];
@@ -126,7 +126,10 @@ export function deriveTacticalShapeProfile(input: DeriveTacticalShapeProfileInpu
         ? shape.coordinationMultiplierBasisPointsBySuitability[suitability] / 10_000
         : 1;
 
-      return { index, value: score * allocation * channelShare * coordination };
+      return {
+        index,
+        value: taskExecutionByTask[task] * allocation * channelShare * coordination,
+      };
     });
 
     capacities[capacity] = saturate(

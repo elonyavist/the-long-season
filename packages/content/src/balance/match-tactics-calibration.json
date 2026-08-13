@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 6,
-  "version": "match-tactics-calibration-v8",
+  "schemaVersion": 7,
+  "version": "match-tactics-calibration-v9",
   "classification": "explicit_game_design_target",
   "chanceActorSelection": {
     "nonSetPieceAssistEligibilityBasisPoints": 7512,
@@ -165,6 +165,78 @@
         "box_protection": 381,
         "counter_threat": 12092,
         "rest_defence": 634
+      }
+    },
+    "taskAbilityWeightsBasisPointsByTask": {
+      "build_up": {
+        "technical.passing": 3000,
+        "technical.longPassing": 2500,
+        "technical.technique": 2000,
+        "mental.vision": 1500,
+        "mental.composure": 1000
+      },
+      "central_progression": {
+        "technical.passing": 3000,
+        "technical.dribbling": 2500,
+        "technical.technique": 2000,
+        "mental.vision": 1500,
+        "physical.agility": 1000
+      },
+      "lateral_progression": {
+        "technical.crossing": 3000,
+        "technical.dribbling": 2500,
+        "physical.pace": 2000,
+        "physical.stamina": 1500,
+        "technical.technique": 1000
+      },
+      "final_third_presence": {
+        "technical.finishing": 3000,
+        "mental.positioning": 2500,
+        "mental.anticipation": 2000,
+        "mental.composure": 1500,
+        "physical.heading": 1000
+      },
+      "pressing_cohesion": {
+        "physical.stamina": 3000,
+        "mental.determination": 2500,
+        "mental.anticipation": 2000,
+        "physical.pace": 1500,
+        "mental.positioning": 1000
+      },
+      "central_coverage": {
+        "mental.positioning": 3000,
+        "technical.tackling": 2500,
+        "mental.anticipation": 2000,
+        "physical.strength": 1500,
+        "physical.stamina": 1000
+      },
+      "lateral_coverage": {
+        "physical.pace": 3000,
+        "physical.stamina": 2500,
+        "technical.tackling": 2000,
+        "mental.positioning": 1500,
+        "physical.agility": 1000
+      },
+      "box_protection": {
+        "mental.positioning": 3000,
+        "physical.heading": 2500,
+        "technical.tackling": 2000,
+        "physical.strength": 1500,
+        "mental.anticipation": 1000
+      },
+      "counter_threat": {
+        "physical.pace": 3000,
+        "technical.dribbling": 2500,
+        "mental.anticipation": 2000,
+        "technical.finishing": 1500,
+        "physical.agility": 1000
+      },
+      "rest_defence": {
+        "mental.positioning": 3000,
+        "mental.anticipation": 2500,
+        "technical.tackling": 2000,
+        "physical.pace": 1500,
+        "mental.leadership": 1000
       }
     },
     "marginalContributionBasisPointsByRank": [

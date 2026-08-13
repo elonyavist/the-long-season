@@ -1,13 +1,20 @@
 import {
   canonicalRoleTacticalFacts,
   evaluatePositionSuitability,
+  PLAYER_ABILITY_KEYS,
+  readPlayerAbility,
   type CanonicalPlayerRole,
   type FormationSide,
   type Player,
   type PlayerDynamicState,
   type PlayerId,
+  type PlayerAbilityKey,
   type PositionSuitability,
+  type MatchTacticsCalibrationConfig,
+  type TacticalShapeTask,
 } from "@game/domain";
+
+import { deriveTacticalTaskExecution } from "./tactical-task-execution.ts";
 
 /**
  * Ability paths accepted by role weight profiles.
@@ -15,32 +22,7 @@ import {
  * Role weights are caller-supplied data. The engine only knows how to read the
  * stable domain ability shape and combine numeric weights deterministically.
  */
-export type AbilityWeightKey =
-  | "technical.finishing"
-  | "technical.passing"
-  | "technical.longPassing"
-  | "technical.crossing"
-  | "technical.dribbling"
-  | "technical.technique"
-  | "technical.tackling"
-  | "technical.penalties"
-  | "technical.freeKicks"
-  | "physical.pace"
-  | "physical.strength"
-  | "physical.stamina"
-  | "physical.agility"
-  | "physical.heading"
-  | "mental.positioning"
-  | "mental.vision"
-  | "mental.anticipation"
-  | "mental.composure"
-  | "mental.determination"
-  | "mental.leadership"
-  | "goalkeeping.reflexes"
-  | "goalkeeping.handling"
-  | "goalkeeping.rushingOut"
-  | "goalkeeping.goalkeeperPositioning"
-  | "goalkeeping.footwork";
+export type AbilityWeightKey = PlayerAbilityKey;
 
 /** Team strength department names excluding the aggregate `overall`. */
 export type TeamStrengthDepartment = "attack" | "midfield" | "defense" | "goalkeeper";
@@ -288,6 +270,11 @@ export interface LineupSlotScore {
   readonly suitability: PositionSuitability;
 }
 
+/** One slot scored once for both department strength and tactical execution. */
+export interface LineupSlotTacticalEvaluation extends LineupSlotScore {
+  readonly taskExecutionByTask: Readonly<Record<TacticalShapeTask, number>>;
+}
+
 /**
  * Scores every lineup slot once, in explicit lineup order.
  *
@@ -300,31 +287,66 @@ export function deriveLineupSlotScores(input: DeriveTeamStrengthInput): readonly
     throw new TeamStrengthError("empty_lineup", "Lineup must include at least one slot");
   }
 
-  return input.lineup.map((slot): LineupSlotScore => {
-    const player = input.players[slot.playerId];
-    if (player === undefined) {
-      throw new TeamStrengthError("missing_player", `Missing player for lineup slot ${slot.slotId}: ${slot.playerId}`);
-    }
+  return input.lineup.map((slot) => scoreLineupSlot(input, slot).score);
+}
 
-    const roleKey = roleWeightKeyForCanonicalRole(slot.canonicalRole);
-    const roleWeight = input.roleWeights[roleKey];
-    if (roleWeight === undefined) {
-      throw new TeamStrengthError(
-        "missing_role_weight",
-        `Missing role weight profile for ${slot.canonicalRole}: ${roleKey}`,
-      );
-    }
-
-    const roleScore = deriveRoleScore(player, roleWeight);
-    const multiplier = deriveStateMultiplier(slot.playerId, input.playerStates, input.stateMultiplierCurves);
-
+/**
+ * Scores one lineup pass for both aggregate strength and task-specific shape.
+ *
+ * The canonical match-context builder uses this instead of separately scoring
+ * the same player for department and tactical work, so dynamic state is applied
+ * once and both readings always describe the same eleven.
+ */
+export function deriveLineupSlotTacticalEvaluations(
+  input: DeriveTeamStrengthInput & { readonly calibration: MatchTacticsCalibrationConfig },
+): readonly LineupSlotTacticalEvaluation[] {
+  if (input.lineup.length === 0) {
+    throw new TeamStrengthError("empty_lineup", "Lineup must include at least one slot");
+  }
+  return input.lineup.map((slot): LineupSlotTacticalEvaluation => {
+    const evaluated = scoreLineupSlot(input, slot);
     return {
-      slot,
-      department: roleWeight.department,
-      score: roleScore * multiplier,
-      suitability: evaluatePositionSuitability(player.naturalPositions, { playerRole: slot.canonicalRole }),
+      ...evaluated.score,
+      taskExecutionByTask: deriveTacticalTaskExecution({
+        player: evaluated.player,
+        calibration: input.calibration,
+        stateMultiplier: evaluated.stateMultiplier,
+      }),
     };
   });
+}
+
+function scoreLineupSlot(
+  input: DeriveTeamStrengthInput,
+  slot: LineupSlot,
+): { readonly score: LineupSlotScore; readonly player: Player; readonly stateMultiplier: number } {
+  const player = input.players[slot.playerId];
+  if (player === undefined) {
+    throw new TeamStrengthError("missing_player", `Missing player for lineup slot ${slot.slotId}: ${slot.playerId}`);
+  }
+  const roleKey = roleWeightKeyForCanonicalRole(slot.canonicalRole);
+  const roleWeight = input.roleWeights[roleKey];
+  if (roleWeight === undefined) {
+    throw new TeamStrengthError(
+      "missing_role_weight",
+      `Missing role weight profile for ${slot.canonicalRole}: ${roleKey}`,
+    );
+  }
+  const stateMultiplier = deriveStateMultiplier(
+    slot.playerId,
+    input.playerStates,
+    input.stateMultiplierCurves,
+  );
+  return {
+    player,
+    stateMultiplier,
+    score: {
+      slot,
+      department: roleWeight.department,
+      score: deriveRoleScore(player, roleWeight) * stateMultiplier,
+      suitability: evaluatePositionSuitability(player.naturalPositions, { playerRole: slot.canonicalRole }),
+    },
+  };
 }
 
 /**
@@ -378,7 +400,7 @@ function deriveRoleScore(player: Player, roleWeight: RoleWeightProfile): number 
   let weightedTotal = 0;
   let weightTotal = 0;
 
-  for (const abilityKey of ABILITY_WEIGHT_KEYS) {
+  for (const abilityKey of PLAYER_ABILITY_KEYS) {
     const weight = roleWeight.abilityWeights[abilityKey];
     if (weight === undefined) {
       continue;
@@ -391,7 +413,7 @@ function deriveRoleScore(player: Player, roleWeight: RoleWeightProfile): number 
       );
     }
 
-    weightedTotal += readAbility(player, abilityKey) * weight;
+    weightedTotal += readPlayerAbility(player.abilities, abilityKey) * weight;
     weightTotal += weight;
   }
 
@@ -443,63 +465,6 @@ function resolveCurveMultiplier(value: number, curve: readonly StateMultiplierCu
   return 1;
 }
 
-/**
- * Reads one named ability from a player.
- */
-function readAbility(player: Player, abilityKey: AbilityWeightKey): number {
-  switch (abilityKey) {
-    case "technical.finishing":
-      return player.abilities.technical.finishing;
-    case "technical.passing":
-      return player.abilities.technical.passing;
-    case "technical.longPassing":
-      return player.abilities.technical.longPassing;
-    case "technical.crossing":
-      return player.abilities.technical.crossing;
-    case "technical.dribbling":
-      return player.abilities.technical.dribbling;
-    case "technical.technique":
-      return player.abilities.technical.technique;
-    case "technical.tackling":
-      return player.abilities.technical.tackling;
-    case "technical.penalties":
-      return player.abilities.technical.penalties;
-    case "technical.freeKicks":
-      return player.abilities.technical.freeKicks;
-    case "physical.pace":
-      return player.abilities.physical.pace;
-    case "physical.strength":
-      return player.abilities.physical.strength;
-    case "physical.stamina":
-      return player.abilities.physical.stamina;
-    case "physical.agility":
-      return player.abilities.physical.agility;
-    case "physical.heading":
-      return player.abilities.physical.heading;
-    case "mental.positioning":
-      return player.abilities.mental.positioning;
-    case "mental.vision":
-      return player.abilities.mental.vision;
-    case "mental.anticipation":
-      return player.abilities.mental.anticipation;
-    case "mental.composure":
-      return player.abilities.mental.composure;
-    case "mental.determination":
-      return player.abilities.mental.determination;
-    case "mental.leadership":
-      return player.abilities.mental.leadership;
-    case "goalkeeping.reflexes":
-      return player.abilities.goalkeeping.reflexes;
-    case "goalkeeping.handling":
-      return player.abilities.goalkeeping.handling;
-    case "goalkeeping.rushingOut":
-      return player.abilities.goalkeeping.rushingOut;
-    case "goalkeeping.goalkeeperPositioning":
-      return player.abilities.goalkeeping.goalkeeperPositioning;
-    case "goalkeeping.footwork":
-      return player.abilities.goalkeeping.footwork;
-  }
-}
 
 /**
  * Builds zeroed department totals.
@@ -519,34 +484,3 @@ function createDepartmentTotals(): Record<TeamStrengthDepartment, { count: numbe
 function averageDepartment(department: { readonly count: number; readonly total: number }): number {
   return department.count === 0 ? 0 : department.total / department.count;
 }
-
-/**
- * Explicit ability traversal order used for deterministic role-score math.
- */
-const ABILITY_WEIGHT_KEYS: readonly AbilityWeightKey[] = [
-  "technical.finishing",
-  "technical.passing",
-  "technical.longPassing",
-  "technical.crossing",
-  "technical.dribbling",
-  "technical.technique",
-  "technical.tackling",
-  "technical.penalties",
-  "technical.freeKicks",
-  "physical.pace",
-  "physical.strength",
-  "physical.stamina",
-  "physical.agility",
-  "physical.heading",
-  "mental.positioning",
-  "mental.vision",
-  "mental.anticipation",
-  "mental.composure",
-  "mental.determination",
-  "mental.leadership",
-  "goalkeeping.reflexes",
-  "goalkeeping.handling",
-  "goalkeeping.rushingOut",
-  "goalkeeping.goalkeeperPositioning",
-  "goalkeeping.footwork",
-];

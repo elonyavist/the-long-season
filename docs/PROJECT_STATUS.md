@@ -23,9 +23,9 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **06C13 `STOP / RETHINK`:** xG-to-goal reaches
-  `R^2=0.8482/0.7923` and goal-to-win `0.6042/0.5656`; neither local resolver
-  is defective. Test the `0.045` premise at season scale; do not reduce upsets.
+- Phase 81A **Step 07 Done; Step 08 next:** player attributes now execute
+  conserved tasks and raise xG range in both untouched sets, but B2 remains
+  `REFINE`. Finish lateral execution before target review; do not reduce upsets.
 - **L6.31 stays green twice:** routine-youth runway improves ready replacements
   `+0.1363/+0.1034`, leaders `+0.0810/+0.0905`, with exact immediate purity.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;

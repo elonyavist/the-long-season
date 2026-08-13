@@ -7,6 +7,7 @@ import {
 import { CANONICAL_PLAYER_ROLES, type CanonicalPlayerRole } from "../tactics/player-roles.ts";
 import type { FormationSide } from "../tactics/formations.ts";
 import { POSITION_SUITABILITIES, type PositionSuitability } from "../tactics/position-suitability.ts";
+import { PLAYER_ABILITY_KEYS, type PlayerAbilityKey } from "../player/player-abilities.ts";
 
 /**
  * One bounded football capacity a single side has by virtue of its shape.
@@ -556,6 +557,14 @@ export interface TacticalShapeCalibrationConfig {
     Record<CanonicalPlayerRole, Readonly<Record<TacticalShapeTask, number>>>
   >;
   /**
+   * Attribute mix used to execute each task, independently of role allocation.
+   * Every row sums to one whole unit so a task changes who is good at it, not
+   * the global quantity of football in the engine.
+   */
+  readonly taskAbilityWeightsBasisPointsByTask: Readonly<
+    Record<TacticalShapeTask, Readonly<Partial<Record<PlayerAbilityKey, number>>>>
+  >;
+  /**
    * Multiplier applied to the nth best contributor to one task, in basis
    * points, strictly decreasing and strictly positive.
    *
@@ -645,6 +654,7 @@ export type MatchTacticsCalibrationErrorCode =
   | "outfield_role_budget_not_conserved"
   | "goalkeeper_is_not_isolated"
   | "outfield_role_leaves_task_empty"
+  | "invalid_task_ability_weights"
   | "invalid_marginal_contribution_ladder"
   | "invalid_channel_policy"
   | "incomplete_saturation_references"
@@ -999,6 +1009,7 @@ export function validateTacticalShapeCalibration(config: TacticalShapeCalibratio
     config.outfieldRoleBudgetBasisPoints,
     config.taskAllocationBasisPointsByRole,
   );
+  validateTaskAbilityWeights(config.taskAbilityWeightsBasisPointsByTask);
   validateMarginalContributionLadder(config.marginalContributionBasisPointsByRank);
   validateChannelPolicy(config.channelPolicy);
   validateCoordinationMultipliers(config.coordinationMultiplierBasisPointsBySuitability);
@@ -1038,7 +1049,7 @@ export function lateralChannelShares(
 }
 
 /** Schema version of the match-tactics calibration asset. */
-export const MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION = 6;
+export const MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION = 7;
 
 /**
  * Derives the exact budget allocated by one role row.
@@ -1118,6 +1129,45 @@ function validateContributionAllocations(
       throw new MatchTacticsCalibrationError(
         "outfield_role_budget_not_conserved",
         `Outfield role ${role} allocates ${allocated}, expected ${outfieldRoleBudgetBasisPoints}`,
+      );
+    }
+  }
+}
+
+function validateTaskAbilityWeights(
+  weightsByTask: TacticalShapeCalibrationConfig["taskAbilityWeightsBasisPointsByTask"],
+): void {
+  for (const task of TACTICAL_SHAPE_TASKS) {
+    const weights = weightsByTask[task];
+    if (weights === undefined) {
+      throw new MatchTacticsCalibrationError(
+        "invalid_task_ability_weights",
+        `Match-tactics calibration has no ability weights for ${task}`,
+      );
+    }
+    let total = 0;
+    let positiveCount = 0;
+    for (const key of PLAYER_ABILITY_KEYS) {
+      const weight = weights[key] ?? 0;
+      if (!Number.isSafeInteger(weight) || weight < 0) {
+        throw new MatchTacticsCalibrationError(
+          "invalid_task_ability_weights",
+          `Task ability weight must be a non-negative safe integer for ${task}.${key}: ${weight}`,
+        );
+      }
+      if (key.startsWith("goalkeeping.") && weight !== 0) {
+        throw new MatchTacticsCalibrationError(
+          "invalid_task_ability_weights",
+          `Outfield tactical task ${task} cannot read goalkeeper ability ${key}`,
+        );
+      }
+      total += weight;
+      if (weight > 0) positiveCount += 1;
+    }
+    if (total !== 10_000 || positiveCount < 2) {
+      throw new MatchTacticsCalibrationError(
+        "invalid_task_ability_weights",
+        `Task ${task} must allocate 10000 basis points across at least two outfield abilities: ${total}/${positiveCount}`,
       );
     }
   }

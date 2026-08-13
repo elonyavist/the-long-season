@@ -2,7 +2,8 @@
 
 ## Status
 
-Not started; requires Step 07 Done.
+Not started; Step 07 is Done with a healthy attribute-task executor and B2
+still `REFINE`. This step owns only the remaining lateral execution path.
 
 ## Rescoped By Checkpoint A
 
@@ -23,18 +24,8 @@ their players, while real executors determine the cost of lateral commitment.
 
 ## What To Implement
 
-- Before changing generation, preregister in the Checkpoint C template the
-  numeric relative targets for tie reduction, formation concentration, club
-  stability and coverage warning deltas against Checkpoint A. Never choose them
-  after seeing Step 08 output.
-- Replace the single slot skeleton with deterministic budgeted squad archetypes.
-- Make all ten primary roles reachable across real generated worlds without
-  requiring every squad to contain all ten.
-- Keep roster size, division quality, rarity budgets, and exceptional-player
-  invariants unchanged.
-- Let `strongestCatalogShape(...)` choose from actual fit; a declared football
-  discriminator followed by canonical formation ID breaks a genuine tie, never
-  catalog order.
+- Keep Step 03A/A2 squad generation, ten-role reachability and formation
+  selection unchanged; they are complete and must not be duplicated.
 - Consume Step 05 lateral focus through Step 07 task execution; do not add a
   second lateral field to formations or roles.
 - Add reorder invariance and mirrored-player counterfactual tests.

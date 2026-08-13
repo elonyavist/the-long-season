@@ -33,7 +33,7 @@ import {
 } from "./tactical-shape.ts";
 import {
   createLineupSlot,
-  deriveLineupSlotScores,
+  deriveLineupSlotTacticalEvaluations,
   deriveTeamStrength,
   type LineupSlot,
   type RoleWeightProfile,
@@ -503,7 +503,11 @@ function profileFor(slots: readonly PitchSlot[], quality: QualityOptions = {}): 
 }
 
 function slotScoresFor(slots: readonly PitchSlot[], quality: QualityOptions = {}) {
-  return deriveLineupSlotScores(strengthInput(slots, quality));
+  const calibration = matchTacticsCalibrationFixture();
+  return deriveLineupSlotTacticalEvaluations({
+    ...strengthInput(slots, quality),
+    calibration,
+  });
 }
 
 function strengthInput(slots: readonly PitchSlot[], quality: QualityOptions = {}) {
