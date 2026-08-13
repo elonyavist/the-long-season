@@ -128,6 +128,11 @@ export type TacticalAgencyWorkerMessage =
   | { readonly ok: true; readonly result: TacticalAgencyWorldResult }
   | { readonly ok: false; readonly message: string };
 
+interface TacticalAgencyWorkerEnvelope {
+  readonly workerKind: "tactical_agency_world";
+  readonly input: TacticalAgencyWorldInput;
+}
+
 /**
  * Measures one generated world through the real career path.
  *
@@ -183,7 +188,7 @@ export function runTacticalAgencyWorld(input: TacticalAgencyWorldInput): Tactica
       policy: {
         roleWeights: world.roleWeights,
         stateMultiplierCurves: world.stateMultiplierCurves,
-        benchSize: BENCH_SIZE,
+        benchSize: TACTICAL_AGENCY_BENCH_SIZE,
       },
       matchTacticsCalibration: world.matchTacticsCalibration,
       valuationConfig: selectPlayerValuationConfig(careerState.gameState.meta.calibrationVersions),
@@ -244,7 +249,7 @@ export function runTacticalAgencyConditionedWorld(
       policy: {
         roleWeights: world.roleWeights,
         stateMultiplierCurves: world.stateMultiplierCurves,
-        benchSize: BENCH_SIZE,
+        benchSize: TACTICAL_AGENCY_BENCH_SIZE,
       },
       matchTacticsCalibration: world.matchTacticsCalibration,
       valuationConfig,
@@ -355,7 +360,7 @@ export function runTacticalAgencyConditionedWorld(
 }
 
 /** Reads the frozen Step 06A opening row from the selections B2 already made. */
-function conditionedPopulationRow(input: {
+export function conditionedPopulationRow(input: {
   readonly careerState: CliCareerState;
   readonly worldSeed: string;
   readonly competitionId: CliCompetitionId;
@@ -430,7 +435,7 @@ function conditionedPopulationRow(input: {
  * a player actually meets first. It is declared here rather than taken as an
  * argument so two runs cannot quietly measure different populations.
  */
-function observedCompetitionId(world: FakeDomesticWorld): CliCompetitionId {
+export function observedCompetitionId(world: FakeDomesticWorld): CliCompetitionId {
   const competitionId = world.domesticCompetitionWorld.competitionIds[2];
   if (competitionId === undefined) {
     throw new Error(`Generated world has no third division: ${world.domesticCompetitionWorld.competitionIds.length}`);
@@ -453,7 +458,7 @@ function observedCompetitionId(world: FakeDomesticWorld): CliCompetitionId {
  * its own output. Verifying costs one comparison per club and converts a silent
  * wrong answer into a loud one.
  */
-function squadIdentityKeyByClubId(
+export function squadIdentityKeyByClubId(
   world: FakeDomesticWorld,
   worldSeed: string,
   competitionId: CliCompetitionId,
@@ -514,6 +519,8 @@ export interface TacticalAgencyCounterfactualRow {
   readonly clubId: ClubId;
   readonly squadIdentityKey: string;
   readonly formationKey: string;
+  /** Complete own-squad policy selected after the controlled role redraw. */
+  readonly policyId: string;
 }
 
 /** The archetype-mix counterfactual for one world. */
@@ -526,6 +533,10 @@ export interface TacticalAgencyCounterfactualResult {
   readonly clubsWhoseShapeMoved: number;
   /** Distinct shapes each club produced across the eight identities, club order. */
   readonly distinctShapeCountByClub: readonly number[];
+  /** Clubs whose complete tactic/focus policy moved across the role redraws. */
+  readonly clubsWhosePolicyMoved: number;
+  /** Distinct complete policies each club produced, in stable club order. */
+  readonly distinctPolicyCountByClub: readonly number[];
 }
 
 /**
@@ -570,10 +581,13 @@ export function runTacticalAgencyArchetypeCounterfactual(input: {
   const valuationConfig = selectPlayerValuationConfig(careerState.gameState.meta.calibrationVersions);
   const rows: TacticalAgencyCounterfactualRow[] = [];
   const distinctShapeCountByClub: number[] = [];
+  const distinctPolicyCountByClub: number[] = [];
   let clubsWhoseShapeMoved = 0;
+  let clubsWhosePolicyMoved = 0;
 
   for (const clubId of clubIds) {
     const shapes = new Set<string>();
+    const policies = new Set<string>();
     for (const squadIdentityKey of input.identityKeys) {
       const rebuilt = careerStateWithReRoledClub(careerState, world, clubId, squadIdentityKey);
       const selection = selectCareerAiTeam({
@@ -583,17 +597,21 @@ export function runTacticalAgencyArchetypeCounterfactual(input: {
         policy: {
           roleWeights: world.roleWeights,
           stateMultiplierCurves: world.stateMultiplierCurves,
-          benchSize: BENCH_SIZE,
+          benchSize: TACTICAL_AGENCY_BENCH_SIZE,
         },
         matchTacticsCalibration: world.matchTacticsCalibration,
         valuationConfig,
       });
       const formationKey = formationKeyOfLineup(selection.teamContext.lineup);
+      const policyId = selection.tacticalPolicy.ownFit.policyId;
       shapes.add(formationKey);
-      rows.push({ clubId, squadIdentityKey, formationKey });
+      policies.add(`${formationKey}|${policyId}`);
+      rows.push({ clubId, squadIdentityKey, formationKey, policyId });
     }
     distinctShapeCountByClub.push(shapes.size);
+    distinctPolicyCountByClub.push(policies.size);
     if (shapes.size > 1) clubsWhoseShapeMoved += 1;
+    if (policies.size > 1) clubsWhosePolicyMoved += 1;
   }
 
   return {
@@ -602,6 +620,8 @@ export function runTacticalAgencyArchetypeCounterfactual(input: {
     clubCount: clubIds.length,
     clubsWhoseShapeMoved,
     distinctShapeCountByClub,
+    clubsWhosePolicyMoved,
+    distinctPolicyCountByClub,
   };
 }
 
@@ -692,7 +712,7 @@ function formationKeyOfLineup(lineup: readonly { readonly slotId: string }[]): s
 }
 
 /** Save identity for a throwaway measurement career, stable per world seed. */
-function careerSaveIdFor(worldSeed: string): CliSaveId {
+export function careerSaveIdFor(worldSeed: string): CliSaveId {
   return `save:agency-${worldSeed}` as CliSaveId;
 }
 
@@ -713,7 +733,7 @@ const NEUTRAL_TACTICS = {
 } as const;
 
 /** Bench size the career path uses, so selection pressure matches a real match. */
-const BENCH_SIZE = 8;
+export const TACTICAL_AGENCY_BENCH_SIZE = 8;
 
 /**
  * Builds the paired low-block reading from one generated world.
@@ -781,7 +801,7 @@ export function buildTacticalAgencyLowBlockInput(input: {
       policy: {
         roleWeights: world.roleWeights,
         stateMultiplierCurves: world.stateMultiplierCurves,
-        benchSize: BENCH_SIZE,
+        benchSize: TACTICAL_AGENCY_BENCH_SIZE,
       },
       matchTacticsCalibration: world.matchTacticsCalibration,
       valuationConfig,
@@ -820,7 +840,9 @@ export function runTacticalAgencyWorldInWorker(
   input: TacticalAgencyWorldInput,
 ): Promise<TacticalAgencyWorldResult> {
   return new Promise((resolve, reject) => {
-    const worker = new Worker(new URL("./tactical-agency-world.ts", import.meta.url), { workerData: input });
+    const worker = new Worker(new URL("./tactical-agency-world.ts", import.meta.url), {
+      workerData: { workerKind: "tactical_agency_world", input } satisfies TacticalAgencyWorkerEnvelope,
+    });
 
     worker.once("message", (message: TacticalAgencyWorkerMessage) => {
       if (message.ok) {
@@ -837,23 +859,34 @@ export function runTacticalAgencyWorldInWorker(
 }
 
 /** Narrows the untyped worker payload before this module runs as a worker entry. */
-function isTacticalAgencyWorldInput(value: unknown): value is TacticalAgencyWorldInput {
+function isTacticalAgencyWorkerEnvelope(value: unknown): value is TacticalAgencyWorkerEnvelope {
   if (typeof value !== "object" || value === null) return false;
-  const candidate = value as Partial<TacticalAgencyWorldInput>;
+  const candidate = value as Partial<TacticalAgencyWorkerEnvelope>;
+  const input = candidate.input;
 
-  return typeof candidate.worldSeed === "string" && typeof candidate.roundCount === "number";
+  return candidate.workerKind === "tactical_agency_world"
+    && typeof input === "object"
+    && input !== null
+    && typeof input.worldSeed === "string"
+    && typeof input.roundCount === "number";
 }
 
-if (!isMainThread) {
+if (!isMainThread && workerKind(workerData) === "tactical_agency_world") {
   try {
-    if (!isTacticalAgencyWorldInput(workerData)) {
+    if (!isTacticalAgencyWorkerEnvelope(workerData)) {
       throw new Error("Tactical agency worker received an unusable payload");
     }
-    parentPort?.postMessage({ ok: true, result: runTacticalAgencyWorld(workerData) });
+    parentPort?.postMessage({ ok: true, result: runTacticalAgencyWorld(workerData.input) });
   } catch (error) {
     parentPort?.postMessage({
       ok: false,
       message: error instanceof Error ? error.message : String(error),
     });
   }
+}
+
+function workerKind(value: unknown): unknown {
+  return typeof value === "object" && value !== null && "workerKind" in value
+    ? value.workerKind
+    : undefined;
 }

@@ -16,6 +16,11 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_D_OWN_SQUAD_AGENCY.md` — **`STOP / RETHINK`.** Eight
+  complete modal policies and mismatch cost are real, but structurally derived
+  own fit reaches only `+0.4018/+0.4643` season points against the frozen `+1.5`
+  floor. Steps 13-16 remain closed pending the product meaning of the MVP.
+
 - `PHASE_81A_MVP_OWN_SQUAD_AGENCY_AMENDMENT.md` — Amendment A7. Retains the
   failed adversarial target for future opponent-aware AI and freezes the current
   MVP's own-squad, season-point contract before Steps 10-11 implementation.

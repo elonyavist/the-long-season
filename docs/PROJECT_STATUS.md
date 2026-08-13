@@ -23,10 +23,10 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **Step 11 Done; Checkpoint D open:** AI pre-match policy now fits
-  only its selected squad/current capacities; live responses reuse the canonical
-  command path. The locked `7 x 1` reached every profile/focus and live reason,
-  with `0` command rejections. No opponent fact, strength bonus or save changed.
+- Phase 81A **Checkpoint D `STOP / RETHINK`:** route-derived own fit reaches only
+  `+0.4018/+0.4643` against `+1.5`; mismatch passes at `-1.5313/-1.6205`.
+  Eight complete policies and zero opponent reads hold, but historical football
+  is red. Steps 13-16 stay closed until the MVP product meaning is chosen.
 - **L6.31 stays green twice:** routine-youth runway improves ready replacements
   `+0.1363/+0.1034`, leaders `+0.0810/+0.0905`, with exact immediate purity.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;

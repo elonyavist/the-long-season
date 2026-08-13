@@ -50,6 +50,7 @@ import {
   LOCKED_PROFILE_MEASUREMENTS,
   type LockedMigrationProfileId,
 } from "./locked-profile-sections.ts";
+import { createOwnSquadAgencySectionFacts } from "./own-squad-agency-section.ts";
 import { resolveWorkspaceOutputPath } from "../workspace-output-path.ts";
 
 /** The three executable modules present at the Step 03C boundary. */
@@ -76,6 +77,7 @@ export const SIMULATION_REPORT_PROFILE_IDS = [
   "phase81a-b2-current-materiality",
   "phase81a-b2-downstream-replication",
   "phase81a-c",
+  "phase81a-d-own-squad-agency",
   "phase81a-b2-attribution",
   "phase81a-b2-identity-family",
   "phase81a-substitution-minute-l2-7x1",
@@ -525,6 +527,21 @@ export const SIMULATION_REPORT_PROFILES = {
       includedSectionIds: ["tactical_agency"],
       detail: "diagnostic",
       seedPrefix: "phase81a-c-player-context",
+      workerCount: 7,
+    },
+  },
+  "phase81a-d-own-squad-agency": {
+    id: "phase81a-d-own-squad-agency",
+    titleKey: "simulationReport.profile.phase81aD.title",
+    descriptionKey: "simulationReport.profile.phase81aD.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-d-own-squad-agency",
+      worldCount: 14,
+      seasonCount: 1,
+      includedSectionIds: ["tactical_agency"],
+      detail: "diagnostic",
+      seedPrefix: "phase81a-own-squad-agency",
       workerCount: 7,
     },
   },
@@ -1857,6 +1874,15 @@ export async function executeSimulationReportModule(
         decision: facts.decision === "IDENTITY_FAMILY" || facts.decision === "SAMPLING_ONLY"
           ? "NOT_EVALUATED"
           : "FAIL",
+        calibrationVersions: facts.calibrationVersions,
+        worldSeeds: facts.worldSeeds,
+      };
+    }
+    if (request.profileId === "phase81a-d-own-squad-agency") {
+      const facts = await createOwnSquadAgencySectionFacts({ workerCount: request.workerCount });
+      return {
+        data: toSimulationReportJsonValue(facts),
+        decision: facts.decision === "GO" ? "PASS" : "FAIL",
         calibrationVersions: facts.calibrationVersions,
         worldSeeds: facts.worldSeeds,
       };

@@ -2,8 +2,11 @@
 
 ## Status
 
-**Ready after Step 11.** This checkpoint was frozen by Amendment A7 before Step
-10 or Step 11 implementation.
+**STOP / RETHINK on 2026-08-13.** The frozen target was run three times over
+both declared sets. The final structural refinement aligned selection with the
+canonical route engine and still produced only `+0.4018/+0.4643` own-fit season
+points against the frozen `+1.5` floor. Steps 13-16 remain closed pending a
+product decision; numeric targets did not move.
 
 ## Goal
 
@@ -63,6 +66,15 @@ replacement and generated-leader gates under the completed tactical code.
 - `packages/simulation-tools/src/index.ts`
 - `apps/cli/src/commands/simulation-report/own-squad-agency-section.ts` **(new)**
 - `apps/cli/src/commands/simulation-report/own-squad-agency-section.test.ts` **(new)**
+- `apps/cli/src/commands/simulation-report/career-sections.ts`. Exposes one
+  checkpoint-only composition of the existing standings and upset readers over
+  a canonical `7 x 1` career lane. The focused eight-club replay cannot produce
+  a league table, and inventing an approximation would not test the frozen Big
+  Five gates.
+- `apps/cli/src/commands/simulation-report/tactical-agency-world.ts`. Extends the
+  existing constant-quality role counterfactual with complete-policy movement;
+  rebuilding its private re-role oracle in the new section would create a
+  second measurement owner.
 - `apps/cli/src/commands/simulation-report/report-registry.ts`
 - `apps/cli/src/commands/simulation-report/report-planner.test.ts`
 - `packages/i18n/src/labels.ts`
@@ -95,3 +107,48 @@ Run the simulation gate and `pnpm check` separately.
   leaks in, a universal policy returns, or historical football guardrails break.
 
 No outcome authorizes lowering the future adversarial `+0.045/-0.045` target.
+
+## Outcome
+
+The first complete run measured the shipped Step 11 score. It returned
+`REFINE`: own fit was `-0.1674/+0.1674`, mismatch `-1.1540/-1.0000`, and the
+complete-policy spread `0.9866/1.1674`. It also exposed two instrumentation
+defects: imported worker entrypoints accepted each other's payload, and the
+historical-upset lane omitted the existing absolute-strength reader and emitted
+zero observations. Both are measurement owners, not gameplay findings.
+
+The first score refinement separated task demand from overall readiness. It
+improved focus reachability but did not solve effect ordering: own fit became
+`+0.1808/+0.2589`, mismatch `-1.0580/-1.2545`, spread
+`1.2388/1.5134`. That hypothesis is rejected; it may not ship as another score
+table.
+
+The final refinement removed both parallel tables and derived candidate fitness
+from the production route plan, control and pre-clamp opportunity functions
+against one fixed neutral `0.5` reference. It also corrected complete-policy
+measurement from `tactic|focus` to `formation|tactic|focus`. This produced eight
+modal complete policies with maximum share `0.125`, zero opponent reads, exact
+catalog invariance and a genuine mismatch cost inside the frozen band on both
+sets (`-1.5313/-1.6205`). Blind remained bounded and non-significant.
+
+The central promise nevertheless failed decisively: correct choice was only
+`+0.4018/+0.4643`, and correct-minus-wrong only `1.9330/2.0848`. The canonical
+career lane also remained outside current goals, draws, dispersion and upset
+bands under the policy population. More coefficient iteration would be
+post-output tuning. Under the frozen Decision section, a correctly wired,
+opponent-free structural selector that cannot produce the perceptible reward is
+`STOP / RETHINK`, not another `REFINE` cycle.
+
+Both refinements were removed before closeout. A final run on the accepted Step
+11 tree reproduced the original two set readings exactly and exited `1` after
+`861757 ms`. The committed tree therefore retains only the measurement seam and
+audit evidence; it does not ship the rejected readiness table, route-derived
+selector, schema bump or caller plumbing.
+
+The product choice is now explicit: either (a) redefine this MVP as error
+avoidance, which requires a new preregistered contract rather than relabelling
+these results; (b) author genuinely specialised tactical plans and recalibrate
+the historical league lanes; or (c) defer positive agency until honest opponent
+evidence exists. Until one is selected, no Step 13-16 implementation or final
+renewal claim is valid. L6.31 remains previously green evidence but is not
+rerun or promoted under an unaccepted tactical engine.

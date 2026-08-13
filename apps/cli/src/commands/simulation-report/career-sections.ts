@@ -1718,6 +1718,70 @@ export async function createCareerSectionsFacts(input: {
   };
 }
 
+/**
+ * Runs Checkpoint D's auxiliary full-league monitor through existing readers.
+ *
+ * The paired agency replay samples eight clubs and therefore cannot produce a
+ * league table or pre-round rank gaps. This composition runs the same seven
+ * opening worlds for one canonical season, then hands their recorded facts to
+ * the standings and historical-upset evaluators already used by L6.2. It is a
+ * regression lane only: none of its values enters the tactical effect estimate.
+ */
+export async function createOwnSquadAgencyHistoricalGuardrailFacts(input: {
+  readonly worldSeeds: readonly string[];
+  readonly workerCount: number;
+}): Promise<{
+  readonly held: boolean;
+  readonly failed: readonly string[];
+  readonly standings: StandingsHierarchyCheckpointDecision;
+  readonly upset: ReturnType<typeof evaluateHistoricalUpsetCheckpoint>;
+}> {
+  if (input.worldSeeds.length !== 7 || input.workerCount !== 7) {
+    throw new Error("Checkpoint D historical guardrails require exactly 7 worlds and 7 workers");
+  }
+  const worlds = await executeCareerWorldBatch({
+    worldSeeds: input.worldSeeds,
+    seasonCount: 1,
+    workerCount: input.workerCount,
+    detail: "diagnostic",
+    sectionIds: ["formations"],
+    projectionInput: (seed) => ({
+      seed,
+      seasonCount: 1,
+      detail: "diagnostic",
+      sectionIds: ["formations"],
+      leagueDiversity: true,
+      generationalSuccession: false,
+      ownerAttribution: true,
+      renewalArchitecture: false,
+      standingsHierarchy: true,
+      marketTargeting: false,
+      collectSquadUse: false,
+      collectRenewalAnalysis: false,
+      // The historical-upset reader consumes the existing absolute-strength
+      // replay. Omitting its frozen scale produces zero rank-gap facts rather
+      // than a neutral guardrail, which the first D run correctly refused.
+      analysisStrengthGapScale: 1.5,
+    }),
+  });
+  const standings = evaluateStandingsHierarchyCheckpoint(
+    worlds.map(requiredStandingsHierarchyFacts),
+    worlds.map(requiredLeagueDiversityFacts),
+    worlds.map(requiredAvailabilityAgingFacts),
+    1,
+  );
+  const upset = evaluateHistoricalUpsetCheckpoint(worlds.map(requiredOwnerAttributionFacts));
+  const firstDivision = standings.divisions.find(({ divisionLevel }) => divisionLevel === 1);
+  const failed = [
+    ...(firstDivision === undefined ? ["first_division_population"] : firstDivision.failed),
+    ...upset.failedGateKeys.map((key) => `upset:${key}`),
+    ...(standings.reconciliationFailureCount === 0 ? [] : ["standings:reconciliation"]),
+    ...(standings.fallbackSelectionCount === 0 ? [] : ["standings:selection_fallback"]),
+    ...(standings.unavailableSelectedPlayerCount === 0 ? [] : ["standings:unavailable_selection"]),
+  ];
+  return { held: failed.length === 0, failed, standings, upset };
+}
+
 function requiredRenewalAblationArm(
   arm: RenewalAblationArm | undefined,
 ): RenewalAblationArm {

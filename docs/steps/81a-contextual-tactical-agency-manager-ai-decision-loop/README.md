@@ -100,7 +100,11 @@ its test-first review also corrected the false premise that shipped content
 already activates form and morale. Step 11 is Done: one versioned own-squad
 policy feeds career and web AI, every profile/focus and live reason is reachable
 on the locked `7 x 1`, and no opponent fact or strength bonus entered the
-choice. Checkpoint D is next.
+choice. Checkpoint D records `STOP / RETHINK`: a canonical route-derived selector
+makes mismatch costly but produces only `+0.4018/+0.4643` correct-choice season
+points against the frozen `+1.5` floor. Steps 13-16 remain closed pending the
+product meaning of the opponent-free MVP; L6.31 is not promoted without its
+required integrated rerun.
 
 This phase is governed by
 [`PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md`](../../audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md).
@@ -362,7 +366,7 @@ contexts; it never owns the analytic diversity gate.
 | 09A | [MVP own-squad agency contract](09a-mvp-own-squad-agency-contract.md) | no | **Done; Step 10 open** |
 | 10 | [manager own-squad tactical read](10-manager-own-squad-tactical-read.md) | information | Ready after A7 |
 | 11 | [AI own-squad and live-state policy](11-ai-own-squad-and-live-state-policy.md) | yes | **Done; 12 open** |
-| 12 | [Checkpoint D own-squad agency](12-checkpoint-d-own-squad-agency.md) | no | Ready; frozen paired season-scale gate |
+| 12 | [Checkpoint D own-squad agency](12-checkpoint-d-own-squad-agency.md) | no | **`STOP / RETHINK`; product decision required** |
 | 13 | [tactical chapters and canonical explanation](13-tactical-chapters-and-canonical-explanation.md) | report/UI | Step 14 |
 | 14 | [preparation and single persistence integration](14-post-match-preparation-choice.md) | next-match state/save | Step 15 |
 | 15 | [Checkpoint E multi-match consequence](15-checkpoint-e-multi-match-consequence.md) | no | GO authorizes 16 |

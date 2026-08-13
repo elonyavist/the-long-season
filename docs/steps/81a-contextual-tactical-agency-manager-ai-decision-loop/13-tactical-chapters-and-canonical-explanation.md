@@ -2,7 +2,10 @@
 
 ## Status
 
-Not started; requires Checkpoint D GO.
+Blocked. Checkpoint D recorded `STOP / RETHINK` on 2026-08-13; this step may not
+start until a replacement own-squad product contract is frozen and its gate
+returns GO. The previously planned implementation scope is retained below for
+review, not authorized execution.
 
 ## Goal
 

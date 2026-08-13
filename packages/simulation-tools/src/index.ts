@@ -34,6 +34,19 @@ export {
 } from "./modular-report/report-contract.ts";
 
 export {
+  OWN_SQUAD_AGENCY_ARMS,
+  OWN_SQUAD_AGENCY_AUDIT_VERSION,
+  evaluateOwnSquadAgencySet,
+  runOwnSquadAgencySchedule,
+  type OwnSquadAgencyArm,
+  type OwnSquadAgencyFixtureInput,
+  type OwnSquadAgencyGuardrails,
+  type OwnSquadAgencyScheduleInput,
+  type OwnSquadAgencyScheduleResult,
+  type OwnSquadAgencySetResult,
+} from "./tactical-agency/own-squad-agency-audit.ts";
+
+export {
   createPlayerMarketCalibrationReport,
   type CreatePlayerMarketCalibrationReportInput,
   type PlayerMarketCalibrationObservation,
