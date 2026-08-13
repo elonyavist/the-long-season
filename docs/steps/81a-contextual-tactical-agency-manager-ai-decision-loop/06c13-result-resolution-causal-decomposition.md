@@ -2,9 +2,9 @@
 
 ## Status
 
-Planned. Step 06C12's larger independent populations name
-`result_resolution` twice, but that aggregate label does not yet justify
-changing football variance.
+Done: `STOP / RETHINK`. Both individual resolver stages are coherent in both
+untouched sets, while the composed xG-state model remains below `R^2=0.5`.
+No gameplay change is authorized.
 
 ## Goal
 
@@ -59,6 +59,12 @@ Evaluate each untouched set independently, then require the same owner twice:
   conversion.
 - `scoreline_mapping` when xG-to-goal is `>= 0.5` and goal-to-win is `< 0.5`.
 - `distributed_resolution` when both two-variable stages are `< 0.5`.
+- `stop_rethink` when both two-variable stages reach `>= 0.5` but the combined
+  xG-state-to-win model remains `< 0.5`; that interaction does not name one
+  lossy stage and cannot authorize a local correction.
+- `stop_rethink` when both stages and the combined model reach `>= 0.5`; in
+  that case the prior aggregate label no longer reproduces under the fuller
+  state and there is no lossy result stage to change.
 - `stop_rethink` for a non-positive primary differential slope, singular pooled
   model, missing telemetry or failed 06C12 reconciliation.
 - Opposite set owners are `MIXED`; no gameplay change is authorized.
@@ -81,7 +87,7 @@ draws and finishing variance are part of realistic football.
 - `docs/audits/README.md`;
 - `docs/PROJECT_STATUS.md`;
 - this step document;
-- `README.md`;
+- the phase `README.md`; reflect the decision and handoff;
 - the next empirical checkpoint document only after the same owner appears in
   both sets.
 
@@ -104,3 +110,17 @@ graphify update .
 The same replay rows expose total and differential causal facts, both untouched
 sets name or disagree on the first lossy stage, classifier reachability is
 proved on real contexts, and no gameplay or target changes.
+
+## Result
+
+The locked `28`-world, `128`-context run reproduces every prior population and
+Phase-1 gate. xG state explains `0.8482/0.7923` of goal-differential variance;
+goal state explains `0.6042/0.5656` of win-share variance. Their primary slopes
+remain positive. Nevertheless xG state explains only `0.3839/0.4046` of
+win-share variance, so both sets return the preregistered `stop_rethink`.
+
+This rejects a local variance reduction. Mean complete-row ranges are only
+`0.1543/0.1322` xG differential and `0.0379/0.0366` win share. The next step
+must evaluate the `0.045` product premise against season-level agency and upset
+credibility; it cannot tune finishing or scoreline randomness merely to make a
+diagnostic green.

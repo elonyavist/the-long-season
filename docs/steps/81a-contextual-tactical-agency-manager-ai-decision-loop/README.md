@@ -85,7 +85,9 @@ is authorized. Step 06C12 runs the preregistered conservative branch: two new
 `14`-world, `64`-context sets replicate the owner before any product fork is
 chosen. Its first run stopped before replay on one real weak-fit selection;
 06C12A makes domain coverage canonical and the unchanged retry names
-`result_resolution` twice. Step 06C13 decomposes that owner before any change;
+`result_resolution` twice. Step 06C13 returns `STOP / RETHINK`: xG-to-goal and
+goal-to-result are each coherent, so reducing football variance is rejected.
+The next checkpoint must test the `0.045` product premise at season scale;
 Step 07 stays closed.
 
 This phase is governed by
@@ -341,7 +343,7 @@ contexts; it never owns the analytic diversity gate.
 | 06C11 | [chance-to-result materiality attribution](06c11-chance-to-result-materiality-attribution.md) | no | Done: `MIXED`, product decision required |
 | 06C12 | [independent downstream owner replication](06c12-independent-downstream-owner-replication.md) | no | Done: `REFINE` before replay, weak-fit owner |
 | 06C12A | [canonical ordinary formation coverage](06c12a-canonical-ordinary-formation-coverage.md) | yes | Done: `GO`, resolution owner twice |
-| 06C13 | [result-resolution causal decomposition](06c13-result-resolution-causal-decomposition.md) | no | Planned: xG-to-goal versus goal-to-win |
+| 06C13 | [result-resolution causal decomposition](06c13-result-resolution-causal-decomposition.md) | no | Done: `STOP / RETHINK`, no local resolver owner |
 | 07 | [player task execution](07-player-task-execution.md) | yes | Step 08 |
 | 08 | [squad identity and lateral execution](08-squad-identity-and-lateral-execution.md) | yes | Step 09 |
 | 09 | [Checkpoint C player context](09-checkpoint-c-player-context.md) | no | GO authorizes 10 |

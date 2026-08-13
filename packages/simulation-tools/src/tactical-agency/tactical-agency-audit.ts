@@ -1237,7 +1237,9 @@ export interface TacticalAgencyConditionedReplayContextResult {
 export interface TacticalAgencyConditionedMaterialityChannelMean {
   readonly opportunityDifferential: number;
   readonly expectedGoalsDifferential: number;
+  readonly expectedGoalsTotal: number;
   readonly goalDifferential: number;
+  readonly goalTotal: number;
 }
 
 interface TacticalAgencyReplayObservation
@@ -1622,7 +1624,10 @@ function tacticalAgencyReplayObservation(input: {
       result.stats[ownSide].opportunities - result.stats[opponentSide].opportunities,
     expectedGoalsDifferential:
       telemetry.stats[ownSide].expectedGoals - telemetry.stats[opponentSide].expectedGoals,
+    expectedGoalsTotal:
+      telemetry.stats[ownSide].expectedGoals + telemetry.stats[opponentSide].expectedGoals,
     goalDifferential: ownGoals - opponentGoals,
+    goalTotal: ownGoals + opponentGoals,
     winShare: ownGoals > opponentGoals ? 1 : ownGoals < opponentGoals ? 0 : 0.5,
   };
 }
@@ -1642,7 +1647,9 @@ function meanTacticalAgencyReplayChannels(
       opportunityDifferential)),
     expectedGoalsDifferential: mean(values.map(({ expectedGoalsDifferential }) =>
       expectedGoalsDifferential)),
+    expectedGoalsTotal: mean(values.map(({ expectedGoalsTotal }) => expectedGoalsTotal)),
     goalDifferential: mean(values.map(({ goalDifferential }) => goalDifferential)),
+    goalTotal: mean(values.map(({ goalTotal }) => goalTotal)),
   };
 }
 
@@ -1757,6 +1764,44 @@ export interface TacticalAgencyChanceToResultRanges {
   readonly winShare: number;
 }
 
+/** First lossy stage in the canonical xG-to-result path. */
+export type TacticalAgencyResultResolutionOwner =
+  | "xg_geometry"
+  | "shot_conversion"
+  | "scoreline_mapping"
+  | "distributed_resolution"
+  | "stop_rethink";
+
+export interface TacticalAgencyResultResolutionModel {
+  readonly predictorKeys: readonly ("expectedGoalsDifferential"
+    | "expectedGoalsTotal"
+    | "goalDifferential"
+    | "goalTotal")[];
+  readonly outcomeKey: "goalDifferential" | "winShare";
+  readonly coefficients: readonly number[] | "not_observed";
+  readonly rSquared: number | "not_observed";
+  readonly residualVariance: number | "not_observed";
+  readonly contextCounts: {
+    readonly atOrAboveHalf: number;
+    readonly belowHalf: number;
+    readonly notObserved: number;
+  };
+}
+
+/** Complete centered decomposition over the exact canonical replay rows. */
+export interface TacticalAgencyResultResolutionDecomposition {
+  readonly contractVersion: "phase81a-result-resolution-decomposition-v1";
+  readonly models: {
+    readonly expectedGoalsDifferentialToGoalDifferential: TacticalAgencyResultResolutionModel;
+    readonly expectedGoalsStateToGoalDifferential: TacticalAgencyResultResolutionModel;
+    readonly goalDifferentialToWinShare: TacticalAgencyResultResolutionModel;
+    readonly goalStateToWinShare: TacticalAgencyResultResolutionModel;
+    readonly expectedGoalsStateToWinShare: TacticalAgencyResultResolutionModel;
+  };
+  readonly classifierReachabilityHeld: boolean;
+  readonly owner: TacticalAgencyResultResolutionOwner;
+}
+
 /** Pooled xG-to-result attribution over one independently seeded population. */
 export interface TacticalAgencyChanceToResultAttribution {
   readonly contractVersion: "phase81a-b2-chance-to-result-v1";
@@ -1776,6 +1821,30 @@ export interface TacticalAgencyChanceToResultAttribution {
   readonly pooledRSquared: number | "not_observed";
   readonly classifierReachabilityHeld: boolean;
   readonly owner: TacticalAgencyChanceToResultOwner;
+  readonly resolutionDecomposition: TacticalAgencyResultResolutionDecomposition;
+}
+
+/** Combines independent decompositions without averaging contradictory owners. */
+export function decideTacticalAgencyResultResolutionOwner(
+  rows: readonly TacticalAgencyResultResolutionDecomposition[],
+): {
+  readonly owner: TacticalAgencyResultResolutionOwner | "mixed" | "not_evaluated";
+  readonly held: boolean;
+} {
+  const owners = new Set(rows.map(({ owner }) => owner));
+  const owner = rows.length === 0
+    ? "not_evaluated" as const
+    : owners.size === 1
+      ? [...owners][0] as TacticalAgencyResultResolutionOwner
+      : "mixed" as const;
+  return {
+    owner,
+    held: rows.length > 0
+      && rows.every(({ classifierReachabilityHeld }) => classifierReachabilityHeld)
+      && owner !== "mixed"
+      && owner !== "not_evaluated"
+      && owner !== "stop_rethink",
+  };
 }
 
 /** Combines independently seeded owners without allowing one set to hide another. */
@@ -1979,6 +2048,264 @@ function summarizeTacticalAgencyChanceToResult(
     pooledRSquared,
     classifierReachabilityHeld,
     owner,
+    resolutionDecomposition: summarizeTacticalAgencyResultResolution(contexts),
+  };
+}
+
+type TacticalAgencyResolutionNumericKey =
+  | "expectedGoalsDifferential"
+  | "expectedGoalsTotal"
+  | "goalDifferential"
+  | "goalTotal"
+  | "winShare";
+
+interface TacticalAgencyResolutionRow {
+  readonly expectedGoalsDifferential: number;
+  readonly expectedGoalsTotal: number;
+  readonly goalDifferential: number;
+  readonly goalTotal: number;
+  readonly winShare: number;
+  readonly weight: number;
+}
+
+interface TacticalAgencyResolutionModelSpec {
+  readonly predictorKeys: readonly ("expectedGoalsDifferential"
+    | "expectedGoalsTotal"
+    | "goalDifferential"
+    | "goalTotal")[];
+  readonly outcomeKey: "goalDifferential" | "winShare";
+}
+
+/** Decomposes result resolution without replaying or rebuilding any match. */
+export function summarizeTacticalAgencyResultResolution(
+  contexts: readonly TacticalAgencyConditionedMaterialityContextResult[],
+): TacticalAgencyResultResolutionDecomposition {
+  if (contexts.length === 0) {
+    throw new TacticalAgencyAuditError(
+      "empty_work_items",
+      "B2 result-resolution decomposition has no contexts",
+    );
+  }
+  const weightTotal = contexts.reduce(
+    (sum, context) => sum + context.populationWeightCount,
+    0,
+  );
+  const centeredByContext = contexts.map((context) => {
+    const winShareByResponse = new Map(context.replayWinShares.map((row) => [
+      row.responseId,
+      row.winShare,
+    ]));
+    const rawRows = context.replayChannelMeans.map((row) => {
+      const winShare = winShareByResponse.get(row.responseId);
+      if (winShare === undefined) {
+        throw new TacticalAgencyAuditError(
+          "missing_telemetry",
+          `B2 result-resolution decomposition lost ${row.responseId} in ${context.contextId}`,
+        );
+      }
+      return { ...row, winShare };
+    });
+    if (rawRows.length === 0 || rawRows.length !== context.replayWinShares.length) {
+      throw new TacticalAgencyAuditError(
+        "missing_telemetry",
+        `B2 result-resolution rows disagree in ${context.contextId}`,
+      );
+    }
+    const means = {
+      expectedGoalsDifferential: mean(rawRows.map(({ expectedGoalsDifferential }) =>
+        expectedGoalsDifferential)),
+      expectedGoalsTotal: mean(rawRows.map(({ expectedGoalsTotal }) => expectedGoalsTotal)),
+      goalDifferential: mean(rawRows.map(({ goalDifferential }) => goalDifferential)),
+      goalTotal: mean(rawRows.map(({ goalTotal }) => goalTotal)),
+      winShare: mean(rawRows.map(({ winShare }) => winShare)),
+    } satisfies Record<TacticalAgencyResolutionNumericKey, number>;
+    const pooledRowWeight = context.populationWeightCount / weightTotal / rawRows.length;
+    return rawRows.map((row) => ({
+      expectedGoalsDifferential: row.expectedGoalsDifferential - means.expectedGoalsDifferential,
+      expectedGoalsTotal: row.expectedGoalsTotal - means.expectedGoalsTotal,
+      goalDifferential: row.goalDifferential - means.goalDifferential,
+      goalTotal: row.goalTotal - means.goalTotal,
+      winShare: row.winShare - means.winShare,
+      weight: pooledRowWeight,
+    }));
+  });
+  const specs = {
+    expectedGoalsDifferentialToGoalDifferential: {
+      predictorKeys: ["expectedGoalsDifferential"],
+      outcomeKey: "goalDifferential",
+    },
+    expectedGoalsStateToGoalDifferential: {
+      predictorKeys: ["expectedGoalsDifferential", "expectedGoalsTotal"],
+      outcomeKey: "goalDifferential",
+    },
+    goalDifferentialToWinShare: {
+      predictorKeys: ["goalDifferential"],
+      outcomeKey: "winShare",
+    },
+    goalStateToWinShare: {
+      predictorKeys: ["goalDifferential", "goalTotal"],
+      outcomeKey: "winShare",
+    },
+    expectedGoalsStateToWinShare: {
+      predictorKeys: ["expectedGoalsDifferential", "expectedGoalsTotal"],
+      outcomeKey: "winShare",
+    },
+  } as const satisfies Record<string, TacticalAgencyResolutionModelSpec>;
+  const model = (spec: TacticalAgencyResolutionModelSpec): TacticalAgencyResultResolutionModel => {
+    const pooled = fitTacticalAgencyResolutionModel(centeredByContext.flat(), spec);
+    const contextModels = centeredByContext.map((rows) =>
+      fitTacticalAgencyResolutionModel(
+        rows.map((row) => ({ ...row, weight: 1 / rows.length })),
+        spec,
+      ));
+    return {
+      predictorKeys: spec.predictorKeys,
+      outcomeKey: spec.outcomeKey,
+      coefficients: pooled.coefficients,
+      rSquared: pooled.rSquared,
+      residualVariance: pooled.residualVariance,
+      contextCounts: {
+        atOrAboveHalf: contextModels.filter(({ rSquared }) =>
+          rSquared !== "not_observed" && rSquared >= 0.5).length,
+        belowHalf: contextModels.filter(({ rSquared }) =>
+          rSquared !== "not_observed" && rSquared < 0.5).length,
+        notObserved: contextModels.filter(({ rSquared }) => rSquared === "not_observed").length,
+      },
+    };
+  };
+  const models = {
+    expectedGoalsDifferentialToGoalDifferential:
+      model(specs.expectedGoalsDifferentialToGoalDifferential),
+    expectedGoalsStateToGoalDifferential: model(specs.expectedGoalsStateToGoalDifferential),
+    goalDifferentialToWinShare: model(specs.goalDifferentialToWinShare),
+    goalStateToWinShare: model(specs.goalStateToWinShare),
+    expectedGoalsStateToWinShare: model(specs.expectedGoalsStateToWinShare),
+  };
+  const hiddenExpectedGoalsDifferentialToWinShare = fitTacticalAgencyResolutionModel(
+    centeredByContext.flat(),
+    { predictorKeys: ["expectedGoalsDifferential"], outcomeKey: "winShare" },
+  );
+  const observedModels = [
+    models.expectedGoalsDifferentialToGoalDifferential,
+    models.expectedGoalsStateToGoalDifferential,
+    models.goalDifferentialToWinShare,
+    models.goalStateToWinShare,
+    models.expectedGoalsStateToWinShare,
+  ];
+  const primarySlopesArePositive = observedModels.every(({ coefficients }) =>
+    coefficients !== "not_observed" && (coefficients[0] as number) > 0);
+  const xgDifferentialToWinRSquared = hiddenExpectedGoalsDifferentialToWinShare.rSquared;
+  const xgStateToGoalRSquared = models.expectedGoalsStateToGoalDifferential.rSquared;
+  const goalStateToWinRSquared = models.goalStateToWinShare.rSquared;
+  const xgStateToWinRSquared = models.expectedGoalsStateToWinShare.rSquared;
+  const allObserved = xgDifferentialToWinRSquared !== "not_observed"
+    && xgStateToGoalRSquared !== "not_observed"
+    && goalStateToWinRSquared !== "not_observed"
+    && xgStateToWinRSquared !== "not_observed";
+  let owner: TacticalAgencyResultResolutionOwner = "stop_rethink";
+  if (allObserved && primarySlopesArePositive) {
+    if (xgDifferentialToWinRSquared < 0.5 && xgStateToWinRSquared >= 0.5) {
+      owner = "xg_geometry";
+    } else if (xgStateToGoalRSquared < 0.5 && goalStateToWinRSquared >= 0.5) {
+      owner = "shot_conversion";
+    } else if (xgStateToGoalRSquared >= 0.5 && goalStateToWinRSquared < 0.5) {
+      owner = "scoreline_mapping";
+    } else if (xgStateToGoalRSquared < 0.5 && goalStateToWinRSquared < 0.5) {
+      owner = "distributed_resolution";
+    }
+  }
+  const hasBothClassifierSides = (value: TacticalAgencyResultResolutionModel): boolean =>
+    value.contextCounts.atOrAboveHalf > 0 && value.contextCounts.belowHalf > 0;
+  const classifierReachabilityHeld = owner === "xg_geometry"
+    ? hasBothClassifierSides(models.expectedGoalsStateToWinShare)
+    : owner === "shot_conversion"
+      ? hasBothClassifierSides(models.expectedGoalsStateToGoalDifferential)
+      : owner === "scoreline_mapping"
+        ? hasBothClassifierSides(models.goalStateToWinShare)
+        : owner === "distributed_resolution"
+          ? hasBothClassifierSides(models.expectedGoalsStateToGoalDifferential)
+            && hasBothClassifierSides(models.goalStateToWinShare)
+          : false;
+  return {
+    contractVersion: "phase81a-result-resolution-decomposition-v1",
+    models,
+    classifierReachabilityHeld,
+    owner,
+  };
+}
+
+function fitTacticalAgencyResolutionModel(
+  rows: readonly TacticalAgencyResolutionRow[],
+  spec: TacticalAgencyResolutionModelSpec,
+): Pick<TacticalAgencyResultResolutionModel, "coefficients" | "rSquared" | "residualVariance"> {
+  const outcomeVariance = rows.reduce(
+    (sum, row) => sum + row.weight * row[spec.outcomeKey] ** 2,
+    0,
+  );
+  if (!(outcomeVariance > 0) || (spec.predictorKeys.length !== 1 && spec.predictorKeys.length !== 2)) {
+    return {
+      coefficients: "not_observed",
+      rSquared: "not_observed",
+      residualVariance: "not_observed",
+    };
+  }
+  const firstKey = spec.predictorKeys[0] as TacticalAgencyResolutionModelSpec["predictorKeys"][number];
+  const firstVariance = rows.reduce(
+    (sum, row) => sum + row.weight * row[firstKey] ** 2,
+    0,
+  );
+  const firstOutcome = rows.reduce(
+    (sum, row) => sum + row.weight * row[firstKey] * row[spec.outcomeKey],
+    0,
+  );
+  let coefficients: readonly number[];
+  if (spec.predictorKeys.length === 1) {
+    if (!(firstVariance > 0)) {
+      return {
+        coefficients: "not_observed",
+        rSquared: "not_observed",
+        residualVariance: "not_observed",
+      };
+    }
+    coefficients = [firstOutcome / firstVariance];
+  } else {
+    const secondKey = spec.predictorKeys[1] as TacticalAgencyResolutionModelSpec["predictorKeys"][number];
+    const secondVariance = rows.reduce(
+      (sum, row) => sum + row.weight * row[secondKey] ** 2,
+      0,
+    );
+    const crossProduct = rows.reduce(
+      (sum, row) => sum + row.weight * row[firstKey] * row[secondKey],
+      0,
+    );
+    const secondOutcome = rows.reduce(
+      (sum, row) => sum + row.weight * row[secondKey] * row[spec.outcomeKey],
+      0,
+    );
+    const determinant = firstVariance * secondVariance - crossProduct ** 2;
+    if (!(determinant > 0)) {
+      return {
+        coefficients: "not_observed",
+        rSquared: "not_observed",
+        residualVariance: "not_observed",
+      };
+    }
+    coefficients = [
+      (firstOutcome * secondVariance - secondOutcome * crossProduct) / determinant,
+      (secondOutcome * firstVariance - firstOutcome * crossProduct) / determinant,
+    ];
+  }
+  const residualVariance = rows.reduce((sum, row) => {
+    const fitted = spec.predictorKeys.reduce(
+      (value, key, index) => value + row[key] * (coefficients[index] as number),
+      0,
+    );
+    return sum + row.weight * (row[spec.outcomeKey] - fitted) ** 2;
+  }, 0);
+  return {
+    coefficients,
+    rSquared: clampUnit(1 - residualVariance / outcomeVariance),
+    residualVariance,
   };
 }
 

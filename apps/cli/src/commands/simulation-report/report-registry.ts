@@ -1743,6 +1743,8 @@ export async function executeSimulationReportModule(
           sets: facts.sets,
           downstreamOwner: facts.downstreamOwner,
           downstreamAttributionHeld: facts.downstreamAttributionHeld,
+          resolutionOwner: facts.resolutionOwner,
+          resolutionAttributionHeld: facts.resolutionAttributionHeld,
           decision: facts.decision,
           execution: {
             workerCount: facts.workerCount,
@@ -1764,6 +1766,8 @@ export async function executeSimulationReportModule(
           sets: facts.sets,
           downstreamOwner: facts.downstreamOwner,
           downstreamAttributionHeld: facts.downstreamAttributionHeld,
+          resolutionOwner: facts.resolutionOwner,
+          resolutionAttributionHeld: facts.resolutionAttributionHeld,
           decision: facts.decision,
           execution: {
             workerCount: facts.workerCount,

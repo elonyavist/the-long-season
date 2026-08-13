@@ -23,9 +23,9 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **06C12A `GO`, owner replicated:** domain coverage removes the sole
-  weak-fit row; all `84/84` populations pass. Larger sets both name
-  `result_resolution` (`R^2=0.3838/0.3714`); 06C13 decomposes before correction.
+- Phase 81A **06C13 `STOP / RETHINK`:** xG-to-goal reaches
+  `R^2=0.8482/0.7923` and goal-to-win `0.6042/0.5656`; neither local resolver
+  is defective. Test the `0.045` premise at season scale; do not reduce upsets.
 - **L6.31 stays green twice:** routine-youth runway improves ready replacements
   `+0.1363/+0.1034`, leaders `+0.0810/+0.0905`, with exact immediate purity.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;

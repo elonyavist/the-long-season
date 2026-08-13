@@ -14,6 +14,7 @@ import {
 import {
   buildTacticalAgencyConditionedResponses,
   decideTacticalAgencyChanceToResultOwner,
+  decideTacticalAgencyResultResolutionOwner,
   buildTacticalAgencyStructuralActions,
   buildTacticalAgencyAuditReport,
   countTacticalAgencyOutOfPositionSlots,
@@ -720,6 +721,24 @@ test("chance-to-result attribution applies both sides of its fixed classifier", 
     decideTacticalAgencyChanceToResultOwner([xgOwned, xgOwned]),
     { owner: "opportunity_xg_magnitude", held: true },
   );
+  const shotConversion = {
+    ...xgOwned.resolutionDecomposition,
+    owner: "shot_conversion" as const,
+    classifierReachabilityHeld: true,
+  };
+  const scorelineMapping = {
+    ...xgOwned.resolutionDecomposition,
+    owner: "scoreline_mapping" as const,
+    classifierReachabilityHeld: true,
+  };
+  assert.deepEqual(
+    decideTacticalAgencyResultResolutionOwner([shotConversion, shotConversion]),
+    { owner: "shot_conversion", held: true },
+  );
+  assert.deepEqual(
+    decideTacticalAgencyResultResolutionOwner([shotConversion, scorelineMapping]),
+    { owner: "mixed", held: false },
+  );
 });
 
 function materialityResult(input: {
@@ -737,19 +756,25 @@ function materialityResult(input: {
         responseId: "high_pressing|left",
         opportunityDifferential: 1,
         expectedGoalsDifferential: 0.2,
+        expectedGoalsTotal: 2.4,
         goalDifferential: 0.1,
+        goalTotal: 2,
       },
       {
         responseId: "low_block|right",
         opportunityDifferential: -1,
         expectedGoalsDifferential: -0.2,
+        expectedGoalsTotal: 2,
         goalDifferential: -0.1,
+        goalTotal: 1.8,
       },
     ],
     contextFreeChannelMean: {
       opportunityDifferential: 0,
       expectedGoalsDifferential: 0,
+      expectedGoalsTotal: 2.2,
       goalDifferential: 0,
+      goalTotal: 1.9,
     },
     optimisticBestResponseId: "high_pressing|left",
     optimisticExposedResponseId: "low_block|right",
@@ -780,7 +805,9 @@ function materialityAttributionResult(
       responseId,
       opportunityDifferential: index - 1,
       expectedGoalsDifferential: index - 1,
+      expectedGoalsTotal: 2 + index * 0.2,
       goalDifferential: (winShares[index] as number) * 2 - 1,
+      goalTotal: 2 + index * 0.1,
     })),
   };
 }

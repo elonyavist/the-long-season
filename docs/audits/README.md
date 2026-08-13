@@ -16,6 +16,11 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_RESULT_RESOLUTION_DECOMPOSITION.md` — **`STOP / RETHINK`.** Both
+  canonical stages are individually coherent, but the composed xG-state model
+  remains below `R^2=0.5`; no randomness reduction is authorized. The next
+  step must test the product premise and season-level agency.
+
 - `PHASE_81A_CANONICAL_ORDINARY_FORMATION_COVERAGE.md` — **`GO`; downstream
   owner replicated.** Ordinary selection now uses domain coverage; all `84/84`
   rows pass and the larger replay names `result_resolution` twice at

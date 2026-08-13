@@ -3,6 +3,7 @@ import {
   buildTacticalAgencyStructuralActions,
   buildTacticalAgencyAuditReport,
   decideTacticalAgencyChanceToResultOwner,
+  decideTacticalAgencyResultResolutionOwner,
   decideTacticalAgencyConditionedOwner,
   firstCoherentTacticalAgencyComponent,
   poolTacticalAgencyLowBlockResults,
@@ -25,6 +26,7 @@ import {
   type TacticalAgencyConditionedMaterialityOwner,
   type TacticalAgencyConditionedMaterialitySummary,
   type TacticalAgencyChanceToResultOwner,
+  type TacticalAgencyResultResolutionOwner,
   type TacticalAgencyRoleSummary,
   type TacticalAgencySelectionRow,
   type TacticalAgencyStructuralAnalysis,
@@ -362,6 +364,8 @@ export interface TacticalAgencyB2CurrentMaterialityProfileFacts {
   }[];
   readonly downstreamOwner: TacticalAgencyChanceToResultOwner | "mixed" | "not_evaluated";
   readonly downstreamAttributionHeld: boolean;
+  readonly resolutionOwner: TacticalAgencyResultResolutionOwner | "mixed" | "not_evaluated";
+  readonly resolutionAttributionHeld: boolean;
   readonly decision: "MATERIALITY_PASS" | "REFINE" | "STOP_RETHINK";
   readonly workerCount: number;
   readonly elapsedMilliseconds: number;
@@ -673,10 +677,15 @@ async function createTacticalAgencyCurrentMaterialityFacts(input: {
   const downstreamOwner = downstreamDecision.owner;
   const downstreamAttributionHeld = downstreamRows.length === sets.length
     && downstreamDecision.held;
+  const resolutionRows = downstreamRows.map(({ resolutionDecomposition }) =>
+    resolutionDecomposition);
+  const resolutionDecision = decideTacticalAgencyResultResolutionOwner(resolutionRows);
   return {
     sets,
     downstreamOwner,
     downstreamAttributionHeld,
+    resolutionOwner: resolutionDecision.owner,
+    resolutionAttributionHeld: resolutionRows.length === sets.length && resolutionDecision.held,
     decision: sets.some(({ phaseOneDecision }) => phaseOneDecision === "STOP_RETHINK")
       ? "STOP_RETHINK"
       : sets.every(({ phaseOneDecision, populationHeld, materialityHeld }) =>
