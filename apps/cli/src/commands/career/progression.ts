@@ -210,18 +210,8 @@ function aiTeamSelectionPolicy(input: {
   return {
     roleWeights: input.roleWeights,
     stateMultiplierCurves: input.stateMultiplierCurves,
-    tacticalDistribution: BALANCED_AI_TACTICAL_DISTRIBUTION,
   };
 }
-
-/** The setup a club uses when nobody has chosen one for it. */
-const BALANCED_AI_TACTICAL_DISTRIBUTION = {
-  mentality: "balanced",
-  pressing: 0.5,
-  directness: 0.5,
-  width: 0.5,
-  risk: 0.5,
-} as const;
 
 function retargetPreparationAfterAdvance(result: CareerAdvanceResult): CareerAdvanceResult {
   if (result.status !== "advanced" || result.careerState.matchPreparation === undefined) {

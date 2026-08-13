@@ -34,6 +34,7 @@ import {
   opportunityRateBeforeClamp,
   simulateMatch,
   type CareerAiTeamSelectionPolicy,
+  type OwnSquadTacticalPolicyEvaluation,
   type MatchContext,
   type MatchEngineConfig,
   type MatchTacticalDistributionInput,
@@ -251,6 +252,7 @@ export interface TacticalAgencySelectionSeriesResult {
 export interface TacticalAgencyObservedSelection {
   readonly row: TacticalAgencySelectionRow;
   readonly teamContext: MatchTeamContext;
+  readonly tacticalPolicy: OwnSquadTacticalPolicyEvaluation;
 }
 
 /**
@@ -306,6 +308,7 @@ export function observeTacticalAgencyTeamSelection(
 
   return {
     teamContext: selection.teamContext,
+    tacticalPolicy: selection.tacticalPolicy,
     row: {
       clubId: workItem.clubId,
       fixtureId: workItem.fixture.id,

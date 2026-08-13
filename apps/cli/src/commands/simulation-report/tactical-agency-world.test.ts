@@ -78,4 +78,39 @@ test("B2 selects every domestic club once and retains both directions of each fi
     }));
   assert.equal(reachabilityWorlds.some(({ matchups }) => matchups.some((matchup) =>
     tacticalAgencyShapeAsymmetryBasisPoints(matchup.own.shape, matchup.opponent.shape) >= 500)), true);
+  const tacticalSelections = reachabilityWorlds.flatMap(({ clubSelections }) => clubSelections);
+  const selectedProfileCounts = Object.fromEntries(["balanced", "attacking", "defensive"].map((profileKey) => [
+    profileKey,
+    tacticalSelections.filter(({ tacticalPolicy }) => tacticalPolicy.ownFit.profileKey === profileKey).length,
+  ]));
+  const balancedMargins = tacticalSelections.map(({ tacticalPolicy }) => {
+    const balancedBest = Math.max(...tacticalPolicy.candidates
+      .filter(({ profileKey }) => profileKey === "balanced")
+      .map(({ totalFit }) => totalFit));
+    const committedBest = Math.max(...tacticalPolicy.candidates
+      .filter(({ profileKey }) => profileKey !== "balanced")
+      .map(({ totalFit }) => totalFit));
+    return balancedBest - committedBest;
+  });
+  const reachabilityDiagnostic = {
+    selectedProfileCounts,
+    balancedMarginMinimum: Math.min(...balancedMargins),
+    balancedMarginMaximum: Math.max(...balancedMargins),
+  };
+  assert.deepEqual(
+    new Set(tacticalSelections.map(({ tacticalPolicy }) => tacticalPolicy.ownFit.profileKey)),
+    new Set(["balanced", "attacking", "defensive"]),
+    JSON.stringify(reachabilityDiagnostic),
+  );
+  assert.deepEqual(
+    new Set(tacticalSelections.map(({ tacticalPolicy }) => tacticalPolicy.ownFit.lateralFocus)),
+    new Set(["balanced", "left", "right"]),
+  );
+  assert.equal(tacticalSelections.every(({ tacticalPolicy }) => tacticalPolicy.tiedAtBestCount === 1), true);
+  assert.equal(tacticalSelections.every(({ tacticalPolicy }) =>
+    tacticalPolicy.candidates.length === 9
+    && tacticalPolicy.candidates.includes(tacticalPolicy.ownFit)
+    && tacticalPolicy.candidates.includes(tacticalPolicy.mismatch)
+    && tacticalPolicy.candidates.includes(tacticalPolicy.nonCommit)
+    && tacticalPolicy.candidates.includes(tacticalPolicy.blind)), true);
 });

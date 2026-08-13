@@ -114,6 +114,51 @@ export interface Formation {
   readonly slots: readonly FormationSlot[];
 }
 
+/** Normalized pitch coordinate shared by live engine and tactical board. */
+export interface FormationSlotCoordinate {
+  readonly nx: number;
+  readonly ny: number;
+}
+
+/**
+ * Canonical geometry of every stable catalog slot key.
+ *
+ * Formation remains football geometry, so engine and web read this owner rather
+ * than carrying separate coordinate tables for the same slot vocabulary.
+ */
+export const FORMATION_SLOT_COORDINATES = {
+  gk: { nx: 0.5, ny: 0.93 },
+  rb: { nx: 0.86, ny: 0.76 },
+  "cb-right": { nx: 0.62, ny: 0.78 },
+  "cb-center": { nx: 0.5, ny: 0.8 },
+  "cb-left": { nx: 0.38, ny: 0.78 },
+  lb: { nx: 0.14, ny: 0.76 },
+  rm: { nx: 0.88, ny: 0.52 },
+  lm: { nx: 0.12, ny: 0.52 },
+  dm: { nx: 0.5, ny: 0.6 },
+  "dm-right": { nx: 0.58, ny: 0.6 },
+  "dm-center": { nx: 0.5, ny: 0.6 },
+  "dm-left": { nx: 0.42, ny: 0.6 },
+  "cm-right": { nx: 0.63, ny: 0.48 },
+  "cm-center": { nx: 0.5, ny: 0.48 },
+  "cm-left": { nx: 0.37, ny: 0.48 },
+  am: { nx: 0.5, ny: 0.34 },
+  "am-right": { nx: 0.58, ny: 0.34 },
+  "am-left": { nx: 0.42, ny: 0.34 },
+  rw: { nx: 0.86, ny: 0.22 },
+  lw: { nx: 0.14, ny: 0.22 },
+  st: { nx: 0.5, ny: 0.16 },
+  "st-right": { nx: 0.62, ny: 0.18 },
+  "st-left": { nx: 0.38, ny: 0.18 },
+} as const satisfies Readonly<Record<string, FormationSlotCoordinate>>;
+
+/** Fails when a catalog slot has no shared live/board geometry. */
+export function formationSlotCoordinate(slotKey: string): FormationSlotCoordinate {
+  const coordinate = (FORMATION_SLOT_COORDINATES as Readonly<Record<string, FormationSlotCoordinate>>)[slotKey];
+  if (coordinate === undefined) throw new Error(`Formation slot has no canonical coordinate: ${slotKey}`);
+  return coordinate;
+}
+
 /** Recognized position families used by formation slots. */
 export const FORMATION_POSITION_FAMILIES = [
   "goalkeeper",

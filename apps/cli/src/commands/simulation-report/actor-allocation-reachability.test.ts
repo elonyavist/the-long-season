@@ -41,13 +41,6 @@ test("structural creator and shooter allocation reverse on real same-role task s
     fixture,
     policy: {
       roleWeights: world.roleWeights,
-      tacticalDistribution: {
-        directness: 0.5,
-        pressing: 0.5,
-        width: 0.5,
-        risk: 0.5,
-        mentality: "balanced",
-      },
       stateMultiplierCurves: world.stateMultiplierCurves,
       benchSize: 9,
     },

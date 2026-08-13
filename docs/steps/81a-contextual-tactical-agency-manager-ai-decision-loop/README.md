@@ -97,7 +97,10 @@ red. Amendment A7 now freezes the accepted own-squad MVP contract and rewrites
 Steps 10-12; Steps 07-08 are not reopened. Step 10 is Done: the existing manager
 read is canonical, opponent-free, fitness-sensitive and recommendation-free;
 its test-first review also corrected the false premise that shipped content
-already activates form and morale. Step 11 is next.
+already activates form and morale. Step 11 is Done: one versioned own-squad
+policy feeds career and web AI, every profile/focus and live reason is reachable
+on the locked `7 x 1`, and no opponent fact or strength bonus entered the
+choice. Checkpoint D is next.
 
 This phase is governed by
 [`PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md`](../../audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md).
@@ -358,8 +361,8 @@ contexts; it never owns the analytic diversity gate.
 | 09 | [Checkpoint C player context](09-checkpoint-c-player-context.md) | no | **`REFINE: product premise review`** |
 | 09A | [MVP own-squad agency contract](09a-mvp-own-squad-agency-contract.md) | no | **Done; Step 10 open** |
 | 10 | [manager own-squad tactical read](10-manager-own-squad-tactical-read.md) | information | Ready after A7 |
-| 11 | [AI own-squad and live-state policy](11-ai-own-squad-and-live-state-policy.md) | yes | Step 10 |
-| 12 | [Checkpoint D own-squad agency](12-checkpoint-d-own-squad-agency.md) | no | frozen paired season-scale gate |
+| 11 | [AI own-squad and live-state policy](11-ai-own-squad-and-live-state-policy.md) | yes | **Done; 12 open** |
+| 12 | [Checkpoint D own-squad agency](12-checkpoint-d-own-squad-agency.md) | no | Ready; frozen paired season-scale gate |
 | 13 | [tactical chapters and canonical explanation](13-tactical-chapters-and-canonical-explanation.md) | report/UI | Step 14 |
 | 14 | [preparation and single persistence integration](14-post-match-preparation-choice.md) | next-match state/save | Step 15 |
 | 15 | [Checkpoint E multi-match consequence](15-checkpoint-e-multi-match-consequence.md) | no | GO authorizes 16 |

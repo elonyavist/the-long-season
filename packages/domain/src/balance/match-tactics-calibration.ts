@@ -312,6 +312,41 @@ export const TACTIC_KNOBS = [
   "risk",
 ] as const satisfies readonly TacticKnob[];
 
+/** Stable own-squad plans available to both the manager and career AI. */
+export type OwnSquadTacticProfileKey = "balanced" | "attacking" | "defensive";
+
+/** Deterministic policy order; stable IDs, rather than asset order, break ties. */
+export const OWN_SQUAD_TACTIC_PROFILE_KEYS = [
+  "balanced",
+  "attacking",
+  "defensive",
+] as const satisfies readonly OwnSquadTacticProfileKey[];
+
+/** One versioned plan and the capacities an own-squad selector asks of it. */
+export interface OwnSquadTacticProfileConfig {
+  readonly profileKey: OwnSquadTacticProfileKey;
+  readonly tactic: {
+    readonly mentality: TacticMentalityKey;
+    readonly directness: number;
+    readonly pressing: number;
+    readonly width: number;
+    readonly risk: number;
+  };
+  /** Non-negative demand shares; every row conserves exactly one full unit. */
+  readonly demandBasisPointsByCapacity: Readonly<Record<TacticalShapeCapacity, number>>;
+}
+
+/** Content-owned candidates for the own-squad tactical fit evaluator. */
+export interface OwnSquadTacticalPolicyConfig {
+  /** Share of total fit assigned to the full twelve-capacity profile. */
+  readonly profileFitShareBasisPoints: number;
+  /** Relative own-fit edge a committed profile must earn over non-commitment. */
+  readonly minimumCommitmentAdvantageBasisPoints: number;
+  /** Relative flank edge required before abandoning a balanced focus. */
+  readonly minimumLateralFocusAdvantageBasisPoints: number;
+  readonly profiles: readonly OwnSquadTacticProfileConfig[];
+}
+
 /**
  * The routes a knob at full intensity makes a side prefer.
  *
@@ -636,6 +671,7 @@ export interface MatchTacticsCalibrationConfig {
   readonly tacticalShape: TacticalShapeCalibrationConfig;
   readonly tacticalMatchup: TacticalMatchupCalibrationConfig;
   readonly tacticalSemantics: TacticalSemanticsCalibrationConfig;
+  readonly ownSquadTacticalPolicy: OwnSquadTacticalPolicyConfig;
 }
 
 /** Stable validation failures for the match-tactics calibration asset. */
@@ -675,7 +711,11 @@ export type MatchTacticsCalibrationErrorCode =
   | "invalid_route_quality_bias"
   | "invalid_route_selection_sharpness"
   | "incomplete_coordination_multipliers"
-  | "invalid_coordination_multipliers";
+  | "invalid_coordination_multipliers"
+  | "incomplete_own_squad_profiles"
+  | "invalid_own_squad_tactic"
+  | "invalid_own_squad_demand"
+  | "own_squad_demand_not_conserved";
 
 /** Typed policy error raised before bad tuning can reach the match engine. */
 export class MatchTacticsCalibrationError extends Error {
@@ -737,6 +777,76 @@ export function validateMatchTacticsCalibration(config: MatchTacticsCalibrationC
   validateChanceActorSelectionCalibration(config.chanceActorSelection);
   validateTacticalMatchupCalibration(config.tacticalMatchup);
   validateTacticalSemanticsCalibration(config.tacticalSemantics);
+  validateOwnSquadTacticalPolicy(config.ownSquadTacticalPolicy);
+}
+
+/** Refuses incomplete, unbounded or non-conserved own-squad policy content. */
+export function validateOwnSquadTacticalPolicy(config: OwnSquadTacticalPolicyConfig): void {
+  if (!isBasisPointShare(config.profileFitShareBasisPoints)) {
+    throw new MatchTacticsCalibrationError(
+      "invalid_own_squad_demand",
+      `Own-squad profile-fit share must be a basis-point share: ${config.profileFitShareBasisPoints}`,
+    );
+  }
+  if (
+    !isBasisPointShare(config.minimumCommitmentAdvantageBasisPoints)
+    || config.minimumCommitmentAdvantageBasisPoints === 0
+  ) {
+    throw new MatchTacticsCalibrationError(
+      "invalid_own_squad_demand",
+      `Own-squad minimum commitment advantage must be positive basis points: ${config.minimumCommitmentAdvantageBasisPoints}`,
+    );
+  }
+  if (
+    !isBasisPointShare(config.minimumLateralFocusAdvantageBasisPoints)
+    || config.minimumLateralFocusAdvantageBasisPoints === 0
+  ) {
+    throw new MatchTacticsCalibrationError(
+      "invalid_own_squad_demand",
+      `Own-squad minimum lateral-focus advantage must be positive basis points: ${config.minimumLateralFocusAdvantageBasisPoints}`,
+    );
+  }
+  const keys = config.profiles.map((profile) => profile.profileKey);
+  if (
+    keys.length !== OWN_SQUAD_TACTIC_PROFILE_KEYS.length
+    || OWN_SQUAD_TACTIC_PROFILE_KEYS.some((key) => keys.filter((value) => value === key).length !== 1)
+  ) {
+    throw new MatchTacticsCalibrationError(
+      "incomplete_own_squad_profiles",
+      "Own-squad tactical policy must declare every profile exactly once",
+    );
+  }
+
+  for (const profile of config.profiles) {
+    const { tactic } = profile;
+    if (
+      !TACTIC_MENTALITIES.includes(tactic.mentality)
+      || TACTIC_KNOBS.some((knob) => !Number.isFinite(tactic[knob]) || tactic[knob] < 0 || tactic[knob] > 1)
+    ) {
+      throw new MatchTacticsCalibrationError(
+        "invalid_own_squad_tactic",
+        `Own-squad tactic is outside its closed vocabulary: ${profile.profileKey}`,
+      );
+    }
+
+    let total = 0;
+    for (const capacity of TACTICAL_SHAPE_CAPACITIES) {
+      const demand = profile.demandBasisPointsByCapacity[capacity];
+      if (!isBasisPointShare(demand)) {
+        throw new MatchTacticsCalibrationError(
+          "invalid_own_squad_demand",
+          `Own-squad demand must be a basis-point share: ${profile.profileKey}.${capacity}=${demand}`,
+        );
+      }
+      total += demand;
+    }
+    if (total !== 10_000) {
+      throw new MatchTacticsCalibrationError(
+        "own_squad_demand_not_conserved",
+        `Own-squad demand must conserve 10000 basis points: ${profile.profileKey}=${total}`,
+      );
+    }
+  }
 }
 
 /** Validates the total empirical shooter-propensity mapping. */
@@ -1049,7 +1159,7 @@ export function lateralChannelShares(
 }
 
 /** Schema version of the match-tactics calibration asset. */
-export const MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION = 7;
+export const MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION = 8;
 
 /**
  * Derives the exact budget allocated by one role row.

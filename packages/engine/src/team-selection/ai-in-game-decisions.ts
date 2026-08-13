@@ -1,6 +1,9 @@
 import {
   createLiveMatchSession,
   evaluatePositionSuitability,
+  formationSlotCoordinate,
+  FORMATIONS,
+  getFormation,
   getPlayerRoleProfile,
   roleCurrentAbility,
   scorePlayerForFormationSlot,
@@ -8,12 +11,14 @@ import {
   type ApplyLiveMatchTeamChangesCommand,
   type CanonicalPlayerRole,
   type CompetitionMatchRules,
+  type Formation,
   type LiveMatchSession,
   type LiveMatchPendingDecision,
   type LiveMatchCommandRejectionCode,
   type LiveMatchTeamState,
   type LiveMatchUnavailableReason,
   type MatchEventSide,
+  type LateralFocus,
   type Player,
   type PlayerId,
   type PlayerRole,
@@ -43,6 +48,7 @@ import {
 import { buildLiveMatchProjection } from "../match-engine/live-match-projection.ts";
 import { telemetryFor } from "../match-engine/match-simulation-state.ts";
 import type { PlayerMatchRatingRegistration } from "../match-engine/player-match-rating.ts";
+import { assignFootballXi, type FootballXiSlotCandidate } from "./football-xi-assignment.ts";
 
 /** Stable football reason behind one opponent decision. */
 export type AiInGameDecisionReasonKey =
@@ -82,6 +88,115 @@ export interface AiInGameFormationOption {
   readonly team: LiveMatchTeamState;
 }
 
+/**
+ * Builds one credible, deterministic shape option for each live intent.
+ *
+ * Only the eleven already on the pitch is reassigned. An option disappears
+ * when any slot would require an invalid fit; the live policy then changes only
+ * tactic/substitutions instead of forcing malformed football.
+ */
+export function buildAiInGameFormationOptions(
+  team: LiveMatchTeamState,
+  players: Readonly<Record<PlayerId, Player>>,
+): readonly AiInGameFormationOption[] {
+  const currentFormation = getFormation(team.formation);
+  const currentGoalkeeperSlot = team.lineup.find(({ role }) => role === "goalkeeper");
+  if (currentGoalkeeperSlot === undefined) return [];
+  const alternatives = FORMATIONS
+    .filter((formation) => formation.key !== currentFormation.key)
+    .flatMap((formation) => {
+      const candidatesBySlot = formation.slots.map((slot) => team.lineup
+        .map(({ playerId }, rank): FootballXiSlotCandidate | undefined => {
+          const player = players[playerId];
+          if (player === undefined) return undefined;
+          const suitability = evaluatePositionSuitability(player.naturalPositions, {
+            playerRole: slot.playerRole,
+          });
+          if (suitability === "invalid") return undefined;
+          return {
+            playerId,
+            score: scorePlayerForFormationSlot({
+              naturalPositions: player.naturalPositions,
+              slot,
+              playerStrength: roleAbilityFor(player, slot.playerRole),
+            }),
+            rank,
+          };
+        })
+        .filter((candidate): candidate is FootballXiSlotCandidate => candidate !== undefined));
+      const assignment = assignFootballXi({ candidatesBySlot });
+      if (assignment === undefined) return [];
+      const departmentCounts = formationDepartmentCounts(formation);
+      return [{
+        formation,
+        departmentCounts,
+        totalScore: assignment.totalScore,
+        team: {
+          ...team,
+          formation: formation.key,
+          lineup: formation.slots.map((slot, index) => slot.playerRole === "goalkeeper"
+            ? {
+                ...currentGoalkeeperSlot,
+                playerId: requiredAssignedPlayer(assignment.candidateBySlot[index]),
+              }
+            : {
+                slotId: slot.slotKey,
+                playerId: requiredAssignedPlayer(assignment.candidateBySlot[index]),
+                role: slot.playerRole,
+                ...formationSlotCoordinate(slot.slotKey),
+              }),
+        },
+      }];
+    });
+  const currentCounts = formationDepartmentCounts(currentFormation);
+
+  return ([
+    optionForIntent(alternatives, "chase_match", (row) => row.departmentCounts.attack > currentCounts.attack),
+    optionForIntent(alternatives, "protect_lead", (row) => row.departmentCounts.defense > currentCounts.defense),
+    optionForIntent(alternatives, "recover_after_dismissal", () => true),
+  ] as const).filter((option): option is AiInGameFormationOption => option !== undefined);
+}
+
+interface CredibleFormationAlternative {
+  readonly formation: Formation;
+  readonly departmentCounts: Readonly<{ defense: number; midfield: number; attack: number }>;
+  readonly totalScore: number;
+  readonly team: LiveMatchTeamState;
+}
+
+function formationDepartmentCounts(formation: Formation): CredibleFormationAlternative["departmentCounts"] {
+  return {
+    defense: formation.slots.filter((slot) => slot.department === "defense").length,
+    midfield: formation.slots.filter((slot) => slot.department === "midfield").length,
+    attack: formation.slots.filter((slot) => slot.department === "attack").length,
+  };
+}
+
+function optionForIntent(
+  alternatives: readonly CredibleFormationAlternative[],
+  intent: AiInGameFormationOption["intent"],
+  eligible: (alternative: CredibleFormationAlternative) => boolean,
+): AiInGameFormationOption | undefined {
+  const selected = alternatives
+    .filter(eligible)
+    .toSorted((left, right) => {
+      const intentComparison = intent === "chase_match"
+        ? right.departmentCounts.attack - left.departmentCounts.attack
+        : intent === "protect_lead"
+          ? right.departmentCounts.defense - left.departmentCounts.defense
+          : right.totalScore - left.totalScore;
+      return intentComparison
+        || right.totalScore - left.totalScore
+        || left.formation.key.localeCompare(right.formation.key);
+    })[0];
+  return selected === undefined ? undefined : { intent, team: selected.team };
+}
+
+function requiredAssignedPlayer(candidate: FootballXiSlotCandidate | undefined): PlayerId {
+  if (candidate === undefined) throw new Error("Credible formation assignment is incomplete");
+  return candidate.playerId;
+}
+
 /** One explainable reason emitted by the deterministic policy. */
 export interface AiInGameDecisionReason {
   readonly reasonKey: AiInGameDecisionReasonKey;
@@ -107,7 +222,6 @@ export interface SelectAiInGameDecisionInput {
   readonly rules: CompetitionMatchRules;
   readonly players: Readonly<Record<PlayerId, Player>>;
   readonly playerSignals: readonly AiInGamePlayerSignal[];
-  readonly formationOptions?: readonly AiInGameFormationOption[];
 }
 
 /** Pure policy result. Absence of a command is an intentional no-change fact. */
@@ -143,8 +257,6 @@ export interface ApplyProgressiveAiInGameDecisionsInput {
   readonly players: Readonly<Record<PlayerId, Player>>;
   /** Current rating and condition facts from the canonical live projection. */
   readonly playerSignals: readonly AiInGamePlayerSignal[];
-  /** Optional canonical board shapes prepared by the caller. */
-  readonly formationOptions?: readonly AiInGameFormationOption[];
   /** Rebuilds the engine team context only after a command has been validated. */
   readonly buildMatchTeamContext: (team: LiveMatchTeamState) => MatchTeamContext;
 }
@@ -170,6 +282,7 @@ export interface RunAutomatedProgressiveMatchInput {
   readonly away: LiveMatchTeamState;
   /** Stable caller order; automatic career matches pass home then away. */
   readonly aiControlledSides: readonly MatchEventSide[];
+  readonly lateralFocusBySide: Readonly<Record<MatchEventSide, LateralFocus>>;
   /** Rebuilds current engine quality from an accepted live-team command. */
   readonly buildMatchTeamContext: (
     team: LiveMatchTeamState,
@@ -239,7 +352,11 @@ export function selectAiInGameDecision(input: SelectAiInGameDecisionInput): AiIn
   const tacticalIntent = selectTacticalIntent(session, side, currentTeam.tactic, scoreDelta);
   const formationOption = tacticalIntent === undefined
     ? undefined
-    : selectFormationOption(input.formationOptions, tacticalIntent.optionIntent, currentTeam);
+    : selectFormationOption(
+        buildAiInGameFormationOptions(currentTeam, input.players),
+        tacticalIntent.optionIntent,
+        currentTeam,
+      );
 
   const dismissal = reorganizeAfterDismissal(
     formationOption ?? currentTeam,
@@ -396,7 +513,6 @@ export function applyProgressiveAiInGameDecisions(
       rules: input.rules,
       players: input.players,
       playerSignals: input.playerSignals,
-      ...(input.formationOptions === undefined ? {} : { formationOptions: input.formationOptions }),
     });
     decisions.push({ selection: applied.selection, facts: applied.facts });
 
@@ -452,7 +568,9 @@ export function runAutomatedProgressiveMatch(
 
   while (state.phase !== "full_time") {
     if (state.runState === "paused") state = resumeProgressiveMatchSession(state);
-    state = advanceProgressiveMatchMinute(state, rng);
+    state = advanceProgressiveMatchMinute(state, rng, {
+      lateralFocusBySide: input.lateralFocusBySide,
+    });
 
     for (const side of aiControlledSides) {
       if (!hasProgressiveAiInGameDecisionBoundary(state, side)) continue;

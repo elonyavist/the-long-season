@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 7,
-  "version": "match-tactics-calibration-v9",
+  "schemaVersion": 8,
+  "version": "match-tactics-calibration-v10",
   "classification": "explicit_game_design_target",
   "chanceActorSelection": {
     "nonSetPieceAssistEligibilityBasisPoints": 7512,
@@ -277,6 +277,67 @@
   "tacticalMatchup": {
     "chainBottleneckWeightBasisPoints": 6500,
     "pressingContestWeightBasisPoints": 2000
+  },
+  "ownSquadTacticalPolicy": {
+    "profileFitShareBasisPoints": 8000,
+    "minimumCommitmentAdvantageBasisPoints": 100,
+    "minimumLateralFocusAdvantageBasisPoints": 500,
+    "profiles": [
+      {
+        "profileKey": "balanced",
+        "tactic": { "mentality": "balanced", "pressing": 0.5, "directness": 0.5, "width": 0.5, "risk": 0.5 },
+        "demandBasisPointsByCapacity": {
+          "build_up": 1000,
+          "central_progression": 1000,
+          "left_progression": 750,
+          "right_progression": 750,
+          "final_third_presence": 1000,
+          "pressing_cohesion": 1000,
+          "central_coverage": 900,
+          "left_coverage": 600,
+          "right_coverage": 600,
+          "box_protection": 900,
+          "counter_threat": 800,
+          "rest_defence": 700
+        }
+      },
+      {
+        "profileKey": "attacking",
+        "tactic": { "mentality": "attacking", "pressing": 0.85, "directness": 0.75, "width": 0.8, "risk": 0.7 },
+        "demandBasisPointsByCapacity": {
+          "build_up": 900,
+          "central_progression": 1100,
+          "left_progression": 950,
+          "right_progression": 950,
+          "final_third_presence": 1800,
+          "pressing_cohesion": 1100,
+          "central_coverage": 500,
+          "left_coverage": 300,
+          "right_coverage": 300,
+          "box_protection": 300,
+          "counter_threat": 1500,
+          "rest_defence": 300
+        }
+      },
+      {
+        "profileKey": "defensive",
+        "tactic": { "mentality": "defensive", "pressing": 0.35, "directness": 0.3, "width": 0.4, "risk": 0.2 },
+        "demandBasisPointsByCapacity": {
+          "build_up": 800,
+          "central_progression": 500,
+          "left_progression": 400,
+          "right_progression": 400,
+          "final_third_presence": 400,
+          "pressing_cohesion": 600,
+          "central_coverage": 1200,
+          "left_coverage": 900,
+          "right_coverage": 900,
+          "box_protection": 1500,
+          "counter_threat": 900,
+          "rest_defence": 1500
+        }
+      }
+    ]
   },
   "tacticalSemantics": {
     "routeAffinityBasisPointsByKnob": {

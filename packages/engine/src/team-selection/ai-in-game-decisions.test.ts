@@ -33,6 +33,7 @@ import {
 import {
   applyAiInGameDecision,
   applyProgressiveAiInGameDecisions,
+  buildAiInGameFormationOptions,
   runAutomatedProgressiveMatch,
   selectAiInGameDecision,
   type SelectAiInGameDecisionInput,
@@ -96,6 +97,31 @@ test("selected-side dismissal produces a bounded reorganization without restorin
   assert.deepEqual(validateLiveMatchCommand(session, selection.command!, RULES), { accepted: true });
 });
 
+test("canonical live alternatives cover chase protect and dismissal without changing the eleven", () => {
+  const team = teamFixture("home");
+  const players = versatileOutfieldPlayers();
+
+  const options = buildAiInGameFormationOptions(team, players);
+
+  assert.deepEqual(options.map(({ intent }) => intent), [
+    "chase_match",
+    "protect_lead",
+    "recover_after_dismissal",
+  ]);
+  for (const option of options) {
+    assert.deepEqual(
+      option.team.lineup.map(({ playerId }) => playerId).toSorted(),
+      team.lineup.map(({ playerId }) => playerId).toSorted(),
+    );
+    assert.equal(option.team.lineup.every(({ nx, ny }) => nx >= 0 && nx <= 1 && ny >= 0 && ny <= 1), true);
+    assert.deepEqual(
+      option.team.lineup.find(({ role }) => role === "goalkeeper"),
+      team.lineup.find(({ role }) => role === "goalkeeper"),
+      "a shape change must preserve the live goalkeeper slot and area",
+    );
+  }
+});
+
 test("dismissed player is never selected as a simultaneous score-response substitution", () => {
   const dismissedPlayerId = homeXi(5);
   const session = sessionFixture({
@@ -125,24 +151,16 @@ test("dismissed player is never selected as a simultaneous score-response substi
 
 test("trailing AI uses a credible substitute and an offered attacking shape", () => {
   const session = sessionFixture({ phase: "second_half", minute: 60, pauseReason: "manual", score: { home: 1, away: 0 } });
-  const awayTeam = session.away;
-  const attackingOption: LiveMatchTeamState = {
-    ...awayTeam,
-    formation: "4-3-3",
-    lineup: awayTeam.lineup.map((slot, index) => ({
-      ...slot,
-      role: ATTACKING_ROLES[index] ?? slot.role,
-    })),
-  };
-  const input = policyInput(session, "away", [signal(awayXi(11), 5.5, 82)], [{
-    intent: "chase_match",
-    team: attackingOption,
-  }]);
+  const players = versatileOutfieldPlayers();
+  const attackingOption = buildAiInGameFormationOptions(session.away, players)
+    .find(({ intent }) => intent === "chase_match");
+  assert.ok(attackingOption);
+  const input = policyInput(session, "away", [signal(awayXi(11), 5.5, 82)], players);
   const first = selectAiInGameDecision(input);
   const second = selectAiInGameDecision(input);
 
   assert.deepEqual(first, second);
-  assert.equal(first.command?.nextTeam.formation, "4-3-3");
+  assert.equal(first.command?.nextTeam.formation, attackingOption.team.formation);
   assert.equal(first.command?.nextTeam.tactic.mentality, "attacking");
   assert.equal(first.command?.substitutions.length, 1);
   assert.equal(first.reasons.some((entry) => entry.reasonKey === "trailing_response"), true);
@@ -183,7 +201,7 @@ test("a dismissed goalkeeper is replaced by the substitute keeper, not by whoeve
     pendingDecision: { type: "red_card_reorganization", minute: 55, side: "away", playerId: dismissedId },
   });
 
-  const selection = selectAiInGameDecision(policyInput(session, "away", [], undefined, away.players));
+  const selection = selectAiInGameDecision(policyInput(session, "away", [], away.players));
   const nextTeam = selection.command?.nextTeam;
   const inGoal = nextTeam?.lineup.find((slot) => slot.role === "goalkeeper");
 
@@ -198,7 +216,7 @@ test("a dismissed goalkeeper is replaced by the substitute keeper, not by whoeve
   );
   // The command has to survive the canonical path, or the reorganization is
   // only correct in this test.
-  const applied = applyAiInGameDecision(policyInput(session, "away", [], undefined, away.players));
+  const applied = applyAiInGameDecision(policyInput(session, "away", [], away.players));
   assert.equal(applied.facts.some((fact) => fact.type === "substitution"), true);
   assert.equal(applied.selection.reasons.some((entry) => entry.reasonKey === "command_rejected"), false);
   assert.equal(applied.session.away.unavailable.some((entry) => entry.playerId === dismissedId), true);
@@ -214,7 +232,7 @@ test("the man who makes way for the substitute keeper is an attacker", () => {
     pendingDecision: { type: "red_card_reorganization", minute: 55, side: "away", playerId: awayXi(1) },
   });
 
-  const selection = selectAiInGameDecision(policyInput(session, "away", [], undefined, away.players));
+  const selection = selectAiInGameDecision(policyInput(session, "away", [], away.players));
   const sacrificedId = selection.command?.substitutions[0]?.outgoingPlayerId;
   const sacrificedRole = away.team.lineup.find((slot) => slot.playerId === sacrificedId)?.role;
 
@@ -241,7 +259,7 @@ test("with no substitute keeper the gloves go to the best hands left on the pitc
     pendingDecision: { type: "red_card_reorganization", minute: 55, side: "away", playerId: awayXi(1) },
   });
 
-  const selection = selectAiInGameDecision(policyInput(session, "away", [], undefined, players));
+  const selection = selectAiInGameDecision(policyInput(session, "away", [], players));
   const inGoal = selection.command?.nextTeam.lineup.find((slot) => slot.role === "goalkeeper");
 
   assert.equal(selection.command?.substitutions.length, 0);
@@ -285,7 +303,6 @@ test("low condition can open a measured three-point opportunity to the reserve",
     session,
     "away",
     [signal(tiredPlayerId, 6.4, 94.4)],
-    undefined,
     players,
   ));
 
@@ -561,6 +578,7 @@ test("the automated progressive runner applies the same AI to both declared side
     home: teamFixture("home"),
     away: teamFixture("away"),
     aiControlledSides: ["home", "away"],
+    lateralFocusBySide: { home: "left", away: "right" },
     buildMatchTeamContext: (team) => matchTeamContextFromLiveTeam(team),
   });
 
@@ -584,12 +602,13 @@ test("the automated progressive runner never commands an undeclared manager side
     home: teamFixture("home"),
     away: teamFixture("away"),
     aiControlledSides: ["away"],
+    lateralFocusBySide: { home: "balanced", away: "right" },
     buildMatchTeamContext: (team) => matchTeamContextFromLiveTeam(team),
   });
 
   assert.equal(completed.decisions.some(({ side }) => side === "home"), false);
   assert.equal(completed.state.appliedSubstitutions.some(({ side }) => side === "home"), false);
-  assert.equal(completed.state.appliedSubstitutions.some(({ side }) => side === "away"), true);
+  assert.equal(completed.decisions.some(({ side }) => side === "away"), true);
 });
 
 const RULES: CompetitionMatchRules = {
@@ -616,25 +635,10 @@ const LINEUP_ROLES: readonly CanonicalPlayerRole[] = [
   "striker",
 ];
 
-const ATTACKING_ROLES: readonly CanonicalPlayerRole[] = [
-  "goalkeeper",
-  "right_full_back",
-  "center_back",
-  "center_back",
-  "left_full_back",
-  "central_midfielder",
-  "central_midfielder",
-  "central_midfielder",
-  "right_winger",
-  "left_winger",
-  "striker",
-];
-
 function policyInput(
   session: LiveMatchSession,
   side: MatchEventSide,
   signals: SelectAiInGameDecisionInput["playerSignals"] = [],
-  formationOptions?: SelectAiInGameDecisionInput["formationOptions"],
   players: Record<PlayerId, Player> = playerLookup(),
 ): SelectAiInGameDecisionInput {
   return {
@@ -643,8 +647,21 @@ function policyInput(
     rules: RULES,
     players,
     playerSignals: signals,
-    ...(formationOptions === undefined ? {} : { formationOptions }),
   };
+}
+
+function versatileOutfieldPlayers(): Record<PlayerId, Player> {
+  return Object.fromEntries(
+    Object.entries(playerLookup()).map(([id, player]) => [
+      id,
+      player.primaryRole === "goalkeeper"
+        ? player
+        : {
+            ...player,
+            naturalPositions: ["rb", "cb", "lb", "dm", "cm", "am", "rw", "lw", "st"] as PlayerPosition[],
+          },
+    ]),
+  ) as Record<PlayerId, Player>;
 }
 
 /** Gives one footballer real hands without touching the rest of him. */

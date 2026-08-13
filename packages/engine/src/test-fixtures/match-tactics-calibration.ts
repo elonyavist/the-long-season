@@ -101,6 +101,7 @@ export function matchTacticsCalibrationFixture(): MatchTacticsCalibrationConfig 
     },
     tacticalMatchup: FIXTURE_TACTICAL_MATCHUP,
     tacticalSemantics: FIXTURE_TACTICAL_SEMANTICS,
+    ownSquadTacticalPolicy: FIXTURE_OWN_SQUAD_TACTICAL_POLICY,
   };
 }
 
@@ -140,6 +141,30 @@ const FIXTURE_TACTICAL_SEMANTICS = {
   routeQualityBiasBasisPoints: 2_500,
   routeSelectionSharpness: 3,
 } as const satisfies TacticalSemanticsCalibrationConfig;
+
+const FIXTURE_OWN_SQUAD_TACTICAL_POLICY: MatchTacticsCalibrationConfig["ownSquadTacticalPolicy"] = {
+  profileFitShareBasisPoints: 8_000,
+  minimumCommitmentAdvantageBasisPoints: 100,
+  minimumLateralFocusAdvantageBasisPoints: 500,
+  profiles: [
+    ownSquadProfile("balanced", "balanced"),
+    ownSquadProfile("attacking", "attacking"),
+    ownSquadProfile("defensive", "defensive"),
+  ],
+};
+
+function ownSquadProfile(
+  profileKey: "balanced" | "attacking" | "defensive",
+  mentality: "balanced" | "attacking" | "defensive",
+): MatchTacticsCalibrationConfig["ownSquadTacticalPolicy"]["profiles"][number] {
+  return {
+    profileKey,
+    tactic: { mentality, directness: 0.5, pressing: 0.5, width: 0.5, risk: 0.5 },
+    demandBasisPointsByCapacity: Object.fromEntries(
+      TACTICAL_SHAPE_CAPACITIES.map((capacity, index) => [capacity, index < 4 ? 834 : 833]),
+    ) as Readonly<Record<TacticalShapeCapacity, number>>,
+  };
+}
 
 const FIXTURE_OUTFIELD_ROLE_BUDGET = 42_000;
 
@@ -294,6 +319,7 @@ export function flatMatchTacticsCalibrationFixture(input: {
     },
     tacticalMatchup: FIXTURE_TACTICAL_MATCHUP,
     tacticalSemantics: FIXTURE_TACTICAL_SEMANTICS,
+    ownSquadTacticalPolicy: FIXTURE_OWN_SQUAD_TACTICAL_POLICY,
   };
 }
 

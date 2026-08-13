@@ -359,6 +359,7 @@ function runFixture(
     home: setup.home,
     away: setup.away,
     aiControlledSides: ["home", "away"],
+    lateralFocusBySide: { home: "balanced", away: "balanced" },
     buildMatchTeamContext: setup.buildMatchTeamContext,
   });
   const { state, home, away } = completed;

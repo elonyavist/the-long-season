@@ -1,5 +1,6 @@
 import {
   CAREER_MATCH_PREPARATION_FORMATIONS,
+  formationSlotCoordinate,
   type CareerMatchPreparationFormationId,
   type CareerMatchPreparationFormationInput,
   type CareerMatchPreparationFormationSlotInput,
@@ -11,36 +12,7 @@ import type { TacticalBoardFormationPreset, TacticalBoardRoleCode, TacticalBoard
 /** Default base formation used by the shared tactical board. */
 export const DEFAULT_TACTICAL_BOARD_FORMATION_ID: CareerMatchPreparationFormationId = "4-4-2";
 
-type BoardCoordinate = Readonly<{ nx: number; ny: number }>;
-
-const DEFAULT_COORDINATE: BoardCoordinate = { nx: 0.5, ny: 0.52 };
 const CENTRAL_TRIPLE_X_COORDINATES = [0.32, 0.5, 0.68] as const;
-
-const SLOT_COORDINATES: Readonly<Record<string, BoardCoordinate>> = {
-  gk: { nx: 0.5, ny: 0.93 },
-  rb: { nx: 0.86, ny: 0.76 },
-  "cb-right": { nx: 0.62, ny: 0.78 },
-  "cb-center": { nx: 0.5, ny: 0.8 },
-  "cb-left": { nx: 0.38, ny: 0.78 },
-  lb: { nx: 0.14, ny: 0.76 },
-  rm: { nx: 0.88, ny: 0.52 },
-  lm: { nx: 0.12, ny: 0.52 },
-  dm: { nx: 0.5, ny: 0.6 },
-  "dm-right": { nx: 0.58, ny: 0.6 },
-  "dm-center": { nx: 0.5, ny: 0.6 },
-  "dm-left": { nx: 0.42, ny: 0.6 },
-  "cm-right": { nx: 0.63, ny: 0.48 },
-  "cm-center": { nx: 0.5, ny: 0.48 },
-  "cm-left": { nx: 0.37, ny: 0.48 },
-  am: { nx: 0.5, ny: 0.34 },
-  "am-right": { nx: 0.58, ny: 0.34 },
-  "am-left": { nx: 0.42, ny: 0.34 },
-  rw: { nx: 0.86, ny: 0.22 },
-  lw: { nx: 0.14, ny: 0.22 },
-  st: { nx: 0.5, ny: 0.16 },
-  "st-right": { nx: 0.62, ny: 0.18 },
-  "st-left": { nx: 0.38, ny: 0.18 },
-};
 
 const BOARD_ROLE_BY_POSITION_KEY: Readonly<Record<string, TacticalBoardRoleCode>> = {
   gk: "POR",
@@ -120,7 +92,7 @@ function tacticalBoardFormationPresetFromInput(
 
 function tacticalBoardSlotFromInput(slot: CareerMatchPreparationFormationSlotInput): TacticalBoardSlot {
   const role = boardRoleFromFormationSlot(slot);
-  const coordinate = SLOT_COORDINATES[slot.pitchSlotKey] ?? SLOT_COORDINATES[slot.slotKey] ?? DEFAULT_COORDINATE;
+  const coordinate = formationSlotCoordinate(slot.pitchSlotKey);
 
   return {
     slotId: slot.slotKey,

@@ -15,6 +15,7 @@ import {
   generateRoundRobinCalendar,
   selectCareerAiTeam,
   type MatchTeamContext,
+  type OwnSquadTacticalPolicyEvaluation,
 } from "@game/engine";
 import {
   observeTacticalAgencyTeamSelection,
@@ -102,6 +103,8 @@ export interface TacticalAgencyConditionedClubSelection {
   readonly secondStructuralScore: number | "not_observed";
   readonly tiedAtBestCount: number;
   readonly outOfPositionSlotCount: number;
+  /** Canonical candidates from the same production selection, never rebuilt. */
+  readonly tacticalPolicy: OwnSquadTacticalPolicyEvaluation;
 }
 
 /** B2's opening row plus the formation distribution needed for attribution. */
@@ -179,7 +182,6 @@ export function runTacticalAgencyWorld(input: TacticalAgencyWorldInput): Tactica
       workItems,
       policy: {
         roleWeights: world.roleWeights,
-        tacticalDistribution: NEUTRAL_TACTICS,
         stateMultiplierCurves: world.stateMultiplierCurves,
         benchSize: BENCH_SIZE,
       },
@@ -241,7 +243,6 @@ export function runTacticalAgencyConditionedWorld(
       careerState,
       policy: {
         roleWeights: world.roleWeights,
-        tacticalDistribution: NEUTRAL_TACTICS,
         stateMultiplierCurves: world.stateMultiplierCurves,
         benchSize: BENCH_SIZE,
       },
@@ -287,6 +288,7 @@ export function runTacticalAgencyConditionedWorld(
         secondStructuralScore: observed.row.secondStructuralScore ?? "not_observed",
         tiedAtBestCount: observed.row.tiedAtBestCount,
         outOfPositionSlotCount: observed.row.outOfPositionSlotCount,
+        tacticalPolicy: observed.tacticalPolicy,
       });
     }
 
@@ -580,7 +582,6 @@ export function runTacticalAgencyArchetypeCounterfactual(input: {
         fixture,
         policy: {
           roleWeights: world.roleWeights,
-          tacticalDistribution: NEUTRAL_TACTICS,
           stateMultiplierCurves: world.stateMultiplierCurves,
           benchSize: BENCH_SIZE,
         },
@@ -779,7 +780,6 @@ export function buildTacticalAgencyLowBlockInput(input: {
       fixture,
       policy: {
         roleWeights: world.roleWeights,
-        tacticalDistribution: NEUTRAL_TACTICS,
         stateMultiplierCurves: world.stateMultiplierCurves,
         benchSize: BENCH_SIZE,
       },

@@ -31,6 +31,7 @@ import {
   type FixtureFieldedLineups,
   type LivePlayerMatchProjection,
   type MatchContext,
+  type MatchLateralFocusBySide,
   type MatchSide,
   type MatchStepEvent,
   type MatchSubstitutionDecision,
@@ -265,6 +266,8 @@ export interface WebLiveMatchdaySession {
   /** Canonical detailed team states kept only for atomic paused-match commands. */
   readonly homeTeam: LiveMatchTeamState;
   readonly awayTeam: LiveMatchTeamState;
+  /** Explicit in-memory focus consumed by every minute; Step 14 persists it. */
+  readonly lateralFocusBySide: MatchLateralFocusBySide;
   readonly engineState: ProgressiveMatchSessionState;
   readonly rng: Rng;
   /** Canonical pure commit result cached at full time and applied only by `Continua`. */
@@ -453,7 +456,11 @@ export function createWebLiveMatchdaySession(careerState: CareerState): CreateWe
       preparation,
       selectedSide,
       engineState,
+      kickoff.opponentFormation,
     ),
+    lateralFocusBySide: selectedSide === "home"
+      ? { home: "balanced", away: kickoff.opponentLateralFocus }
+      : { home: kickoff.opponentLateralFocus, away: "balanced" },
     engineState,
     rng: deriveRng(rngKey.seed, rngKey.streamName, ...matchRngKeyParts(rngKey)),
   };
@@ -487,7 +494,9 @@ export function resolveWebLiveMatchdayIncident(
 export function advanceWebLiveMatchdayMinute(
   session: WebLiveMatchdaySession,
 ): AdvanceWebLiveMatchdayMinuteResult {
-  const engineState = advanceProgressiveMatchMinute(session.engineState, session.rng);
+  const engineState = advanceProgressiveMatchMinute(session.engineState, session.rng, {
+    lateralFocusBySide: session.lateralFocusBySide,
+  });
   const progressedSession = applyOpponentAiInGameDecisions(withEngineState(session, engineState));
   const advancedSession = progressedSession.engineState.phase === "full_time"
     ? withCompletionPreview(progressedSession)
@@ -947,6 +956,8 @@ type WebMatchdayKickoffPrepared =
       readonly recoveredCareerState: CareerState;
       /** Substitutes the opponent's own selection chose, in its own order. */
       readonly opponentBenchPlayerIds: readonly PlayerId[];
+      readonly opponentFormation: FormationKey;
+      readonly opponentLateralFocus: MatchLateralFocusBySide["home"];
       readonly matchContext: MatchContext;
     }
   | {
@@ -1055,6 +1066,8 @@ function prepareWebMatchdayKickoff(
     fixture: nextFixture.fixture,
     recoveredCareerState,
     opponentBenchPlayerIds: opponent.benchPlayerIds,
+    opponentFormation: opponent.formation,
+    opponentLateralFocus: opponent.tacticalPolicy.ownFit.lateralFocus,
     matchContext: {
       fixtureId: nextFixture.fixtureId,
       seed: recoveredCareerState.gameState.meta.seed,
@@ -1131,6 +1144,7 @@ function initialLiveTeams(
   preparation: MatchPreparationDraft,
   selectedSide: MatchSide,
   engineState: ProgressiveMatchSessionState,
+  opponentFormation: FormationKey,
 ): Pick<WebLiveMatchdaySession, "homeTeam" | "awayTeam"> {
   const selectedTeam = liveTeamFromPreparation(
     selectedSide,
@@ -1141,7 +1155,12 @@ function initialLiveTeams(
   const opponentSnapshot = opponentSide === "home"
     ? createProgressiveMatchMinuteSnapshot(engineState).home
     : createProgressiveMatchMinuteSnapshot(engineState).away;
-  const opponentTeam = liveTeamFromEngineSnapshot(opponentSide, opponentSnapshot.team, opponentSnapshot.bench);
+  const opponentTeam = liveTeamFromEngineSnapshot(
+    opponentSide,
+    opponentSnapshot.team,
+    opponentSnapshot.bench,
+    opponentFormation,
+  );
 
   return selectedSide === "home"
     ? { homeTeam: selectedTeam, awayTeam: opponentTeam }
@@ -1182,14 +1201,15 @@ function liveTeamFromEngineSnapshot(
   side: MatchSide,
   team: MatchTeamContext,
   bench: ProgressiveMatchAvailability["home"]["bench"],
+  formation: FormationKey,
 ): LiveMatchTeamState {
-  const boardSlots = tacticalBoardSlotsFromFormation("4-4-2");
+  const boardSlots = tacticalBoardSlotsFromFormation(formation);
   return {
     side,
-    formation: "4-4-2",
+    formation,
     lineup: team.lineup.map((slot, index) => {
-      const boardSlot = boardSlots[index] ?? boardSlots.at(-1);
-      if (boardSlot === undefined) throw new Error("Canonical 4-4-2 requires tactical board slots");
+      const boardSlot = boardSlots[index];
+      if (boardSlot === undefined) throw new Error(`Formation ${formation} is missing tactical board slot ${index}`);
       return {
         slotId: slot.slotId,
         playerId: slot.playerId,
@@ -1201,7 +1221,13 @@ function liveTeamFromEngineSnapshot(
     bench: bench.map((slot) => ({ ...slot })),
     unavailable: [],
     substitutionsUsed: 0,
-    tactic: balancedTactic(),
+    tactic: {
+      mentality: team.tacticalDistribution.mentality,
+      pressing: team.tacticalDistribution.pressing,
+      directness: team.tacticalDistribution.directness,
+      width: team.tacticalDistribution.width,
+      risk: team.tacticalDistribution.risk,
+    },
   };
 }
 
@@ -1591,13 +1617,6 @@ function aiTeamSelectionPolicy(
   return {
     roleWeights: contentConfig.roleWeights,
     stateMultiplierCurves: contentConfig.stateMultiplierCurves,
-    tacticalDistribution: {
-      mentality: "balanced",
-      pressing: 0.5,
-      directness: 0.5,
-      width: 0.5,
-      risk: 0.5,
-    },
   };
 }
 

@@ -2,6 +2,7 @@ import {
   accruePlayerFixtureParticipations,
   createEmptyPlayerParticipationLedger,
   EMPTY_PLAYER_AVAILABILITY,
+  formationSlotCoordinate,
   isCanonicalPlayerRole,
   playerUnavailabilityReason,
 } from "@game/domain";
@@ -9,7 +10,6 @@ import {
   type CareerPlayerAvailabilityState,
   type CompetitionMatchRules,
   type AppliedMatchSubstitution,
-  type FormationSlot,
   type LiveMatchTeamState,
   type Player,
   type PlayerDynamicState,
@@ -33,6 +33,7 @@ import {
   type GameState,
   type LeagueTableRow,
   type LeagueTableRules,
+  type LateralFocus,
   type Round,
   type SeasonId,
 } from "@game/domain";
@@ -80,6 +81,7 @@ import {
 import {
   AiSquadSelectionError,
   buildAiSquadMatchTeamContext,
+  evaluateOwnSquadTacticalPolicies,
   runAutomatedProgressiveMatch,
   type AiInGameDecisionReasonKey,
   type AiInGameReplacementFailureKey,
@@ -400,6 +402,8 @@ export interface SimulateSeasonFixtureFieldedTeam {
   readonly selectionSource: SimulateSeasonFormationSelectionSource;
   /** Exact instructions present in the match context consumed at kickoff. */
   readonly tacticalDistribution: MatchTacticalDistributionInput;
+  /** Exact in-memory route focus consumed at kickoff. */
+  readonly lateralFocus: LateralFocus;
   /** Catalog diagnostics from the same selector walk; absent for imposed shapes. */
   readonly catalogChoice?: CatalogShapeChoice;
   /** Exact weak/invalid kickoff slots emitted by the selector, never reconstructed later. */
@@ -735,6 +739,8 @@ interface FixtureTeamSetup {
   readonly teamContext: MatchTeamContext;
   /** Exact bench selected alongside the XI, empty for fixed-lineup callers. */
   readonly benchPlayerIds: readonly PlayerId[];
+  /** Explicit kickoff focus; fixed analysis callers stay balanced. */
+  readonly lateralFocus: LateralFocus;
   /** Detailed live team present when the canonical AI selected this squad. */
   readonly liveTeam?: LiveMatchTeamState;
   /** Exact catalog shape consumed by the match, when the caller supplied one. */
@@ -882,6 +888,10 @@ function completeSeasonFixture(
     aiControlledSides: input.matchEngineConfig.minuteCount === 90
       ? ["home", "away"]
       : [],
+    lateralFocusBySide: {
+      home: setup.home.lateralFocus,
+      away: setup.away.lateralFocus,
+    },
     buildMatchTeamContext: (team, playerCondition) => {
       const rebuilt = rebuildLiveTeamContext(
         input,
@@ -1115,6 +1125,7 @@ function fixtureTeamSetup(
         playerStates ?? fixtureLineupOverride.playerStates,
       ),
       benchPlayerIds: [],
+      lateralFocus: "balanced",
       selectionSource: "fixture_lineup_override",
     };
   }
@@ -1127,6 +1138,7 @@ function fixtureTeamSetup(
         playerStates ?? setupOverride.playerStates,
       ),
       benchPlayerIds: [],
+      lateralFocus: "balanced",
       selectionSource: "setup_override",
     };
   }
@@ -1149,6 +1161,7 @@ function fixtureTeamSetup(
   return {
     teamContext: fixedLineupMatchTeamContext(clubId, team, input.matchTacticsCalibration, playerStates),
     benchPlayerIds: [],
+    lateralFocus: "balanced",
     selectionSource: "fixed_lineup",
   };
 }
@@ -1164,6 +1177,7 @@ function fieldedTeamForFixture(
     kickoffStrength: { ...setup.teamContext.strength },
     selectionSource: setup.selectionSource,
     tacticalDistribution: { ...setup.teamContext.tacticalDistribution },
+    lateralFocus: setup.lateralFocus,
     ...(setup.formationKey === undefined ? {} : { formationKey: setup.formationKey }),
     ...(setup.catalogChoice === undefined ? {} : { catalogChoice: setup.catalogChoice }),
     ...(setup.outOfPositionSlotCount === undefined
@@ -1760,6 +1774,15 @@ function aiSelectedMatchTeamContext(
       built = buildSelection(attemptedPlayerIds);
     }
     const { recentUse, publicAssessments, result } = built;
+    const tacticalPolicy = selectionPolicy.formation === undefined
+      ? evaluateOwnSquadTacticalPolicies({
+          shape: result.teamContext.shape,
+          policy: matchTacticsCalibration.ownSquadTacticalPolicy,
+        })
+      : undefined;
+    const selectedTeamContext = tacticalPolicy === undefined
+      ? result.teamContext
+      : { ...result.teamContext, tacticalDistribution: tacticalPolicy.ownFit.tactic };
     const selectedPlayerIds = [
       ...result.teamContext.lineup.map(({ playerId }) => playerId),
       ...result.selection.benchPlayerIds,
@@ -1776,12 +1799,13 @@ function aiSelectedMatchTeamContext(
       reason.selection === "lineup" && reason.suitability === "invalid"
     ).length;
     return {
-      teamContext: result.teamContext,
+      teamContext: selectedTeamContext,
       benchPlayerIds: result.selection.benchPlayerIds,
+      lateralFocus: tacticalPolicy?.ownFit.lateralFocus ?? "balanced",
       liveTeam: liveTeamFromAiSelection(
         fixture.homeClubId === clubId ? "home" : "away",
         result.selection.formation,
-        result.teamContext,
+        selectedTeamContext,
         result.selection.benchPlayerIds,
       ),
       formationKey: result.selection.formation.key,
@@ -1802,7 +1826,7 @@ function aiSelectedMatchTeamContext(
         ? {}
         : {
             lifecycleDiagnostics: {
-              unavailableSelectedPlayerCount: result.teamContext.lineup.filter(({ playerId }) =>
+              unavailableSelectedPlayerCount: selectedTeamContext.lineup.filter(({ playerId }) =>
                 playerUnavailabilityReason(
                   availabilityRuntime.availability,
                   playerId,
@@ -1816,7 +1840,7 @@ function aiSelectedMatchTeamContext(
       ...(collectSelectionLoadDiagnostics
         ? {
             selectionLoadDiagnostics: selectionLoadDiagnostics({
-              lineup: result.teamContext.lineup,
+              lineup: selectedTeamContext.lineup,
               availablePlayerIds: attemptedPlayerIds,
               players: team.players,
               publicAssessments,
@@ -1960,12 +1984,11 @@ function liveTeamFromAiSelection(
           `Formation ${formation.key} has no slot at index ${index}`,
         );
       }
-      const coordinate = normalizedCoordinateForFormationSlot(formationSlot);
       return {
         slotId: slot.slotId,
         playerId: slot.playerId,
         role: slot.canonicalRole,
-        ...coordinate,
+        ...formationSlotCoordinate(formationSlot.slotKey),
       };
     }),
     bench: benchPlayerIds.map((playerId, index) => ({
@@ -1982,31 +2005,6 @@ function liveTeamFromAiSelection(
       width: context.tacticalDistribution.width,
       risk: context.tacticalDistribution.risk,
     },
-  };
-}
-
-/** Derives validation-only board coordinates from domain formation semantics. */
-function normalizedCoordinateForFormationSlot(
-  slot: FormationSlot,
-): { readonly nx: number; readonly ny: number } {
-  const nxBySide = {
-    left: 0.18,
-    left_center: 0.36,
-    center: 0.5,
-    right_center: 0.64,
-    right: 0.82,
-  } as const;
-  const nyByLine = {
-    goalkeeper: 0.92,
-    defensive_line: 0.76,
-    defensive_midfield: 0.62,
-    midfield_line: 0.5,
-    attacking_midfield: 0.34,
-    forward_line: 0.18,
-  } as const;
-  return {
-    nx: nxBySide[slot.side ?? "center"],
-    ny: nyByLine[slot.line],
   };
 }
 

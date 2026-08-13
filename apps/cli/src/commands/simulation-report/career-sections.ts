@@ -650,7 +650,6 @@ interface LeagueFormationSeasonProjection {
   readonly primaryRolePositiveCount: number;
   readonly primaryRoles: unknown;
   readonly roleDepthWarnings: unknown;
-  readonly lateralFocus: "not_observed";
   readonly clubModalRows: readonly {
     readonly clubId: string;
     readonly clubName: string;
@@ -659,6 +658,8 @@ interface LeagueFormationSeasonProjection {
   }[];
   readonly rows: readonly unknown[];
 }
+
+type ObservedLateralFocus = SimulateSeasonResult["fixtureParticipation"][number]["fieldedTeams"]["home"]["lateralFocus"];
 
 interface SubstitutionMinuteSeasonProjection {
   readonly rows: readonly Omit<
@@ -2317,6 +2318,7 @@ function formationProjection(
     width: number;
     risk: number;
     mentality: string;
+    lateralFocus: ObservedLateralFocus;
     matches: number;
   }>();
   const clubFormationCounts = new Map<string, Map<FormationKey, number>>();
@@ -2393,6 +2395,7 @@ function formationProjection(
         tactic.width,
         tactic.risk,
         tactic.mentality,
+        team.lateralFocus,
       ].join("|");
       const current = counts.get(key);
       counts.set(key, {
@@ -2405,6 +2408,7 @@ function formationProjection(
         width: tactic.width,
         risk: tactic.risk,
         mentality: tactic.mentality,
+        lateralFocus: team.lateralFocus,
         matches: (current?.matches ?? 0) + 1,
       });
       const formationCounts = clubFormationCounts.get(String(team.clubId)) ?? new Map<FormationKey, number>();
@@ -2416,6 +2420,12 @@ function formationProjection(
     left.clubId.localeCompare(right.clubId)
     || left.formation.localeCompare(right.formation)
     || left.selectionSource.localeCompare(right.selectionSource)
+    || left.mentality.localeCompare(right.mentality)
+    || left.lateralFocus.localeCompare(right.lateralFocus)
+    || left.directness - right.directness
+    || left.pressing - right.pressing
+    || left.width - right.width
+    || left.risk - right.risk
   );
   const clubModalRows = [...clubFormationCounts].map(([clubId, formationCounts]) => {
     const selected = [...formationCounts].sort(([leftKey, leftCount], [rightKey, rightCount]) =>
@@ -2492,7 +2502,6 @@ function formationProjection(
     primaryRolePositiveCount: primaryRoles.roleShares.filter(({ count }) => count > 0).length,
     primaryRoles,
     roleDepthWarnings,
-    lateralFocus: "not_observed",
     clubModalRows,
     rows,
   };

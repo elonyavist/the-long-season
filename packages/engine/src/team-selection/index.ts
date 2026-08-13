@@ -2,6 +2,7 @@
 export {
   applyAiInGameDecision,
   applyProgressiveAiInGameDecisions,
+  buildAiInGameFormationOptions,
   hasProgressiveAiInGameDecisionBoundary,
   runAutomatedProgressiveMatch,
   selectAiInGameDecision,
@@ -20,7 +21,12 @@ export {
   type RunAutomatedProgressiveMatchResult,
   type SelectAiInGameDecisionInput,
 } from "./ai-in-game-decisions.ts";
-export { deriveShapeTacticalDistribution } from "./shape-tactical-distribution.ts";
+export {
+  evaluateOwnSquadTacticalPolicies,
+  type OwnSquadTacticalPolicyCandidate,
+  type OwnSquadTacticalPolicyEvaluation,
+  type OwnSquadTacticalPolicyId,
+} from "./own-squad-tactical-policy.ts";
 export {
   AiSquadSelectionError,
   buildAiSquadMatchTeamContext,

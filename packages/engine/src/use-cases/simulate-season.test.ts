@@ -952,6 +952,10 @@ test("AI squad participation retains the exact selected bench as zero-minute evi
     assert.equal(fixture.fieldedTeams.away.formationKey, "4-4-2");
     assert.equal(fixture.fieldedTeams.home.selectionSource, "imposed_ai");
     assert.equal(fixture.fieldedTeams.away.selectionSource, "imposed_ai");
+    assert.equal(fixture.fieldedTeams.home.tacticalDistribution.mentality, "balanced");
+    assert.equal(fixture.fieldedTeams.away.tacticalDistribution.mentality, "balanced");
+    assert.equal(fixture.fieldedTeams.home.lateralFocus, "balanced");
+    assert.equal(fixture.fieldedTeams.away.lateralFocus, "balanced");
   }
 });
 
@@ -1075,7 +1079,17 @@ test("AI squad selection records the catalog shape actually fielded when none is
     const team = input.teamsByClubId[clubId];
     assert.ok(team?.aiSelection !== undefined);
     const { formation: _imposedFormation, ...catalogSelection } = team.aiSelection;
-    teamsByClubId[clubId] = { ...team, aiSelection: catalogSelection };
+    teamsByClubId[clubId] = {
+      ...team,
+      aiSelection: catalogSelection,
+      tacticalDistribution: {
+        mentality: "very_attacking",
+        directness: 1,
+        pressing: 1,
+        width: 1,
+        risk: 1,
+      },
+    };
   }
 
   const result = simulateSeason({ ...input, teamsByClubId });
@@ -1089,10 +1103,10 @@ test("AI squad selection records the catalog shape actually fielded when none is
   assert.equal(fielded.every((team) => team.formationKey !== undefined), true);
   assert.equal(fielded.every((team) => team.catalogChoice?.fillableShapeCount === 23), true);
   assert.equal(fielded.every((team) => (team.catalogChoice?.tiedAtBestCount ?? 0) >= 1), true);
-  assert.equal(
-    fielded.every((team) => team.tacticalDistribution.mentality === "balanced"),
-    true,
-  );
+  assert.equal(fielded.every((team) => team.tacticalDistribution.mentality !== "very_attacking"), true);
+  assert.equal(fielded.every((team) => ["balanced", "attacking", "defensive"]
+    .includes(team.tacticalDistribution.mentality)), true);
+  assert.equal(fielded.every((team) => ["balanced", "left", "right"].includes(team.lateralFocus)), true);
 });
 
 /**

@@ -1,9 +1,11 @@
 import {
   CANONICAL_PLAYER_ROLES,
   MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION,
+  TACTICAL_SHAPE_CAPACITIES,
   TACTICAL_SHAPE_TASKS,
   type CanonicalPlayerRole,
   type MatchTacticsCalibrationConfig,
+  type TacticalShapeCapacity,
   type TacticalShapeTask,
 } from "@game/domain";
 
@@ -84,6 +86,29 @@ export function matchTacticsCalibrationFixture(): MatchTacticsCalibrationConfig 
       routeQualityBiasBasisPoints: 2_500,
       routeSelectionSharpness: 3,
     },
+    ownSquadTacticalPolicy: {
+      profileFitShareBasisPoints: 8_000,
+      minimumCommitmentAdvantageBasisPoints: 100,
+      minimumLateralFocusAdvantageBasisPoints: 500,
+      profiles: [
+        ownSquadProfile("balanced", "balanced"),
+        ownSquadProfile("attacking", "attacking"),
+        ownSquadProfile("defensive", "defensive"),
+      ],
+    },
+  };
+}
+
+function ownSquadProfile(
+  profileKey: "balanced" | "attacking" | "defensive",
+  mentality: "balanced" | "attacking" | "defensive",
+): MatchTacticsCalibrationConfig["ownSquadTacticalPolicy"]["profiles"][number] {
+  return {
+    profileKey,
+    tactic: { mentality, directness: 0.5, pressing: 0.5, width: 0.5, risk: 0.5 },
+    demandBasisPointsByCapacity: Object.fromEntries(
+      TACTICAL_SHAPE_CAPACITIES.map((capacity, index) => [capacity, index < 4 ? 834 : 833]),
+    ) as Readonly<Record<TacticalShapeCapacity, number>>,
   };
 }
 

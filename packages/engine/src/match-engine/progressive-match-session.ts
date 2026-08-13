@@ -105,7 +105,7 @@ export type ProgressiveMatchBeforeMinute = (
 export interface AdvanceProgressiveMatchMinuteOptions {
   readonly occasionResolver?: OccasionResolver;
   readonly beforeMinute?: ProgressiveMatchBeforeMinute;
-  /** Explicit analysis plan; live play stays balanced until Step 14. */
+  /** Explicit in-memory plan; durable preparation ownership arrives in Step 14. */
   readonly lateralFocusBySide?: MatchLateralFocusBySide;
 }
 

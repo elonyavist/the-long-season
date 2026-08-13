@@ -1,4 +1,4 @@
-import { createFakeGameplayConfig } from "@game/content";
+import { createFakeGameplayConfig, matchTacticsCalibration } from "@game/content";
 import { fieldablePlayerIds } from "@game/engine";
 import {
   createLineupSlot,
@@ -84,9 +84,11 @@ const BENCH_SLOT_KEYS = ["01", "02", "03", "04", "05", "06", "07", "08"] as cons
 
 /** Current bounded tactic choices backed by the existing domain contract. */
 export const MATCH_PREPARATION_TACTIC_PROFILES: readonly CareerMatchPreparationTacticProfileInput[] = [
-  { tacticProfileId: "tactic:balanced", labelKey: "career.matchPreparation.tactic.balanced", values: { mentality: "balanced", pressing: 0.5, directness: 0.5, width: 0.5, risk: 0.5 } },
-  { tacticProfileId: "tactic:attacking", labelKey: "career.matchPreparation.tactic.attacking", values: { mentality: "attacking", pressing: 0.85, directness: 0.75, width: 0.8, risk: 0.7 } },
-  { tacticProfileId: "tactic:defensive", labelKey: "career.matchPreparation.tactic.defensive", values: { mentality: "defensive", pressing: 0.35, directness: 0.3, width: 0.4, risk: 0.2 } },
+  ...matchTacticsCalibration.ownSquadTacticalPolicy.profiles.map((profile) => ({
+    tacticProfileId: `tactic:${profile.profileKey}`,
+    labelKey: `career.matchPreparation.tactic.${profile.profileKey}`,
+    values: profile.tactic,
+  })),
 ];
 
 /** Creates the editable draft from the loaded durable career, preserving exact board geometry. */

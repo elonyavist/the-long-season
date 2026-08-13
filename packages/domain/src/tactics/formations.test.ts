@@ -9,6 +9,7 @@ import {
   FORMATION_KEYS,
   FORMATION_POSITION_FAMILIES,
   FORMATIONS,
+  formationSlotCoordinate,
   getFormation,
   isFormationKey,
   type FormationPositionFamily,
@@ -41,6 +42,16 @@ test("every formation has unique slot keys", () => {
   for (const formation of FORMATIONS) {
     const slotKeys = formation.slots.map((slot) => slot.slotKey);
     assert.equal(new Set(slotKeys).size, slotKeys.length, `${formation.key} should not repeat slot keys`);
+  }
+});
+
+test("every shipped slot resolves through the canonical pitch geometry", () => {
+  for (const formation of FORMATIONS) {
+    for (const slot of formation.slots) {
+      const coordinate = formationSlotCoordinate(slot.slotKey);
+      assert.equal(coordinate.nx >= 0 && coordinate.nx <= 1, true, `${formation.key}:${slot.slotKey} nx`);
+      assert.equal(coordinate.ny >= 0 && coordinate.ny <= 1, true, `${formation.key}:${slot.slotKey} ny`);
+    }
   }
 });
 

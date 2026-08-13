@@ -181,7 +181,7 @@ test("an empty population is refused rather than summarized into zeros", () => {
         {
           careerState: careerStateWithRoles({}),
           workItems: [],
-          policy: { roleWeights: {}, tacticalDistribution: neutralTactics() },
+          policy: { roleWeights: {} },
           matchTacticsCalibration: {} as never,
           valuationConfig: {} as never,
         },

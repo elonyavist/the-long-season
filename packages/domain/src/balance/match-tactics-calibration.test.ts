@@ -459,6 +459,29 @@ function validCalibration(): MatchTacticsCalibrationConfig {
     tacticalShape: validShape(),
     tacticalMatchup: { chainBottleneckWeightBasisPoints: 6_500, pressingContestWeightBasisPoints: 5_000 },
     tacticalSemantics: validSemantics(),
+    ownSquadTacticalPolicy: {
+      profileFitShareBasisPoints: 8_000,
+      minimumCommitmentAdvantageBasisPoints: 100,
+      minimumLateralFocusAdvantageBasisPoints: 500,
+      profiles: [
+        validOwnSquadProfile("balanced", "balanced"),
+        validOwnSquadProfile("attacking", "attacking"),
+        validOwnSquadProfile("defensive", "defensive"),
+      ],
+    },
+  };
+}
+
+function validOwnSquadProfile(
+  profileKey: "balanced" | "attacking" | "defensive",
+  mentality: "balanced" | "attacking" | "defensive",
+): MatchTacticsCalibrationConfig["ownSquadTacticalPolicy"]["profiles"][number] {
+  return {
+    profileKey,
+    tactic: { mentality, directness: 0.5, pressing: 0.5, width: 0.5, risk: 0.5 },
+    demandBasisPointsByCapacity: Object.fromEntries(
+      TACTICAL_SHAPE_CAPACITIES.map((capacity, index) => [capacity, index < 4 ? 834 : 833]),
+    ) as Readonly<Record<TacticalShapeCapacity, number>>,
   };
 }
 
@@ -686,6 +709,51 @@ test("committing to neither is the neutral reference, never a bonus", () => {
 
 test("shape must decide some of possession control", () => {
   assertRejects(withSemantics({ shapeControlShareBasisPoints: 0 }), "invalid_shape_control_share");
+});
+
+test("own-squad policy commitment thresholds are positive bounded shares", () => {
+  const base = validCalibration();
+  assertRejects({
+    ...base,
+    ownSquadTacticalPolicy: {
+      ...base.ownSquadTacticalPolicy,
+      minimumCommitmentAdvantageBasisPoints: 0,
+    },
+  }, "invalid_own_squad_demand");
+  assertRejects({
+    ...base,
+    ownSquadTacticalPolicy: {
+      ...base.ownSquadTacticalPolicy,
+      minimumLateralFocusAdvantageBasisPoints: 10_001,
+    },
+  }, "invalid_own_squad_demand");
+});
+
+test("own-squad policy requires the complete conserved profile vocabulary", () => {
+  const base = validCalibration();
+  assertRejects({
+    ...base,
+    ownSquadTacticalPolicy: {
+      ...base.ownSquadTacticalPolicy,
+      profiles: base.ownSquadTacticalPolicy.profiles.slice(1),
+    },
+  }, "incomplete_own_squad_profiles");
+
+  const balanced = base.ownSquadTacticalPolicy.profiles[0];
+  assert.ok(balanced);
+  assertRejects({
+    ...base,
+    ownSquadTacticalPolicy: {
+      ...base.ownSquadTacticalPolicy,
+      profiles: [{
+        ...balanced,
+        demandBasisPointsByCapacity: {
+          ...balanced.demandBasisPointsByCapacity,
+          build_up: balanced.demandBasisPointsByCapacity.build_up + 1,
+        },
+      }, ...base.ownSquadTacticalPolicy.profiles.slice(1)],
+    },
+  }, "own_squad_demand_not_conserved");
 });
 
 test("the route taken must decide something about the chance it produced", () => {

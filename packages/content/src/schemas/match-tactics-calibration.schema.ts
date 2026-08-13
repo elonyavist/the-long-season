@@ -7,6 +7,8 @@ import {
   POSITION_SUITABILITIES,
   TACTIC_KNOBS,
   TACTIC_MENTALITIES,
+  OWN_SQUAD_TACTIC_PROFILE_KEYS,
+  TACTICAL_SHAPE_CAPACITIES,
   TACTICAL_SHAPE_TASKS,
   validateMatchTacticsCalibration,
   type MatchTacticsCalibrationConfig,
@@ -33,6 +35,7 @@ export class MatchTacticsCalibrationValidationError extends Error {
 const nonEmptyString = v.pipe(v.string(), v.minLength(1));
 const safeInteger = v.pipe(v.number(), v.safeInteger());
 const basisPoints = v.pipe(safeInteger, v.minValue(0), v.maxValue(10_000));
+const positiveBasisPoints = v.pipe(safeInteger, v.minValue(1), v.maxValue(10_000));
 const nonNegativeInteger = v.pipe(safeInteger, v.minValue(0));
 const positiveInteger = v.pipe(safeInteger, v.minValue(1));
 
@@ -125,6 +128,30 @@ const tacticalSemanticsSchema = v.strictObject({
   routeSelectionSharpness: positiveInteger,
 });
 
+const ownSquadDemandSchema = v.strictObject(
+  Object.fromEntries(TACTICAL_SHAPE_CAPACITIES.map((capacity) => [capacity, basisPoints])) as Record<
+    (typeof TACTICAL_SHAPE_CAPACITIES)[number],
+    typeof basisPoints
+  >,
+);
+
+const ownSquadTacticalPolicySchema = v.strictObject({
+  profileFitShareBasisPoints: basisPoints,
+  minimumCommitmentAdvantageBasisPoints: positiveBasisPoints,
+  minimumLateralFocusAdvantageBasisPoints: positiveBasisPoints,
+  profiles: v.array(v.strictObject({
+    profileKey: v.picklist(OWN_SQUAD_TACTIC_PROFILE_KEYS),
+    tactic: v.strictObject({
+      mentality: v.picklist(TACTIC_MENTALITIES),
+      directness: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
+      pressing: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
+      width: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
+      risk: v.pipe(v.number(), v.minValue(0), v.maxValue(1)),
+    }),
+    demandBasisPointsByCapacity: ownSquadDemandSchema,
+  })),
+});
+
 const matchTacticsCalibrationSchema = v.strictObject({
   schemaVersion: v.literal(MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION),
   version: nonEmptyString,
@@ -133,6 +160,7 @@ const matchTacticsCalibrationSchema = v.strictObject({
   tacticalShape: tacticalShapeSchema,
   tacticalMatchup: tacticalMatchupSchema,
   tacticalSemantics: tacticalSemanticsSchema,
+  ownSquadTacticalPolicy: ownSquadTacticalPolicySchema,
 });
 
 /**

@@ -668,7 +668,6 @@ test("a club the manager never meets still selects a typed eleven in a real shap
     fixture: careerState.gameState.fixtures[fixtureToPlayId] as Fixture,
     policy: {
       roleWeights: roleWeightsFixture(),
-      tacticalDistribution: { directness: 0.5, pressing: 0.5, width: 0.5, risk: 0.5, mentality: "balanced" },
     },
     matchTacticsCalibration: matchTacticsCalibrationFixture(),
     valuationConfig: playerValuationConfigFixture(),
@@ -683,6 +682,21 @@ test("a club the manager never meets still selects a typed eleven in a real shap
   );
   assert.equal(new Set(stranger.teamContext.lineup.map((slot) => slot.playerId)).size, 11);
   assert.equal(stranger.benchPlayerIds.length > 0, true);
+  assert.deepEqual(stranger.teamContext.tacticalDistribution, stranger.tacticalPolicy.ownFit.tactic);
+  assert.equal(stranger.tacticalPolicy.candidates.length, 9);
+
+  const changedOpponent = selectCareerAiTeam({
+    careerState,
+    clubId: strangerClubId,
+    fixture: {
+      ...(careerState.gameState.fixtures[fixtureToPlayId] as Fixture),
+      awayClubId: clubId("club:unobserved-opponent"),
+    },
+    policy: { roleWeights: roleWeightsFixture() },
+    matchTacticsCalibration: matchTacticsCalibrationFixture(),
+    valuationConfig: playerValuationConfigFixture(),
+  });
+  assert.deepEqual(changedOpponent.tacticalPolicy, stranger.tacticalPolicy);
 });
 
 test("career AI can field a strong academy player without adding him to the senior roster", () => {
@@ -709,7 +723,6 @@ test("career AI can field a strong academy player without adding him to the seni
     fixture,
     policy: {
       roleWeights: roleWeightsFixture(),
-      tacticalDistribution: { directness: 0.5, pressing: 0.5, width: 0.5, risk: 0.5, mentality: "balanced" },
     },
     matchTacticsCalibration: matchTacticsCalibrationFixture(),
     valuationConfig: playerValuationConfigFixture(),
@@ -768,7 +781,6 @@ test("an AI club rests the footballers it has been leaning on", () => {
     fixture: { ...fixtureFixture(fixtureToPlayId, selectedClubId, otherClubId, false, fixtureDate) },
     policy: {
       roleWeights: roleWeightsFixture(),
-      tacticalDistribution: { directness: 0.5, pressing: 0.5, width: 0.5, risk: 0.5, mentality: "balanced" },
     },
     matchTacticsCalibration: matchTacticsCalibrationFixture(),
     valuationConfig: playerValuationConfigFixture(),
@@ -803,13 +815,6 @@ test("progressNextCareerFixture can build the non-selected opponent context with
     },
     aiTeamSelection: {
       roleWeights: roleWeightsFixture(),
-      tacticalDistribution: {
-        directness: 0.5,
-        pressing: 0.5,
-        width: 0.5,
-        risk: 0.5,
-        mentality: "balanced",
-      },
       benchSize: 8,
     },
     matchEngineConfig: matchEngineConfigFixture(),
@@ -842,13 +847,6 @@ test("progressNextCareerFixture never auto-builds the selected club lineup", () 
     },
     aiTeamSelection: {
       roleWeights: roleWeightsFixture(),
-      tacticalDistribution: {
-        directness: 0.5,
-        pressing: 0.5,
-        width: 0.5,
-        risk: 0.5,
-        mentality: "balanced",
-      },
     },
     matchEngineConfig: matchEngineConfigFixture(),
     matchTacticsCalibration: matchTacticsCalibrationFixture(),

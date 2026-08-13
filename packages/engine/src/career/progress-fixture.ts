@@ -11,6 +11,7 @@ import {
   type CompetitionMatchRules,
   type Fixture,
   type FixtureId,
+  type LateralFocus,
   type MatchReport,
   type MarketBehaviorCalibrationConfig,
   type MatchPlayerConsequence,
@@ -304,12 +305,17 @@ export function progressNextCareerFixture(input: ProgressNextCareerFixtureInput)
     return resolvedContexts.result;
   }
 
-  const simulatedFixture = simulateFixtureAndCreateReport(input, nextFixture.fixtureId, resolvedContexts.home, resolvedContexts.away);
+  const simulatedFixture = simulateFixtureAndCreateReport(
+    input,
+    nextFixture.fixtureId,
+    resolvedContexts.home,
+    resolvedContexts.away,
+  );
   const selectedClubContext = selectedClubTeamContext(
     input.careerState.selectedClubId,
     nextFixture.fixture,
-    resolvedContexts.home,
-    resolvedContexts.away,
+    resolvedContexts.home.context,
+    resolvedContexts.away.context,
   );
   const selectedStarterIds = selectedClubContext.lineup.map((slot) => slot.playerId);
   const applied = applyCareerFixtureReport({
@@ -325,13 +331,13 @@ export function progressNextCareerFixture(input: ProgressNextCareerFixtureInput)
     participationSides: [
       {
         side: "home",
-        initialContext: resolvedContexts.home,
-        finalContext: resolvedContexts.home,
+        initialContext: resolvedContexts.home.context,
+        finalContext: resolvedContexts.home.context,
       },
       {
         side: "away",
-        initialContext: resolvedContexts.away,
-        finalContext: resolvedContexts.away,
+        initialContext: resolvedContexts.away.context,
+        finalContext: resolvedContexts.away.context,
       },
     ],
     playerRatings: simulatedFixture.playerRatings,
@@ -498,8 +504,8 @@ function applyCareerFixtureReport(
 type ResolvedFixtureTeamContexts =
   | {
       readonly status: "resolved";
-      readonly home: MatchTeamContext;
-      readonly away: MatchTeamContext;
+      readonly home: ResolvedTeamContext;
+      readonly away: ResolvedTeamContext;
     }
   | {
       readonly status: "invalid";
@@ -533,11 +539,11 @@ function resolveFixtureTeamContexts(
     return { status: "invalid", result: invalidResult(careerState, "missing_away_team_context", fixture.id) };
   }
 
-  if (home.context.clubId !== fixture.homeClubId) {
+  if (home.context.context.clubId !== fixture.homeClubId) {
     return { status: "invalid", result: invalidResult(careerState, "home_team_context_mismatch", fixture.id) };
   }
 
-  if (away.context.clubId !== fixture.awayClubId) {
+  if (away.context.context.clubId !== fixture.awayClubId) {
     return { status: "invalid", result: invalidResult(careerState, "away_team_context_mismatch", fixture.id) };
   }
 
@@ -548,10 +554,16 @@ function resolveFixtureTeamContexts(
   };
 }
 
+interface ResolvedTeamContext {
+  readonly context: MatchTeamContext;
+  /** The selection-owned focus consumed at kickoff without a second evaluation. */
+  readonly lateralFocus: LateralFocus;
+}
+
 type ResolveTeamContextResult =
   | {
       readonly status: "resolved";
-      readonly context: MatchTeamContext | undefined;
+      readonly context: ResolvedTeamContext | undefined;
     }
   | {
       readonly status: "invalid";
@@ -590,7 +602,9 @@ function resolveTeamContext(
     }
     return {
       status: "resolved",
-      context: suppliedContext,
+      context: suppliedContext === undefined
+        ? undefined
+        : { context: suppliedContext, lateralFocus: "balanced" },
     };
   }
 
@@ -603,16 +617,20 @@ function resolveTeamContext(
   }
 
   try {
+    const selection = selectCareerAiTeam({
+      careerState,
+      clubId,
+      fixture,
+      policy: aiSelection,
+      matchTacticsCalibration: input.matchTacticsCalibration,
+      valuationConfig: input.valuationConfig,
+    });
     return {
       status: "resolved",
-      context: selectCareerAiTeam({
-        careerState,
-        clubId,
-        fixture,
-        policy: aiSelection,
-        matchTacticsCalibration: input.matchTacticsCalibration,
-        valuationConfig: input.valuationConfig,
-      }).teamContext,
+      context: {
+        context: selection.teamContext,
+        lateralFocus: selection.tacticalPolicy.ownFit.lateralFocus,
+      },
     };
   } catch (error) {
     if (error instanceof AiSquadSelectionError) {
@@ -638,18 +656,22 @@ interface SimulatedFixtureProgression {
 function simulateFixtureAndCreateReport(
   input: ProgressNextCareerFixtureInput,
   fixtureId: FixtureId,
-  home: MatchTeamContext,
-  away: MatchTeamContext,
+  home: ResolvedTeamContext,
+  away: ResolvedTeamContext,
 ): SimulatedFixtureProgression {
   const simulatedMatch = simulateMatch({
     fixtureId,
     seed: input.careerState.gameState.meta.seed,
-    home,
-    away,
+    home: home.context,
+    away: away.context,
     engineConfig: input.matchEngineConfig,
     matchTacticsCalibration: input.matchTacticsCalibration,
   }, {
     includeExplanationTrace: input.includeExplanationTrace === true,
+    lateralFocusBySide: {
+      home: home.lateralFocus,
+      away: away.lateralFocus,
+    },
   });
 
   return {
@@ -659,8 +681,8 @@ function simulateFixtureAndCreateReport(
       playerRegistrations: playerRatingRegistrationsFromContext({
         fixtureId,
         seed: input.careerState.gameState.meta.seed,
-        home,
-        away,
+        home: home.context,
+        away: away.context,
         engineConfig: input.matchEngineConfig,
         matchTacticsCalibration: input.matchTacticsCalibration,
       }),

@@ -4,16 +4,13 @@ import {
   type CareerState,
   type ClubId,
   type Fixture,
+  type FormationKey,
   type MatchTacticsCalibrationConfig,
   type PlayerId,
 } from "@game/domain";
 
 import type { MatchTeamContext } from "../match-engine/match-context.ts";
-import type {
-  MatchTacticalDistributionInput,
-  PlayerStateMultiplierCurves,
-  RoleWeightProfile,
-} from "../match-engine/index.ts";
+import type { PlayerStateMultiplierCurves, RoleWeightProfile } from "../match-engine/index.ts";
 import type { PlayerValuationConfig } from "../market/player-valuation.ts";
 import { fieldablePlayerIds } from "../squad/squad-depth.ts";
 import {
@@ -22,8 +19,9 @@ import {
 } from "../squad/public-player-assessment.ts";
 import {
   buildAiSquadMatchTeamContext,
-  deriveShapeTacticalDistribution,
+  evaluateOwnSquadTacticalPolicies,
   type CatalogShapeChoice,
+  type OwnSquadTacticalPolicyEvaluation,
 } from "../team-selection/index.ts";
 import { recentPlayerUseForFixture } from "./player-participation.ts";
 
@@ -40,8 +38,6 @@ import { recentPlayerUseForFixture } from "./player-participation.ts";
 export interface CareerAiTeamSelectionPolicy {
   /** Match-engine role profiles used to derive team strength. */
   readonly roleWeights: Readonly<Record<string, RoleWeightProfile>>;
-  /** Tactical distribution used for every AI side. */
-  readonly tacticalDistribution: MatchTacticalDistributionInput;
   /** Optional state curves used when deriving strength from selected players. */
   readonly stateMultiplierCurves?: PlayerStateMultiplierCurves;
   /** Maximum substitutes to include in diagnostics. */
@@ -70,6 +66,8 @@ export interface CareerAiTeamSelection {
   readonly teamContext: MatchTeamContext;
   /** Substitutes the same selection chose, in the same order. */
   readonly benchPlayerIds: readonly PlayerId[];
+  /** Formation actually chosen by the canonical squad selector. */
+  readonly formation: FormationKey;
   /**
    * How close this club's own shape decision was.
    *
@@ -79,6 +77,8 @@ export interface CareerAiTeamSelection {
    * selector does the walk to choose with.
    */
   readonly catalogChoice?: CatalogShapeChoice;
+  /** Complete own-squad policy evaluation and the selected product choice. */
+  readonly tacticalPolicy: OwnSquadTacticalPolicyEvaluation;
 }
 
 /**
@@ -139,6 +139,11 @@ export function selectCareerAiTeam(input: SelectCareerAiTeamInput): CareerAiTeam
   );
   const selectablePlayerIds = [...seniorPlayerIds, ...academyCallUpPlayerIds];
 
+  const balancedProfile = input.matchTacticsCalibration.ownSquadTacticalPolicy.profiles.find(
+    (profile) => profile.profileKey === "balanced",
+  );
+  if (balancedProfile === undefined) throw new Error("Career AI policy is missing balanced profile");
+
   const result = buildAiSquadMatchTeamContext({
     clubId: input.clubId,
     playerIds: selectablePlayerIds,
@@ -153,11 +158,7 @@ export function selectCareerAiTeam(input: SelectCareerAiTeamInput): CareerAiTeam
       playerIds: selectablePlayerIds,
     }),
     roleWeights: input.policy.roleWeights,
-    // The club's instructions follow the shape it just chose, so a back three
-    // with two strikers is not told to play the same football as a back five
-    // with one. The policy value is the neutral setup those deviate from.
-    tacticalDistribution: (formation) =>
-      deriveShapeTacticalDistribution(formation, input.policy.tacticalDistribution),
+    tacticalDistribution: () => balancedProfile.tactic,
     matchTacticsCalibration: input.matchTacticsCalibration,
     ...(input.policy.stateMultiplierCurves === undefined
       ? {}
@@ -165,9 +166,16 @@ export function selectCareerAiTeam(input: SelectCareerAiTeamInput): CareerAiTeam
     ...(input.policy.benchSize === undefined ? {} : { benchSize: input.policy.benchSize }),
   });
 
+  const tacticalPolicy = evaluateOwnSquadTacticalPolicies({
+    shape: result.teamContext.shape,
+    policy: input.matchTacticsCalibration.ownSquadTacticalPolicy,
+  });
+
   return {
-    teamContext: result.teamContext,
+    teamContext: { ...result.teamContext, tacticalDistribution: tacticalPolicy.ownFit.tactic },
     benchPlayerIds: result.selection.benchPlayerIds,
+    formation: result.selection.formation.key,
+    tacticalPolicy,
     ...(result.selection.catalogChoice === undefined
       ? {}
       : { catalogChoice: result.selection.catalogChoice }),

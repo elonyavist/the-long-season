@@ -2,8 +2,8 @@
 
 ## Status
 
-Closed until Step 11 is Done. This checkpoint was frozen by Amendment A7 before
-Step 10 or Step 11 implementation.
+**Ready after Step 11.** This checkpoint was frozen by Amendment A7 before Step
+10 or Step 11 implementation.
 
 ## Goal
 
