@@ -13,6 +13,7 @@ import {
 
 import {
   buildTacticalAgencyConditionedResponses,
+  decideTacticalAgencyChanceToResultOwner,
   buildTacticalAgencyStructuralActions,
   buildTacticalAgencyAuditReport,
   countTacticalAgencyOutOfPositionSlots,
@@ -685,6 +686,42 @@ test("B2 materiality attribution uses only the frozen replay targets", () => {
   assert.ok(Math.abs(selection.exposureRegret - 0.035) < Number.EPSILON);
 });
 
+test("chance-to-result attribution applies both sides of its fixed classifier", () => {
+  const xgOwned = summarizeTacticalAgencyConditionedMateriality({
+    declaredContextCount: 11,
+    contexts: [
+      materialityAttributionResult("aligned", 10),
+      materialityAttributionResult("weak", 1),
+    ],
+  }).chanceToResult;
+  const resultOwned = summarizeTacticalAgencyConditionedMateriality({
+    declaredContextCount: 11,
+    contexts: [
+      materialityAttributionResult("aligned", 1),
+      materialityAttributionResult("weak", 10),
+    ],
+  }).chanceToResult;
+
+  assert.equal(xgOwned.owner, "opportunity_xg_magnitude");
+  assert.equal(resultOwned.owner, "result_resolution");
+  assert.equal(xgOwned.classifierReachabilityHeld, true);
+  assert.equal(resultOwned.classifierReachabilityHeld, true);
+  assert.deepEqual(xgOwned.resolutionContextCounts, { atOrAboveHalf: 1, belowHalf: 1 });
+  assert.equal(xgOwned.pooledRSquared !== "not_observed" && xgOwned.pooledRSquared >= 0.5, true);
+  assert.equal(
+    resultOwned.pooledRSquared !== "not_observed" && resultOwned.pooledRSquared < 0.5,
+    true,
+  );
+  assert.deepEqual(
+    decideTacticalAgencyChanceToResultOwner([xgOwned, resultOwned]),
+    { owner: "mixed", held: false },
+  );
+  assert.deepEqual(
+    decideTacticalAgencyChanceToResultOwner([xgOwned, xgOwned]),
+    { owner: "opportunity_xg_magnitude", held: true },
+  );
+});
+
 function materialityResult(input: {
   readonly optimisticCeiling: number;
   readonly optimisticExposure: number;
@@ -695,10 +732,56 @@ function materialityResult(input: {
       { responseId: "high_pressing|left", winShare: 0.5 + input.optimisticCeiling },
       { responseId: "low_block|right", winShare: 0.5 + input.optimisticExposure },
     ],
+    replayChannelMeans: [
+      {
+        responseId: "high_pressing|left",
+        opportunityDifferential: 1,
+        expectedGoalsDifferential: 0.2,
+        goalDifferential: 0.1,
+      },
+      {
+        responseId: "low_block|right",
+        opportunityDifferential: -1,
+        expectedGoalsDifferential: -0.2,
+        goalDifferential: -0.1,
+      },
+    ],
+    contextFreeChannelMean: {
+      opportunityDifferential: 0,
+      expectedGoalsDifferential: 0,
+      goalDifferential: 0,
+    },
     optimisticBestResponseId: "high_pressing|left",
     optimisticExposedResponseId: "low_block|right",
     optimisticCounterMoveDeltas: [input.optimisticCeiling, input.optimisticCeiling],
     optimisticExposureDeltas: [input.optimisticExposure, input.optimisticExposure],
+  };
+}
+
+function materialityAttributionResult(
+  kind: "aligned" | "weak",
+  populationWeightCount: number,
+): TacticalAgencyConditionedMaterialityContextResult {
+  const responseIds = [
+    "direct_play|balanced",
+    "high_pressing|left",
+    "low_block|right",
+  ] as const;
+  const winShares = kind === "aligned" ? [0.4, 0.5, 0.6] : [0.4, 0.6, 0.5];
+  const base = materialityResult({ optimisticCeiling: 0.02, optimisticExposure: -0.02 });
+  return {
+    ...base,
+    populationWeightCount,
+    replayWinShares: responseIds.map((responseId, index) => ({
+      responseId,
+      winShare: winShares[index] as number,
+    })),
+    replayChannelMeans: responseIds.map((responseId, index) => ({
+      responseId,
+      opportunityDifferential: index - 1,
+      expectedGoalsDifferential: index - 1,
+      goalDifferential: (winShares[index] as number) * 2 - 1,
+    })),
   };
 }
 

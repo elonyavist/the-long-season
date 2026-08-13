@@ -1233,6 +1233,18 @@ export interface TacticalAgencyConditionedReplayContextResult {
   readonly contextFreeDeltas: readonly number[];
 }
 
+/** Non-result means retained from the same canonical matches as one replay row. */
+export interface TacticalAgencyConditionedMaterialityChannelMean {
+  readonly opportunityDifferential: number;
+  readonly expectedGoalsDifferential: number;
+  readonly goalDifferential: number;
+}
+
+interface TacticalAgencyReplayObservation
+  extends TacticalAgencyConditionedMaterialityChannelMean {
+  readonly winShare: number;
+}
+
 /** Full replay row used only to attribute B2's sub-material selected result. */
 export interface TacticalAgencyConditionedMaterialityContextResult
   extends TacticalAgencyConditionedReplayContextResult {
@@ -1240,6 +1252,10 @@ export interface TacticalAgencyConditionedMaterialityContextResult
     readonly responseId: string;
     readonly winShare: number;
   }[];
+  readonly replayChannelMeans: readonly (TacticalAgencyConditionedMaterialityChannelMean & {
+    readonly responseId: string;
+  })[];
+  readonly contextFreeChannelMean: TacticalAgencyConditionedMaterialityChannelMean;
   readonly optimisticBestResponseId: string;
   readonly optimisticExposedResponseId: string;
   readonly optimisticCounterMoveDeltas: readonly number[];
@@ -1293,9 +1309,9 @@ export function runTacticalAgencyConditionedMaterialityPartition(input: {
     );
     const replayValuesByResponse = new Map(input.responses.map((response) => [
       response.responseId,
-      [] as number[],
+      [] as TacticalAgencyReplayObservation[],
     ]));
-    const contextFreeValues: number[] = [];
+    const contextFreeValues: TacticalAgencyReplayObservation[] = [];
     for (
       let pairIndex = 0;
       pairIndex < TACTICAL_AGENCY_B2_REPLAY_SEEDS_PER_CONTEXT;
@@ -1308,8 +1324,8 @@ export function runTacticalAgencyConditionedMaterialityPartition(input: {
       for (const ownIsHome of [true, false]) {
         const seed = `${input.replaySeedPrefix}|${context.contextId}|${pairIndex}|${ownIsHome ? "h" : "a"}`;
         for (const response of input.responses) {
-          (replayValuesByResponse.get(response.responseId) as number[]).push(
-            tacticalAgencyReplayWinShare({
+          (replayValuesByResponse.get(response.responseId) as TacticalAgencyReplayObservation[]).push(
+            tacticalAgencyReplayObservation({
               context,
               response,
               opponentResponse,
@@ -1321,14 +1337,27 @@ export function runTacticalAgencyConditionedMaterialityPartition(input: {
           );
         }
         const contextFreeValuesForResponse = replayValuesByResponse.get(contextFreeResponse.responseId);
-        contextFreeValues.push(
-          contextFreeValuesForResponse?.[contextFreeValuesForResponse.length - 1] ?? 0,
-        );
+        const contextFreeValue = contextFreeValuesForResponse?.[contextFreeValuesForResponse.length - 1];
+        if (contextFreeValue === undefined) {
+          throw new TacticalAgencyAuditError(
+            "missing_telemetry",
+            `B2 materiality lost context-free telemetry for ${context.contextId}`,
+          );
+        }
+        contextFreeValues.push(contextFreeValue);
       }
     }
     const replayWinShares = input.responses.map((response) => ({
       responseId: response.responseId,
-      winShare: mean(replayValuesByResponse.get(response.responseId) ?? []),
+      winShare: mean((replayValuesByResponse.get(response.responseId) ?? []).map(({ winShare }) =>
+        winShare)),
+    }));
+    const replayChannelMeans = input.responses.map((response) => ({
+      responseId: response.responseId,
+      ...meanTacticalAgencyReplayChannels(
+        replayValuesByResponse.get(response.responseId) ?? [],
+        context.contextId,
+      ),
     }));
     const replayRanked = rankTacticalAgencyResponses(replayWinShares);
     const replayReverseRanked = rankTacticalAgencyResponses(replayWinShares, true);
@@ -1342,12 +1371,15 @@ export function runTacticalAgencyConditionedMaterialityPartition(input: {
       replayReverseRanked[0]?.responseId,
       context.contextId,
     );
-    const values = (response: TacticalAgencyConditionedResponse): readonly number[] =>
+    const values = (response: TacticalAgencyConditionedResponse): readonly TacticalAgencyReplayObservation[] =>
       replayValuesByResponse.get(response.responseId) ?? [];
-    const bestValues = values(bestResponse);
-    const exposedValues = values(exposedResponse);
-    const optimisticBestValues = values(optimisticBestResponse);
-    const optimisticExposedValues = values(optimisticExposedResponse);
+    const winShares = (response: TacticalAgencyConditionedResponse): readonly number[] =>
+      values(response).map(({ winShare }) => winShare);
+    const bestValues = winShares(bestResponse);
+    const exposedValues = winShares(exposedResponse);
+    const optimisticBestValues = winShares(optimisticBestResponse);
+    const optimisticExposedValues = winShares(optimisticExposedResponse);
+    const contextFreeWinShares = contextFreeValues.map(({ winShare }) => winShare);
     return {
       contextIndex: context.contextIndex,
       contextId: context.contextId,
@@ -1358,19 +1390,24 @@ export function runTacticalAgencyConditionedMaterialityPartition(input: {
       selectionWinShares,
       bestReplayWinShare: mean(bestValues),
       exposedReplayWinShare: mean(exposedValues),
-      contextFreeReplayWinShare: mean(contextFreeValues),
+      contextFreeReplayWinShare: mean(contextFreeWinShares),
       counterMoveDeltas: bestValues.map((value, index) =>
-        value - (contextFreeValues[index] as number)),
+        value - (contextFreeWinShares[index] as number)),
       exposureDeltas: exposedValues.map((value, index) =>
-        value - (contextFreeValues[index] as number)),
-      contextFreeDeltas: contextFreeValues.map((value) => value - 0.5),
+        value - (contextFreeWinShares[index] as number)),
+      contextFreeDeltas: contextFreeWinShares.map((value) => value - 0.5),
       replayWinShares,
+      replayChannelMeans,
+      contextFreeChannelMean: meanTacticalAgencyReplayChannels(
+        contextFreeValues,
+        context.contextId,
+      ),
       optimisticBestResponseId: optimisticBestResponse.responseId,
       optimisticExposedResponseId: optimisticExposedResponse.responseId,
       optimisticCounterMoveDeltas: optimisticBestValues.map((value, index) =>
-        value - (contextFreeValues[index] as number)),
+        value - (contextFreeWinShares[index] as number)),
       optimisticExposureDeltas: optimisticExposedValues.map((value, index) =>
-        value - (contextFreeValues[index] as number)),
+        value - (contextFreeWinShares[index] as number)),
     };
   });
 }
@@ -1474,7 +1511,7 @@ export function runTacticalAgencyConditionedReplayPartition(input: {
       }
       for (const ownIsHome of [true, false]) {
         const replayKey = `${context.contextId}|${pairIndex}|${ownIsHome ? "h" : "a"}`;
-        bestValues.push(tacticalAgencyReplayWinShare({
+        bestValues.push(tacticalAgencyReplayObservation({
           context,
           response: bestResponse,
           opponentResponse,
@@ -1482,8 +1519,8 @@ export function runTacticalAgencyConditionedReplayPartition(input: {
           ownIsHome,
           engineConfig: input.engineConfig,
           matchTacticsCalibration: input.matchTacticsCalibration,
-        }));
-        exposedValues.push(tacticalAgencyReplayWinShare({
+        }).winShare);
+        exposedValues.push(tacticalAgencyReplayObservation({
           context,
           response: exposedResponse,
           opponentResponse,
@@ -1491,8 +1528,8 @@ export function runTacticalAgencyConditionedReplayPartition(input: {
           ownIsHome,
           engineConfig: input.engineConfig,
           matchTacticsCalibration: input.matchTacticsCalibration,
-        }));
-        contextFreeValues.push(tacticalAgencyReplayWinShare({
+        }).winShare);
+        contextFreeValues.push(tacticalAgencyReplayObservation({
           context,
           response: contextFreeResponse,
           opponentResponse,
@@ -1500,7 +1537,7 @@ export function runTacticalAgencyConditionedReplayPartition(input: {
           ownIsHome,
           engineConfig: input.engineConfig,
           matchTacticsCalibration: input.matchTacticsCalibration,
-        }));
+        }).winShare);
       }
     }
 
@@ -1536,17 +1573,17 @@ function meanTacticalAgencyReplayWinShare(input: {
   const values: number[] = [];
   for (let pairIndex = 0; pairIndex < input.pairedSeedCount; pairIndex += 1) {
     for (const ownIsHome of [true, false]) {
-      values.push(tacticalAgencyReplayWinShare({
+      values.push(tacticalAgencyReplayObservation({
         ...input,
         seed: `${input.seedPrefix}|${input.context.contextId}|${pairIndex}|${ownIsHome ? "h" : "a"}`,
         ownIsHome,
-      }));
+      }).winShare);
     }
   }
   return mean(values);
 }
 
-function tacticalAgencyReplayWinShare(input: {
+function tacticalAgencyReplayObservation(input: {
   readonly context: TacticalAgencyConditionedReplayContext;
   readonly response: TacticalAgencyConditionedResponse;
   readonly opponentResponse: TacticalAgencyConditionedResponse;
@@ -1554,7 +1591,7 @@ function tacticalAgencyReplayWinShare(input: {
   readonly ownIsHome: boolean;
   readonly engineConfig: MatchEngineConfig;
   readonly matchTacticsCalibration: MatchTacticsCalibrationConfig;
-}): number {
+}): TacticalAgencyReplayObservation {
   const own = { ...input.context.own, tacticalDistribution: input.response.tactic };
   const opponent = { ...input.context.opponent, tacticalDistribution: input.opponentResponse.tactic };
   const result = simulateMatch({
@@ -1571,7 +1608,42 @@ function tacticalAgencyReplayWinShare(input: {
   });
   const ownGoals = input.ownIsHome ? result.score.home : result.score.away;
   const opponentGoals = input.ownIsHome ? result.score.away : result.score.home;
-  return ownGoals > opponentGoals ? 1 : ownGoals < opponentGoals ? 0 : 0.5;
+  const ownSide = input.ownIsHome ? "home" : "away";
+  const opponentSide = input.ownIsHome ? "away" : "home";
+  const telemetry = result.stats.telemetry;
+  if (telemetry === undefined) {
+    throw new TacticalAgencyAuditError(
+      "missing_telemetry",
+      `B2 replay has no canonical telemetry for ${input.context.contextId}`,
+    );
+  }
+  return {
+    opportunityDifferential:
+      result.stats[ownSide].opportunities - result.stats[opponentSide].opportunities,
+    expectedGoalsDifferential:
+      telemetry.stats[ownSide].expectedGoals - telemetry.stats[opponentSide].expectedGoals,
+    goalDifferential: ownGoals - opponentGoals,
+    winShare: ownGoals > opponentGoals ? 1 : ownGoals < opponentGoals ? 0 : 0.5,
+  };
+}
+
+function meanTacticalAgencyReplayChannels(
+  values: readonly TacticalAgencyReplayObservation[],
+  contextId: string,
+): TacticalAgencyConditionedMaterialityChannelMean {
+  if (values.length === 0) {
+    throw new TacticalAgencyAuditError(
+      "missing_telemetry",
+      `B2 materiality has no channel observations for ${contextId}`,
+    );
+  }
+  return {
+    opportunityDifferential: mean(values.map(({ opportunityDifferential }) =>
+      opportunityDifferential)),
+    expectedGoalsDifferential: mean(values.map(({ expectedGoalsDifferential }) =>
+      expectedGoalsDifferential)),
+    goalDifferential: mean(values.map(({ goalDifferential }) => goalDifferential)),
+  };
 }
 
 function mean(values: readonly number[]): number {
@@ -1671,6 +1743,64 @@ export type TacticalAgencyConditionedMaterialityOwner =
   | "asymmetric_materiality"
   | "selection_power";
 
+/** Downstream owner named from the same complete-row match observations. */
+export type TacticalAgencyChanceToResultOwner =
+  | "opportunity_xg_magnitude"
+  | "result_resolution"
+  | "stop_rethink";
+
+/** Mean within-context range of every causal result channel. */
+export interface TacticalAgencyChanceToResultRanges {
+  readonly opportunityDifferential: number;
+  readonly expectedGoalsDifferential: number;
+  readonly goalDifferential: number;
+  readonly winShare: number;
+}
+
+/** Pooled xG-to-result attribution over one independently seeded population. */
+export interface TacticalAgencyChanceToResultAttribution {
+  readonly contractVersion: "phase81a-b2-chance-to-result-v1";
+  readonly selectedContextCount: number;
+  readonly responseRowCount: number;
+  readonly ranges: TacticalAgencyChanceToResultRanges;
+  readonly covarianceContextCounts: {
+    readonly positive: number;
+    readonly negative: number;
+    readonly zero: number;
+  };
+  readonly resolutionContextCounts: {
+    readonly atOrAboveHalf: number;
+    readonly belowHalf: number;
+  };
+  readonly pooledSlope: number | "not_observed";
+  readonly pooledRSquared: number | "not_observed";
+  readonly classifierReachabilityHeld: boolean;
+  readonly owner: TacticalAgencyChanceToResultOwner;
+}
+
+/** Combines independently seeded owners without allowing one set to hide another. */
+export function decideTacticalAgencyChanceToResultOwner(
+  rows: readonly TacticalAgencyChanceToResultAttribution[],
+): {
+  readonly owner: TacticalAgencyChanceToResultOwner | "mixed" | "not_evaluated";
+  readonly held: boolean;
+} {
+  const owners = new Set(rows.map(({ owner }) => owner));
+  const owner = rows.length === 0
+    ? "not_evaluated" as const
+    : owners.size === 1
+      ? [...owners][0] as TacticalAgencyChanceToResultOwner
+      : "mixed" as const;
+  return {
+    owner,
+    held: rows.length > 0
+      && rows.every(({ classifierReachabilityHeld }) => classifierReachabilityHeld)
+      && owner !== "mixed"
+      && owner !== "not_evaluated"
+      && owner !== "stop_rethink",
+  };
+}
+
 /** Complete optimistic bound over one seed set's full replay rows. */
 export interface TacticalAgencyConditionedMaterialitySummary {
   readonly contractVersion: "phase81a-b2-materiality-attribution-v1";
@@ -1680,6 +1810,7 @@ export interface TacticalAgencyConditionedMaterialitySummary {
   readonly selectionRegret: number;
   readonly exposureRegret: number;
   readonly owner: TacticalAgencyConditionedMaterialityOwner;
+  readonly chanceToResult: TacticalAgencyChanceToResultAttribution;
 }
 
 /** Attributes the red selected arms without treating same-stream max/min as a gate. */
@@ -1709,6 +1840,7 @@ export function summarizeTacticalAgencyConditionedMateriality(input: {
   );
   const ceilingHeld = optimisticCounterMoveCeiling.value >= 0.045;
   const exposureHeld = optimisticCounterMoveExposure.value <= -0.045;
+  const chanceToResult = summarizeTacticalAgencyChanceToResult(input.contexts);
   return {
     contractVersion: "phase81a-b2-materiality-attribution-v1",
     acceptedReplay,
@@ -1723,7 +1855,135 @@ export function summarizeTacticalAgencyConditionedMateriality(input: {
       : ceilingHeld || exposureHeld
         ? "asymmetric_materiality"
         : "minute_effect_materiality",
+    chanceToResult,
   };
+}
+
+function summarizeTacticalAgencyChanceToResult(
+  contexts: readonly TacticalAgencyConditionedMaterialityContextResult[],
+): TacticalAgencyChanceToResultAttribution {
+  if (contexts.length === 0) {
+    throw new TacticalAgencyAuditError(
+      "empty_work_items",
+      "B2 chance-to-result attribution has no contexts",
+    );
+  }
+  const weightTotal = contexts.reduce(
+    (sum, context) => sum + context.populationWeightCount,
+    0,
+  );
+  const rangeTotals: Record<keyof TacticalAgencyChanceToResultRanges, number> = {
+    opportunityDifferential: 0,
+    expectedGoalsDifferential: 0,
+    goalDifferential: 0,
+    winShare: 0,
+  };
+  let covariancePositive = 0;
+  let covarianceNegative = 0;
+  let covarianceZero = 0;
+  let atOrAboveHalf = 0;
+  let belowHalf = 0;
+  let pooledCovariance = 0;
+  let pooledExpectedGoalsVariance = 0;
+  let pooledWinShareVariance = 0;
+  let responseRowCount = 0;
+
+  for (const context of contexts) {
+    const winShareByResponse = new Map(context.replayWinShares.map((row) => [
+      row.responseId,
+      row.winShare,
+    ]));
+    const rows = context.replayChannelMeans.map((row) => {
+      const winShare = winShareByResponse.get(row.responseId);
+      if (winShare === undefined) {
+        throw new TacticalAgencyAuditError(
+          "missing_telemetry",
+          `B2 chance-to-result attribution lost ${row.responseId} in ${context.contextId}`,
+        );
+      }
+      return { ...row, winShare };
+    });
+    if (rows.length === 0 || rows.length !== context.replayWinShares.length) {
+      throw new TacticalAgencyAuditError(
+        "missing_telemetry",
+        `B2 chance-to-result rows disagree in ${context.contextId}`,
+      );
+    }
+    const contextWeight = context.populationWeightCount / weightTotal;
+    for (const key of Object.keys(rangeTotals) as (keyof TacticalAgencyChanceToResultRanges)[]) {
+      const values = rows.map((row) => row[key]);
+      rangeTotals[key] += contextWeight * (Math.max(...values) - Math.min(...values));
+    }
+
+    const meanExpectedGoals = mean(rows.map(({ expectedGoalsDifferential }) =>
+      expectedGoalsDifferential));
+    const meanWinShare = mean(rows.map(({ winShare }) => winShare));
+    let contextCovariance = 0;
+    let contextExpectedGoalsVariance = 0;
+    let contextWinShareVariance = 0;
+    const rowWeight = contextWeight / rows.length;
+    for (const row of rows) {
+      const centeredExpectedGoals = row.expectedGoalsDifferential - meanExpectedGoals;
+      const centeredWinShare = row.winShare - meanWinShare;
+      contextCovariance += centeredExpectedGoals * centeredWinShare;
+      contextExpectedGoalsVariance += centeredExpectedGoals ** 2;
+      contextWinShareVariance += centeredWinShare ** 2;
+      pooledCovariance += rowWeight * centeredExpectedGoals * centeredWinShare;
+      pooledExpectedGoalsVariance += rowWeight * centeredExpectedGoals ** 2;
+      pooledWinShareVariance += rowWeight * centeredWinShare ** 2;
+    }
+    if (contextCovariance > 0) covariancePositive += 1;
+    else if (contextCovariance < 0) covarianceNegative += 1;
+    else covarianceZero += 1;
+    const contextRSquared = contextExpectedGoalsVariance > 0 && contextWinShareVariance > 0
+      ? clampUnit(
+          contextCovariance ** 2
+          / (contextExpectedGoalsVariance * contextWinShareVariance),
+        )
+      : 0;
+    if (contextRSquared >= 0.5) atOrAboveHalf += 1;
+    else belowHalf += 1;
+    responseRowCount += rows.length;
+  }
+
+  const pooledSlope = pooledExpectedGoalsVariance > 0
+    ? pooledCovariance / pooledExpectedGoalsVariance
+    : "not_observed" as const;
+  const pooledRSquared = pooledExpectedGoalsVariance > 0 && pooledWinShareVariance > 0
+    ? clampUnit(
+        pooledCovariance ** 2
+        / (pooledExpectedGoalsVariance * pooledWinShareVariance),
+      )
+    : "not_observed" as const;
+  const classifierReachabilityHeld = atOrAboveHalf > 0 && belowHalf > 0;
+  const owner = pooledSlope === "not_observed"
+      || pooledRSquared === "not_observed"
+      || pooledSlope <= 0
+    ? "stop_rethink" as const
+    : pooledRSquared >= 0.5
+      ? "opportunity_xg_magnitude" as const
+      : "result_resolution" as const;
+
+  return {
+    contractVersion: "phase81a-b2-chance-to-result-v1",
+    selectedContextCount: contexts.length,
+    responseRowCount,
+    ranges: rangeTotals,
+    covarianceContextCounts: {
+      positive: covariancePositive,
+      negative: covarianceNegative,
+      zero: covarianceZero,
+    },
+    resolutionContextCounts: { atOrAboveHalf, belowHalf },
+    pooledSlope,
+    pooledRSquared,
+    classifierReachabilityHeld,
+    owner,
+  };
+}
+
+function clampUnit(value: number): number {
+  return Math.max(0, Math.min(1, value));
 }
 
 function weightedReplayEstimate(

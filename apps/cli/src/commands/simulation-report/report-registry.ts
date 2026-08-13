@@ -1723,6 +1723,8 @@ export async function executeSimulationReportModule(
       return {
         data: toSimulationReportJsonValue({
           sets: facts.sets,
+          downstreamOwner: facts.downstreamOwner,
+          downstreamAttributionHeld: facts.downstreamAttributionHeld,
           decision: facts.decision,
           execution: {
             workerCount: facts.workerCount,

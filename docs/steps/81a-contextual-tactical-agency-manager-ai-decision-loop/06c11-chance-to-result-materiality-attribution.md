@@ -2,8 +2,9 @@
 
 ## Status
 
-Planned. Step 06C10 proved that the canonical analytic response space is
-diverse and coherent while final-result materiality remains sub-target.
+Done: `MIXED`. Step 06C10 proved that the canonical analytic response space is
+diverse and coherent while final-result materiality remains sub-target; the
+two independent populations now disagree on the downstream owner.
 
 ## Goal
 
@@ -70,10 +71,14 @@ the aggregate owner may be reported but cannot authorize implementation.
 - `packages/simulation-tools/src/tactical-agency/tactical-agency-audit.ts` and
   test; retain canonical telemetry once and derive the downstream attribution;
 - `packages/simulation-tools/src/index.ts` only if its explicit exports need a
-  new public type;
+  new public type; the materiality summary is exported through this barrel, so
+  its downstream-attribution types must remain available to legal consumers;
 - `apps/cli/src/commands/simulation-report/tactical-agency-section.ts`; expose
   the attribution through the existing current-materiality profile, never a
   new report entrypoint;
+- `apps/cli/src/commands/simulation-report/report-registry.ts`; the existing
+  profile adapter must forward the aggregate owner and reachability decision,
+  not strand them in the producer while exposing only per-set details;
 - `docs/audits/PHASE_81A_CHANCE_TO_RESULT_MATERIALITY_ATTRIBUTION.md` **(new)**;
 - `docs/audits/README.md`;
 - `docs/PROJECT_STATUS.md`;
@@ -103,3 +108,17 @@ the frozen result gate is red; attribution is evidence, not a replacement pass.
 One canonical match execution supplies every downstream channel, the two seed
 sets independently name or disagree on the owner, both classifier branches are
 observed on real contexts, and no gameplay fact changes.
+
+## Result
+
+The in-sample set reports `R^2 = 0.48724` and names `result_resolution`; the
+untouched out-of-sample set reports `0.55516` and names
+`opportunity_xg_magnitude`. Both have positive xG-result covariance in `31/32`
+contexts and both exercise each side of the `0.5` classifier on real rows.
+
+The frozen aggregate decision is therefore `MIXED`; no correction is
+authorized. Mean best-to-worst response ranges are only `0.1764/0.2455` xG and
+`0.04494/0.04679` win share across the two sets. Continuing now requires a
+product decision between retaining the `+0.045/-0.045` target with deeper
+structural execution, reconsidering the target premise, or preregistering a
+larger independent attribution population. Step 07 stays closed.

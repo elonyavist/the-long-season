@@ -16,6 +16,11 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHANCE_TO_RESULT_MATERIALITY_ATTRIBUTION.md` — **`MIXED`.** The
+  same canonical matches retain chances, xG, goals and results. In-sample
+  `R^2=0.4872` names result resolution; OOS `0.5552` names xG magnitude. Both
+  classifier branches are real; no gameplay correction is authorized.
+
 - `PHASE_81A_CANONICAL_THREAT_DERIVATION.md` — ownership correction accepted,
   gameplay unchanged. Canonical Phase 1 passes twice with `6/9` best-response
   signatures and no incoherence; complete-row result materiality stays

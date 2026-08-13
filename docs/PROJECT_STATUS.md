@@ -23,10 +23,10 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **06C10 canonical Phase 1 `GO`, materiality `REFINE`:** shared
-  opportunity math retains `6/9` best-response signatures twice, but complete
-  rows reach only about `+0.025/-0.021`. Step 06C11 attributes chance/xG versus
-  result dilution; Step 07 remains closed.
+- Phase 81A **06C11 `MIXED`:** the same complete rows give xG-to-result
+  `R^2=0.4872/0.5552`; in-sample names resolution, OOS names xG magnitude.
+  Both branches are real, so no correction is authorized. Step 07 remains
+  closed pending the documented target/deeper-redesign/replication product fork.
 - **L6.31 stays green twice:** routine-youth runway improves ready replacements
   `+0.1363/+0.1034`, leaders `+0.0810/+0.0905`, with exact immediate purity.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;

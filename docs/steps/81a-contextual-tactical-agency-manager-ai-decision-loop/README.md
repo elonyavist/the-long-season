@@ -79,8 +79,9 @@ Checkpoint B2 Phase 2 remains `REFINE`. Steps 06C6-06C9 rejected every final
 translation candidate while retaining two bit-exact ownership migrations.
 Step 06C10 now shares the exact opportunity derivation between analysis and
 the minute loop: Phase 1 passes twice, but result materiality stays red. Step
-06C11 attributes chance/xG separation versus final-result dilution; Step 07
-stays closed.
+06C11 records `MIXED`: in-sample names result resolution and out-of-sample
+names xG magnitude around the frozen `R^2=0.5` split. No gameplay correction
+is authorized; Step 07 stays closed pending the product fork recorded there.
 
 This phase is governed by
 [`PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md`](../../audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md).
@@ -332,7 +333,7 @@ contexts; it never owns the analytic diversity gate.
 | 06C8 | [route quality/volume interaction](06c8-route-quality-volume-interaction.md) | yes | Done: `STOP / RETHINK`, removed |
 | 06C9 | [possession-to-opportunity translation](06c9-possession-opportunity-translation.md) | yes | Done: migration accepted, candidates rejected |
 | 06C10 | [canonical threat derivation](06c10-canonical-threat-derivation.md) | no | Done: canonical Phase 1 passes, materiality `REFINE` |
-| 06C11 | [chance-to-result materiality attribution](06c11-chance-to-result-materiality-attribution.md) | no | Active: identify the downstream owner |
+| 06C11 | [chance-to-result materiality attribution](06c11-chance-to-result-materiality-attribution.md) | no | Done: `MIXED`, product decision required |
 | 07 | [player task execution](07-player-task-execution.md) | yes | Step 08 |
 | 08 | [squad identity and lateral execution](08-squad-identity-and-lateral-execution.md) | yes | Step 09 |
 | 09 | [Checkpoint C player context](09-checkpoint-c-player-context.md) | no | GO authorizes 10 |

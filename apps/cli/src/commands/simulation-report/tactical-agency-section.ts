@@ -2,6 +2,7 @@ import {
   buildTacticalAgencyConditionedResponses,
   buildTacticalAgencyStructuralActions,
   buildTacticalAgencyAuditReport,
+  decideTacticalAgencyChanceToResultOwner,
   decideTacticalAgencyConditionedOwner,
   firstCoherentTacticalAgencyComponent,
   poolTacticalAgencyLowBlockResults,
@@ -23,6 +24,7 @@ import {
   type TacticalAgencyConditionedReplaySummary,
   type TacticalAgencyConditionedMaterialityOwner,
   type TacticalAgencyConditionedMaterialitySummary,
+  type TacticalAgencyChanceToResultOwner,
   type TacticalAgencyRoleSummary,
   type TacticalAgencySelectionRow,
   type TacticalAgencyStructuralAnalysis,
@@ -306,6 +308,8 @@ export interface TacticalAgencyB2CurrentMaterialityProfileFacts {
     readonly attribution: TacticalAgencyConditionedMaterialitySummary | null;
     readonly materialityHeld: boolean;
   }[];
+  readonly downstreamOwner: TacticalAgencyChanceToResultOwner | "mixed" | "not_evaluated";
+  readonly downstreamAttributionHeld: boolean;
   readonly decision: "MATERIALITY_PASS" | "REFINE" | "STOP_RETHINK";
   readonly workerCount: number;
   readonly elapsedMilliseconds: number;
@@ -579,8 +583,16 @@ export async function createTacticalAgencyB2CurrentMaterialityProfileFacts(input
       && set.attribution.optimisticCounterMoveCeiling.value >= 0.045
       && set.attribution.optimisticCounterMoveExposure.value <= -0.045,
   }));
+  const downstreamRows = sets.flatMap(({ attribution }) =>
+    attribution === null ? [] : [attribution.chanceToResult]);
+  const downstreamDecision = decideTacticalAgencyChanceToResultOwner(downstreamRows);
+  const downstreamOwner = downstreamDecision.owner;
+  const downstreamAttributionHeld = downstreamRows.length === sets.length
+    && downstreamDecision.held;
   return {
     sets,
+    downstreamOwner,
+    downstreamAttributionHeld,
     decision: sets.some(({ phaseOneDecision }) => phaseOneDecision === "STOP_RETHINK")
       ? "STOP_RETHINK"
       : sets.every(({ phaseOneDecision, populationHeld, materialityHeld }) =>
