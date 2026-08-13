@@ -23,10 +23,10 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **Checkpoint D `STOP / RETHINK`:** route-derived own fit reaches only
-  `+0.4018/+0.4643` against `+1.5`; mismatch passes at `-1.5313/-1.6205`.
-  Eight complete policies and zero opponent reads hold, but historical football
-  is red. Steps 13-16 stay closed until the MVP product meaning is chosen.
+- Phase 81A **Step 12A active:** Checkpoint D stopped at `+0.4018/+0.4643` own
+  fit. Product option B is accepted: six specialised own-squad plans, no
+  opponent reads, unchanged point bands and two fresh powered D2 sets are
+  frozen before implementation. Steps 13-16 remain closed until D2 GO.
 - **L6.31 stays green twice:** routine-youth runway improves ready replacements
   `+0.1363/+0.1034`, leaders `+0.0810/+0.0905`, with exact immediate purity.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;

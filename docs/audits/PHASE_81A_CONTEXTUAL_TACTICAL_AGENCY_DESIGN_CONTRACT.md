@@ -1957,3 +1957,26 @@ PASS.
 
 La specifica esecutiva e le popolazioni complete vivono in
 [`PHASE_81A_MVP_OWN_SQUAD_AGENCY_AMENDMENT.md`](./PHASE_81A_MVP_OWN_SQUAD_AGENCY_AMENDMENT.md).
+
+## Amendment A8 - Specialised Own-Squad Plans
+
+Checkpoint D ha falsificato i tre profili generici: il miglior tentativo
+strutturale rende il mismatch materialmente dannoso ma porta la scelta corretta
+solo a `+0.4018/+0.4643` punti stagionali contro il floor `+1.5`. Il 2026-08-13
+il prodotto ha scelto l'opzione B: l'AI resta priva di fatti avversari, mentre
+il vocabolario diventa composto da piani calcistici realmente specializzati.
+
+`balanced`, `patient_possession`, `high_press`, `direct_transition`,
+`wide_overload` e `compact_counter` sono condivisi da manager e AI. Nessuno
+aggiunge forza o risultato: ciascuno configura soltanto gli input tattici
+esistenti e dichiara una domanda conservata sulle dodici capacità canoniche.
+Il contenuto esatto è congelato prima dell'implementazione.
+
+Checkpoint D2 usa due nuovi set mai osservati, sette mondi ciascuno, e mantiene
+immutate le bande `+1.5..+6.0`, `-6.0..-1.5`, blind neutrale e spread `>=3.0`.
+La corsia storica avanza gli stessi mondi per cinque stagioni, ottenendo 35
+stagioni per set affinché anche i reader upset rari abbiano un denominatore
+interpretabile. Un fallimento apre attribuzione, non tuning post-output.
+
+La specifica completa vive in
+[`PHASE_81A_SPECIALISED_OWN_SQUAD_PLANS_AMENDMENT.md`](./PHASE_81A_SPECIALISED_OWN_SQUAD_PLANS_AMENDMENT.md).

@@ -2,10 +2,10 @@
 
 ## Status
 
-Blocked. Checkpoint D recorded `STOP / RETHINK` on 2026-08-13; this step may not
-start until a replacement own-squad product contract is frozen and its gate
-returns GO. The previously planned implementation scope is retained below for
-review, not authorized execution.
+Blocked. Product option B is frozen by Step 12A, but this step may not start
+until specialised-plan implementation and Checkpoint D2 both return GO. The
+previously planned implementation scope is retained below for review, not
+authorized execution.
 
 ## Goal
 

@@ -16,10 +16,14 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_SPECIALISED_OWN_SQUAD_PLANS_AMENDMENT.md` — Amendment A8. Product
+  option B: six frozen own-squad plans, no opponent reads, unchanged season-point
+  bands and fresh powered D2 populations before implementation.
+
 - `PHASE_81A_CHECKPOINT_D_OWN_SQUAD_AGENCY.md` — **`STOP / RETHINK`.** Eight
   complete modal policies and mismatch cost are real, but structurally derived
   own fit reaches only `+0.4018/+0.4643` season points against the frozen `+1.5`
-  floor. Steps 13-16 remain closed pending the product meaning of the MVP.
+  floor. Option B supersedes the product fork; Steps 12A-C now own the retry.
 
 - `PHASE_81A_MVP_OWN_SQUAD_AGENCY_AMENDMENT.md` — Amendment A7. Retains the
   failed adversarial target for future opponent-aware AI and freezes the current
