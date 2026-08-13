@@ -117,6 +117,20 @@ describe("simulation-report planner", () => {
     });
   });
 
+  it("locks Checkpoint C to A2 plus both untouched downstream populations", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-c",
+      workerCount: 7,
+    });
+    expect(plan.measurementRequest).toMatchObject({
+      worldCount: 42,
+      seasonCount: 1,
+      workerCount: 7,
+      seedPrefix: "phase81a-c-player-context",
+      includedSectionIds: ["tactical_agency"],
+    });
+  });
+
   it("locks B2.1 attribution to the same population and seven workers", () => {
     const plan = createSimulationReportPlan({
       profileId: "phase81a-b2-attribution",

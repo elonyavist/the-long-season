@@ -16,6 +16,11 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_C_PLAYER_CONTEXT.md` — **`REFINE: product premise
+  review`.** All player-context, diversity, dominance and blind-neutral gates
+  pass across `42` worlds; only the historical `+0.045/-0.045` adversarial
+  target is red. Steps 07-08 remain accepted and Step 09A owns the MVP contract.
+
 - `PHASE_81A_LATERAL_PLAYER_EXECUTION.md` — Step 08 mechanism `GO`, B2 still
   `REFINE`. Player quality, side capacity and focus already form one canonical
   chain; adding another lateral multiplier would duplicate the decision.

@@ -373,6 +373,65 @@ export interface TacticalAgencyB2CurrentMaterialityProfileFacts {
   readonly worldSeeds: readonly string[];
 }
 
+/** Checkpoint C composition of the frozen player-context and materiality facts. */
+export interface TacticalAgencyCProfileFacts {
+  readonly a2: CheckpointA2Facts;
+  readonly downstream: TacticalAgencyB2CurrentMaterialityProfileFacts;
+  readonly originalDominance: {
+    readonly invariants: readonly TacticalShapeInvariantResult[];
+    readonly held: boolean;
+  };
+  readonly decision:
+    | "GO"
+    | "REFINE_PRODUCT_PREMISE"
+    | "REFINE_PLAYER_CONTEXT"
+    | "STOP_RETHINK";
+  readonly workerCount: number;
+  readonly elapsedMilliseconds: number;
+  readonly calibrationVersions: Readonly<Record<string, string>>;
+  readonly worldSeeds: readonly string[];
+}
+
+/**
+ * Fail-closed Checkpoint C truth table.
+ *
+ * Materiality is deliberately last: it may name a product-premise review only
+ * after squad context, analytic diversity, dominance, blind neutrality and
+ * cross-population ownership all hold independently.
+ */
+export function decideTacticalAgencyCheckpointC(input: {
+  readonly a2Decision: CheckpointA2Facts["decision"];
+  readonly phaseOneDecisions: readonly (
+    TacticalAgencyB2CurrentMaterialityProfileFacts["sets"][number]["phaseOneDecision"]
+  )[];
+  readonly populationHeld: readonly boolean[];
+  readonly attributionAvailable: readonly boolean[];
+  readonly blindNeutralHeld: readonly boolean[];
+  readonly materialityHeld: readonly boolean[];
+  readonly downstreamOwner: TacticalAgencyB2CurrentMaterialityProfileFacts["downstreamOwner"];
+  readonly downstreamAttributionHeld: boolean;
+  readonly originalDominanceHeld: boolean;
+}): TacticalAgencyCProfileFacts["decision"] {
+  const contradictoryEvidence = input.a2Decision === "STOP_RETHINK"
+    || input.phaseOneDecisions.some((decision) => decision === "STOP_RETHINK")
+    || input.attributionAvailable.some((available) => !available)
+    || input.downstreamOwner === "mixed"
+    || input.downstreamOwner === "not_evaluated"
+    || !input.downstreamAttributionHeld;
+  if (contradictoryEvidence) return "STOP_RETHINK";
+
+  const playerContextHeld = input.a2Decision === "GO"
+    && input.phaseOneDecisions.every((decision) => decision === "PASS_PHASE_1")
+    && input.populationHeld.every(Boolean)
+    && input.blindNeutralHeld.every(Boolean)
+    && input.originalDominanceHeld;
+  if (!playerContextHeld) return "REFINE_PLAYER_CONTEXT";
+
+  return input.materialityHeld.every(Boolean)
+    ? "GO"
+    : "REFINE_PRODUCT_PREMISE";
+}
+
 interface TacticalAgencyB2MaterialityMeasurement {
   readonly sets: readonly {
     readonly setName: string;
@@ -653,6 +712,87 @@ export async function createTacticalAgencyB2DownstreamReplicationProfileFacts(in
     calibrationVersionKey: "tacticalAgencyDownstreamReplication",
     calibrationVersion: "phase81a-b2-downstream-replication-v1",
   });
+}
+
+/** Runs Checkpoint C by composing the locked A2, downstream B2 and dominance readers. */
+export async function createTacticalAgencyCProfileFacts(input: {
+  readonly workerCount: number;
+}): Promise<TacticalAgencyCProfileFacts> {
+  if (input.workerCount !== 7) {
+    throw new Error(`Checkpoint C requires exactly 7 workers: ${input.workerCount}`);
+  }
+  const startedAt = performance.now();
+  const a2Facts = await createTacticalAgencyA2ProfileFacts({
+    worldSeed: DEFAULT_TACTICAL_AGENCY_WORLD_SEED,
+    worldCount: DEFAULT_TACTICAL_AGENCY_WORLD_COUNT,
+    roundCount: DEFAULT_TACTICAL_AGENCY_ROUND_COUNT,
+    seedPrefix: DEFAULT_TACTICAL_AGENCY_SEED_PREFIX,
+    pairedSeedCount: DEFAULT_TACTICAL_AGENCY_PAIRED_SEEDS,
+    workerCount: input.workerCount,
+    checkpointMode: true,
+  });
+  const downstream = await createTacticalAgencyB2DownstreamReplicationProfileFacts(input);
+  const invariants = createTacticalShapeSectionFacts().report.invariants.filter(
+    ({ key }) => key === "no_dominant_composition"
+      || key === "no_dominant_formation"
+      || key === "no_dominant_tactic",
+  );
+  const originalDominance = {
+    invariants,
+    held: invariants.length === 3 && invariants.every(({ status }) => status === "pass"),
+  };
+  const attributionAvailable = downstream.sets.map(({ attribution }) => attribution !== null);
+  const blindNeutralHeld = downstream.sets.map(({ attribution }) =>
+    attribution !== null && replayBlindNeutralHeld(attribution.acceptedReplay));
+  const decision = decideTacticalAgencyCheckpointC({
+    a2Decision: a2Facts.checkpoint.decision,
+    phaseOneDecisions: downstream.sets.map(({ phaseOneDecision }) => phaseOneDecision),
+    populationHeld: downstream.sets.map(({ populationHeld }) => populationHeld),
+    attributionAvailable,
+    blindNeutralHeld,
+    materialityHeld: downstream.sets.map(({ materialityHeld }) => materialityHeld),
+    downstreamOwner: downstream.downstreamOwner,
+    downstreamAttributionHeld: downstream.downstreamAttributionHeld,
+    originalDominanceHeld: originalDominance.held,
+  });
+
+  return {
+    a2: a2Facts.checkpoint,
+    downstream,
+    originalDominance,
+    decision,
+    workerCount: input.workerCount,
+    elapsedMilliseconds: performance.now() - startedAt,
+    calibrationVersions: mergeMatchingCalibrationVersions(
+      a2Facts.calibrationVersions,
+      downstream.calibrationVersions,
+    ),
+    worldSeeds: [...new Set([
+      ...a2Facts.checkpoint.sets.flatMap(({ worldSeeds }) => worldSeeds),
+      ...downstream.worldSeeds,
+    ])],
+  };
+}
+
+function replayBlindNeutralHeld(replay: TacticalAgencyConditionedReplaySummary): boolean {
+  return Math.abs(replay.contextFreeDelta.value) <= 0.015
+    && replay.contextFreeDelta.interval95[0] <= 0
+    && replay.contextFreeDelta.interval95[1] >= 0;
+}
+
+function mergeMatchingCalibrationVersions(
+  left: Readonly<Record<string, string>>,
+  right: Readonly<Record<string, string>>,
+): Readonly<Record<string, string>> {
+  const merged: Record<string, string> = { ...left };
+  for (const [key, value] of Object.entries(right)) {
+    const existing = merged[key];
+    if (existing !== undefined && existing !== value) {
+      throw new Error(`Checkpoint C calibration ${key} disagrees: ${existing} != ${value}`);
+    }
+    merged[key] = value;
+  }
+  return merged;
 }
 
 async function createTacticalAgencyCurrentMaterialityFacts(input: {

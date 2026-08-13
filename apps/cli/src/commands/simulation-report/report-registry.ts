@@ -23,6 +23,7 @@ import {
   createTacticalAgencyB2MaterialityProfileFacts,
   createTacticalAgencyB2ProfileFacts,
   createTacticalAgencyBProfileFacts,
+  createTacticalAgencyCProfileFacts,
   createTacticalAgencySectionFacts,
   TACTICAL_AGENCY_B_WORLD_SEED,
   TACTICAL_AGENCY_B2_DOWNSTREAM_REPLICATION_WORLD_COUNT,
@@ -74,6 +75,7 @@ export const SIMULATION_REPORT_PROFILE_IDS = [
   "phase81a-b2-materiality",
   "phase81a-b2-current-materiality",
   "phase81a-b2-downstream-replication",
+  "phase81a-c",
   "phase81a-b2-attribution",
   "phase81a-b2-identity-family",
   "phase81a-substitution-minute-l2-7x1",
@@ -507,6 +509,22 @@ export const SIMULATION_REPORT_PROFILES = {
       includedSectionIds: ["tactical_agency"],
       detail: "diagnostic",
       seedPrefix: "phase81a-b2-downstream-replication",
+      workerCount: 7,
+    },
+  },
+  "phase81a-c": {
+    id: "phase81a-c",
+    titleKey: "simulationReport.profile.phase81aC.title",
+    descriptionKey: "simulationReport.profile.phase81aC.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-c",
+      worldCount: DEFAULT_TACTICAL_AGENCY_WORLD_COUNT * 2
+        + TACTICAL_AGENCY_B2_DOWNSTREAM_REPLICATION_WORLD_COUNT * 2,
+      seasonCount: 1,
+      includedSectionIds: ["tactical_agency"],
+      detail: "diagnostic",
+      seedPrefix: "phase81a-c-player-context",
       workerCount: 7,
     },
   },
@@ -1776,6 +1794,27 @@ export async function executeSimulationReportModule(
           },
         }),
         decision: facts.decision === "MATERIALITY_PASS" ? "NOT_EVALUATED" : "FAIL",
+        calibrationVersions: facts.calibrationVersions,
+        worldSeeds: facts.worldSeeds,
+      };
+    }
+    if (request.profileId === "phase81a-c") {
+      const facts = await createTacticalAgencyCProfileFacts({
+        workerCount: request.workerCount,
+      });
+      return {
+        data: toSimulationReportJsonValue({
+          a2: facts.a2,
+          downstream: facts.downstream,
+          originalDominance: facts.originalDominance,
+          decision: facts.decision,
+          execution: {
+            workerCount: facts.workerCount,
+            partitionCount: facts.workerCount,
+            elapsedMilliseconds: facts.elapsedMilliseconds,
+          },
+        }),
+        decision: facts.decision === "GO" ? "PASS" : "FAIL",
         calibrationVersions: facts.calibrationVersions,
         worldSeeds: facts.worldSeeds,
       };

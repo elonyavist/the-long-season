@@ -23,9 +23,9 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **Step 08 Done; Step 09 next:** player-task quality already flows
-  through side capacities into focus; causal mirror proofs pass and no duplicate
-  multiplier was added. B2 stays `REFINE`; do not reduce upsets.
+- Phase 81A **Checkpoint C `REFINE: product premise review`:** all player,
+  diversity, dominance and blind-neutral gates pass across `42` worlds; only
+  historical adversarial `+0.045/-0.045` is red. Step 09A owns the MVP rewrite.
 - **L6.31 stays green twice:** routine-youth runway improves ready replacements
   `+0.1363/+0.1034`, leaders `+0.0810/+0.0905`, with exact immediate purity.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;

@@ -90,7 +90,11 @@ goal-to-result are each coherent, so reducing football variance is rejected.
 Step 07 is now complete: real attributes execute conserved tactical tasks and
 raise xG range in both untouched sets, but B2 remains `REFINE`. Step 08 owns the
 remaining lateral execution before any target review. Step 08 then proves the
-chain is already canonical and adds no duplicate multiplier; Step 09 is next.
+chain is already canonical and adds no duplicate multiplier. Checkpoint C
+records `REFINE: product_premise_review`: all player-context and structural
+gates pass, while the historical adversarial `+0.045/-0.045` target alone is
+red. Step 09A now freezes the accepted own-squad MVP contract; Steps 07-08 are
+not reopened.
 
 This phase is governed by
 [`PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md`](../../audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md).
@@ -348,7 +352,8 @@ contexts; it never owns the analytic diversity gate.
 | 06C13 | [result-resolution causal decomposition](06c13-result-resolution-causal-decomposition.md) | no | Done: `STOP / RETHINK`, no local resolver owner |
 | 07 | [player task execution](07-player-task-execution.md) | yes | Done: task identity accepted; Step 08 |
 | 08 | [squad identity and lateral execution](08-squad-identity-and-lateral-execution.md) | yes | Done: canonical chain; Step 09 |
-| 09 | [Checkpoint C player context](09-checkpoint-c-player-context.md) | no | GO authorizes 10 |
+| 09 | [Checkpoint C player context](09-checkpoint-c-player-context.md) | no | **`REFINE: product premise review`** |
+| 09A | [MVP own-squad agency contract](09a-mvp-own-squad-agency-contract.md) | no | rewrites 10-12 before implementation |
 | 10 | [manager opponent read](10-manager-opponent-read.md) | information | A1 rescope required before start |
 | 11 | [MVP AI policy - historical opponent-read plan superseded](11-ai-shared-opponent-read.md) | yes | A1 rescope required after B2 |
 | 12 | [Checkpoint D - historical shared-read plan superseded](12-checkpoint-d-manager-ai-agency.md) | no | A1 rescope required after B2 |
