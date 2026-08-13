@@ -10,6 +10,7 @@ import {
   type CareerPlayerAvailabilityState,
   type CompetitionMatchRules,
   type AppliedMatchSubstitution,
+  type MatchTacticalCommandRecord,
   type LiveMatchTeamState,
   type Player,
   type PlayerDynamicState,
@@ -569,7 +570,18 @@ export function simulateSeason(input: SimulateSeasonInput): SimulateSeasonResult
     );
     const simulatedMatch = completed.result;
     collectPlayerOpportunityStats(opportunityStats, simulatedMatch.events, matchContext);
-    const report = createMatchReport(simulatedMatch);
+    const tacticalContext = {
+      home: {
+        formation: matchSetup.home.formationKey ?? "not_observed",
+        lateralFocus: matchSetup.home.lateralFocus,
+      },
+      away: {
+        formation: matchSetup.away.formationKey ?? "not_observed",
+        lateralFocus: matchSetup.away.lateralFocus,
+      },
+      commands: completed.tacticalCommandFacts,
+    } as const;
+    const report = createMatchReport(simulatedMatch, tacticalContext);
     const contributions = buildFixtureParticipationContributions({
       fixtureId,
       seasonId: input.seasonId,
@@ -617,7 +629,10 @@ export function simulateSeason(input: SimulateSeasonInput): SimulateSeasonResult
       analysisState = applyMatchReportToFixture({
         state: analysisState,
         fixtureId,
-        report: createMatchReport(analysisCompleted.result),
+        report: createMatchReport(analysisCompleted.result, {
+          ...tacticalContext,
+          commands: analysisCompleted.tacticalCommandFacts,
+        }),
       });
     }
     fitnessRuntime = spendFitnessAfterFixture(input, fixture, contributions, fitnessRuntime);
@@ -819,6 +834,8 @@ interface CompletedSeasonFixture {
   readonly result: SimulateMatchResult;
   readonly finalContext: MatchContext;
   readonly progression: SimulateSeasonFixtureProgression;
+  /** Accepted progressive commands, already ordered by the live session. */
+  readonly tacticalCommandFacts: readonly MatchTacticalCommandRecord[];
 }
 
 function validateAnalysisStrengthGapScale(scale: number | undefined): void {
@@ -876,6 +893,7 @@ function completeSeasonFixture(
           away: matchContext.away.lineup,
         },
       },
+      tacticalCommandFacts: [],
     };
   }
 
@@ -944,6 +962,7 @@ function completeSeasonFixture(
         away: state.simulation.context.away.lineup,
       },
     },
+    tacticalCommandFacts: state.appliedTacticalCommandFacts,
   };
 }
 

@@ -142,6 +142,7 @@ export function runMatchSimulation(input: RunMatchSimulationInput): SimulateMatc
       ...(input.lateralFocusBySide === undefined
         ? {}
         : { lateralFocusBySide: input.lateralFocusBySide }),
+      tacticalCommandFacts: completed.appliedTacticalCommandFacts,
     }),
   };
 }

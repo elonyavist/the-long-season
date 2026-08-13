@@ -314,7 +314,11 @@ test("commitCompletedCareerFixture publishes the watched final state without rec
     matchTacticsCalibration: matchTacticsCalibrationFixture(),
   };
   const completed = simulateMatch(initialContext);
-  const report = createMatchReport(completed);
+  const report = createMatchReport(completed, {
+    home: { formation: "not_observed", lateralFocus: "balanced" },
+    away: { formation: "not_observed", lateralFocus: "balanced" },
+    commands: [],
+  });
 
   const finalContext = {
     ...initialContext,

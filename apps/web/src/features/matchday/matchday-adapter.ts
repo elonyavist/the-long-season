@@ -15,6 +15,7 @@ import {
   createLineupSlot,
   createMatchReport,
   createMatchExplanationTrace,
+  createMatchTacticalChaptersFromReport,
   createProgressiveMatchMinuteSnapshot,
   createProgressiveMatchSession,
   computePlayerMatchStats,
@@ -841,7 +842,7 @@ function buildWebMatchdayPhaseInput(state: WebMatchdayState): BuildCareerMatchda
             : playedResult.playerAvailabilityConsequences,
           tacticalChapters: playedResult === undefined
             ? fullTimeReview!.tacticalChapters
-            : playedResult.explanationTrace?.tacticalChapters ?? [],
+            : createMatchTacticalChaptersFromReport(playedResult.report),
         }),
     ...(isFullTime ? { nextActionId: "back_to_dashboard" as const } : {}),
   };
@@ -1141,7 +1142,7 @@ function projectLiveProgress(session: WebLiveMatchdaySession): WebLiveMatchdayPr
             conditionChanges: structuredClone(previewInput.conditionChanges),
             playerStateChanges: structuredClone(previewInput.playerStateChanges),
             availabilityConsequences: structuredClone(previewResult.playerAvailabilityConsequences),
-            tacticalChapters: structuredClone(previewResult.explanationTrace?.tacticalChapters ?? []),
+            tacticalChapters: structuredClone(createMatchTacticalChaptersFromReport(previewResult.report)),
           },
         }),
   };
@@ -1349,7 +1350,7 @@ function toDomainLiveSession(
     score: session.engineState.simulation.score,
     stats: session.engineState.simulation.stats,
     events: session.engineState.events,
-  });
+  }, tacticalContextForSession(session));
   return {
     fixtureId: session.engineState.initialContext.fixtureId,
     controlledSide: session.selectedSide,
@@ -1515,7 +1516,7 @@ function commitProgressiveWebMatchday(
     score: finalState.simulation.score,
     stats: finalState.simulation.stats,
     events: finalState.events,
-  });
+  }, tacticalContextForSession(session));
   const explanationTrace = createMatchExplanationTrace({
     context: finalState.initialContext,
     score: finalState.simulation.score,
@@ -1548,6 +1549,21 @@ function commitProgressiveWebMatchday(
     ),
     playerStateCurvesConfig: selectPlayerStateCurvesConfig(),
   });
+}
+
+/** Reads persistence facts from the same private live session that played them. */
+function tacticalContextForSession(session: WebLiveMatchdaySession): MatchReport["tacticalContext"] {
+  return {
+    home: {
+      formation: session.homeTeam.formation,
+      lateralFocus: session.lateralFocusBySide.home,
+    },
+    away: {
+      formation: session.awayTeam.formation,
+      lateralFocus: session.lateralFocusBySide.away,
+    },
+    commands: session.engineState.appliedTacticalCommandFacts,
+  };
 }
 
 /** Returns one stable invalid adapter state without mutating durable facts. */

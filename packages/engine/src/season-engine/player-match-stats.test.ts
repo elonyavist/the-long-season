@@ -335,6 +335,11 @@ function reportWithEvents(): MatchReport {
         shooterPlayerId: playerId("player:away-blocked-shooter"),
       },
     ],
+    tacticalContext: {
+      home: { formation: "4-3-3", lateralFocus: "balanced" },
+      away: { formation: "4-4-2", lateralFocus: "balanced" },
+      commands: [],
+    },
   };
 }
 
@@ -346,6 +351,7 @@ function shot(side: "home" | "away", minute: number, isShotOnTarget: boolean): S
     minute,
     side,
     quality: 0.75,
+    expectedGoals: 0.56,
     isShotOnTarget,
     shotType: "normal",
     chanceType: "open_play",

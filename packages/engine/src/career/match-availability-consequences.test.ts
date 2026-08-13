@@ -7,6 +7,7 @@ import {
   createCompetitionMatchRules,
   fixtureId,
   gameDate,
+  MATCH_EVENT_SCHEMA_VERSION,
   playerId,
   seasonId,
   type Fixture,
@@ -130,7 +131,7 @@ test("injury duration bands are bounded and preserve zero-day knocks", () => {
 
 function reportWithEvents(events: MatchReport["events"]): MatchReport {
   return {
-    eventSchemaVersion: 8,
+    eventSchemaVersion: MATCH_EVENT_SCHEMA_VERSION,
     fixtureId: FIXTURE.id,
     finalMinute: 90,
     score: { home: 0, away: 0 },
@@ -139,5 +140,10 @@ function reportWithEvents(events: MatchReport["events"]): MatchReport {
       away: { opportunities: 0, shots: 0, shotsOnTarget: 0, goals: 0 },
     },
     events,
+    tacticalContext: {
+      home: { formation: "4-3-3", lateralFocus: "balanced" },
+      away: { formation: "4-4-2", lateralFocus: "balanced" },
+      commands: [],
+    },
   };
 }

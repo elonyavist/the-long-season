@@ -9,6 +9,8 @@ import {
   type MatchTacticalChapterFact,
   type MatchTacticalChapterSideFact,
   type MatchTacticalCommandOwner,
+  type MatchEvent,
+  type MatchReport,
   type TacticalRoute,
   type TacticalShapeCapacity,
 } from "@game/domain";
@@ -336,9 +338,11 @@ export function createMatchExplanationTrace(input: CreateMatchExplanationTraceIn
 export interface CreateMatchTacticalChaptersInput {
   readonly score: MatchScore;
   readonly stats: MatchSimulationStats;
-  readonly events: readonly MatchStepEvent[];
+  readonly events: readonly TacticalChapterEvent[];
   readonly tacticalCommandFacts: readonly AppliedLiveMatchTacticalCommandFact[];
 }
+
+type TacticalChapterEvent = MatchStepEvent | MatchEvent;
 
 interface ChapterBoundaryAccumulator {
   readonly effectiveMinute: number;
@@ -413,6 +417,18 @@ export function createMatchTacticalChapters(
   return chapters;
 }
 
+/** Rebuilds chapters from persisted raw facts without a parallel formula. */
+export function createMatchTacticalChaptersFromReport(
+  report: MatchReport,
+): readonly MatchTacticalChapterFact[] {
+  return createMatchTacticalChapters({
+    score: report.score,
+    stats: report.stats,
+    events: report.events,
+    tacticalCommandFacts: report.tacticalContext.commands,
+  });
+}
+
 function addChapterBoundary(
   boundaries: Map<number, ChapterBoundaryAccumulator>,
   effectiveMinute: number,
@@ -441,14 +457,16 @@ function chapterSideFacts(
   side: MatchSide,
   startMinute: number,
   endMinute: number,
-  events: readonly MatchStepEvent[],
+  events: readonly TacticalChapterEvent[],
 ): MatchTacticalChapterSideFact {
-  const routedShots: MatchShotOutcomeStepEvent[] = [];
+  const routedShots: { readonly route?: TacticalRoute; readonly isGoal: boolean }[] = [];
   let shots = 0;
   let goals = 0;
   let expectedGoals = 0;
   for (const event of events) {
-    if (event.minute < startMinute || event.minute > endMinute || !("side" in event) || event.side !== side) {
+    const eventMinute = "shot" in event ? event.shot.minute : event.minute;
+    const eventSide = "shot" in event ? event.shot.side : "side" in event ? event.side : undefined;
+    if (eventMinute < startMinute || eventMinute > endMinute || eventSide !== side) {
       continue;
     }
     if (event.type === "penalty_outcome") {
@@ -457,11 +475,25 @@ function chapterSideFacts(
       expectedGoals += PENALTY_EXPECTED_GOALS;
       continue;
     }
-    if (!isShotOutcome(event) || event.deadBallKind === "penalty") continue;
-    routedShots.push(event);
+    if (isShotOutcome(event)) {
+      if (event.deadBallKind === "penalty") continue;
+      routedShots.push({
+        ...(event.route === undefined ? {} : { route: event.route }),
+        isGoal: event.outcome === "goal",
+      });
+      shots += 1;
+      goals += event.outcome === "goal" ? 1 : 0;
+      expectedGoals += event.expectedGoals ?? event.quality;
+      continue;
+    }
+    if (!("shot" in event) || isPersistedPenaltyShot(event, events)) continue;
+    routedShots.push({
+      ...(event.shot.route === undefined ? {} : { route: event.shot.route }),
+      isGoal: event.type === "goal",
+    });
     shots += 1;
-    goals += event.outcome === "goal" ? 1 : 0;
-    expectedGoals += event.expectedGoals ?? event.quality;
+    goals += event.type === "goal" ? 1 : 0;
+    expectedGoals += event.shot.expectedGoals;
   }
   return {
     shots,
@@ -469,12 +501,12 @@ function chapterSideFacts(
     expectedGoals,
     averageChanceQuality: shots === 0 ? "not_observed" : expectedGoals / shots,
     attemptedRoutes: routeCounts(routedShots),
-    scoringRoutes: routeCounts(routedShots.filter(({ outcome }) => outcome === "goal")),
+    scoringRoutes: routeCounts(routedShots.filter(({ isGoal }) => isGoal)),
   };
 }
 
 function routeCounts(
-  shots: readonly MatchShotOutcomeStepEvent[],
+  shots: readonly { readonly route?: TacticalRoute }[],
 ): MatchTacticalChapterSideFact["attemptedRoutes"] {
   return TACTICAL_ROUTES.map((route) => ({
     route,
@@ -482,11 +514,25 @@ function routeCounts(
   })).filter(({ count }) => count > 0);
 }
 
-function isShotOutcome(event: MatchStepEvent): event is MatchShotOutcomeStepEvent {
+/** Identifies the durable shot copy emitted beside the canonical penalty outcome. */
+function isPersistedPenaltyShot(
+  event: MatchEvent,
+  events: readonly TacticalChapterEvent[],
+): boolean {
+  return "shot" in event
+    && event.shot.chanceType === "dead_ball"
+    && events.some((candidate) =>
+      candidate.type === "penalty_outcome"
+      && candidate.minute === event.shot.minute
+      && candidate.side === event.shot.side
+    );
+}
+
+function isShotOutcome(event: TacticalChapterEvent): event is MatchShotOutcomeStepEvent {
   return event.type === "shot_outcome";
 }
 
-function fullTimeMinute(events: readonly MatchStepEvent[]): number {
+function fullTimeMinute(events: readonly TacticalChapterEvent[]): number {
   const fullTime = events.findLast((event) => event.type === "full_time");
   if (fullTime === undefined) throw new Error("Tactical chapters require a full-time event");
   return fullTime.minute;
@@ -552,11 +598,12 @@ function assertChapterReconciliation(
 /** Replays only the event-owned xG additions, in original simulation order. */
 function canonicalEventExpectedGoals(
   side: MatchSide,
-  events: readonly MatchStepEvent[],
+  events: readonly TacticalChapterEvent[],
 ): number {
   let total = 0;
   for (const event of events) {
-    if (!("side" in event) || event.side !== side) continue;
+    const eventSide = "shot" in event ? event.shot.side : "side" in event ? event.side : undefined;
+    if (eventSide !== side) continue;
     if (event.type === "penalty_outcome") {
       total += PENALTY_EXPECTED_GOALS;
     } else if (event.type === "shot_outcome" && event.deadBallKind !== "penalty") {
@@ -564,6 +611,8 @@ function canonicalEventExpectedGoals(
         throw new Error("Tactical chapter source event is missing canonical xG");
       }
       total += event.expectedGoals;
+    } else if ("shot" in event && !isPersistedPenaltyShot(event, events)) {
+      total += event.shot.expectedGoals;
     }
   }
   return total;

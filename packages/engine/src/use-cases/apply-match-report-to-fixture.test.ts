@@ -181,6 +181,11 @@ function matchReport(
       },
     },
     events: [],
+    tacticalContext: {
+      home: { formation: "not_observed", lateralFocus: "balanced" },
+      away: { formation: "not_observed", lateralFocus: "balanced" },
+      commands: [],
+    },
   };
 }
 

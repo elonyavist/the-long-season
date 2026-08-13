@@ -1,6 +1,5 @@
-import {
-  type MatchContext,
-} from "./match-context.ts";
+import type { MatchTacticalCommandRecord } from "@game/domain";
+import type { MatchContext } from "./match-context.ts";
 import {
   buildManualTacticChangeSchedule,
   type ManualTacticChange,
@@ -28,6 +27,11 @@ export interface SimulateMatchWithManualTacticsOptions {
   readonly lateralFocusBySide?: MatchLateralFocusBySide;
 }
 
+/** Batch result plus the accepted analysis commands needed by persistence. */
+export interface SimulateMatchWithManualTacticsResult extends SimulateMatchResult {
+  readonly tacticalCommandFacts?: readonly MatchTacticalCommandRecord[];
+}
+
 /**
  * Runs one deterministic match while applying caller-declared tactic changes.
  *
@@ -44,7 +48,7 @@ export interface SimulateMatchWithManualTacticsOptions {
 export function simulateMatchWithManualTactics(
   context: MatchContext,
   options: SimulateMatchWithManualTacticsOptions = {},
-): SimulateMatchResult {
+): SimulateMatchWithManualTacticsResult {
   if (options.manualTacticChanges === undefined || options.manualTacticChanges.length === 0) {
     return simulateMatch(context, {
       ...(options.occasionResolver === undefined ? {} : { occasionResolver: options.occasionResolver }),
@@ -58,16 +62,45 @@ export function simulateMatchWithManualTactics(
     minuteCount: context.engineConfig.minuteCount,
     changes: options.manualTacticChanges,
   });
-  return runMatchSimulation({
-    context,
-    ...(options.occasionResolver === undefined ? {} : { occasionResolver: options.occasionResolver }),
-    ...(options.maxStepCount === undefined ? {} : { maxStepCount: options.maxStepCount }),
-    ...(options.includeExplanationTrace === undefined ? {} : { includeExplanationTrace: options.includeExplanationTrace }),
-    ...(options.lateralFocusBySide === undefined ? {} : { lateralFocusBySide: options.lateralFocusBySide }),
-    beforeStep: (simulation, currentMinute) => ({
-      ...simulation,
-      context: applyScheduledManualTacticChanges(simulation.context, schedule, currentMinute),
+  const tacticalCommandFacts = scheduledTacticalCommandFacts(context, schedule);
+  return {
+    ...runMatchSimulation({
+      context,
+      ...(options.occasionResolver === undefined ? {} : { occasionResolver: options.occasionResolver }),
+      ...(options.maxStepCount === undefined ? {} : { maxStepCount: options.maxStepCount }),
+      ...(options.includeExplanationTrace === undefined ? {} : { includeExplanationTrace: options.includeExplanationTrace }),
+      ...(options.lateralFocusBySide === undefined ? {} : { lateralFocusBySide: options.lateralFocusBySide }),
+      beforeStep: (simulation, currentMinute) => ({
+        ...simulation,
+        context: applyScheduledManualTacticChanges(simulation.context, schedule, currentMinute),
+      }),
     }),
+    tacticalCommandFacts,
+  };
+}
+
+/** Converts the validated schedule into the exact ordered manager-owned deltas. */
+function scheduledTacticalCommandFacts(
+  context: MatchContext,
+  schedule: ManualTacticChangeSchedule,
+): readonly MatchTacticalCommandRecord[] {
+  let home = context.home.tacticalDistribution;
+  let away = context.away.tacticalDistribution;
+  return schedule.changes.map((change) => {
+    const before = change.side === "home" ? home : away;
+    const after = change.team.tacticalDistribution;
+    if (change.side === "home") home = after;
+    else away = after;
+    return {
+      owner: "manager",
+      fact: {
+        type: "tactic_change",
+        minute: change.minute,
+        side: change.side,
+        before: { ...before },
+        after: { ...after },
+      },
+    };
   });
 }
 

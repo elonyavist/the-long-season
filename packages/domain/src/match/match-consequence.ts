@@ -2,6 +2,9 @@ import type { MatchInjurySeverity } from "../entities/match-event.entity.ts";
 import type { GameDate } from "../value-objects/game-date.ts";
 import type { CompetitionId, FixtureId, PlayerId } from "../types/ids.ts";
 import type { TacticalRoute } from "../balance/match-tactics-calibration.ts";
+import type { TacticSetup, LateralFocus } from "../entities/tactic.entity.ts";
+import type { FormationKey } from "../tactics/formations.ts";
+import type { CanonicalPlayerRole } from "../tactics/player-roles.ts";
 
 /** Durable reason for a competition suspension after one completed match. */
 export type MatchSuspensionReason = "straight_red" | "second_yellow" | "yellow_accumulation";
@@ -31,6 +34,52 @@ export type MatchPlayerConsequence = MatchInjuryConsequence | MatchSuspensionCon
 
 /** Who owned an accepted live tactical decision. */
 export type MatchTacticalCommandOwner = "manager" | "ai";
+
+/** Accepted non-substitution tactical delta in durable match order. */
+export type MatchTacticalCommandFact =
+  | {
+      readonly type: "formation_change";
+      readonly minute: number;
+      readonly side: "home" | "away";
+      readonly fromFormation: FormationKey;
+      readonly toFormation: FormationKey;
+    }
+  | {
+      readonly type: "role_change";
+      readonly minute: number;
+      readonly side: "home" | "away";
+      readonly playerId: PlayerId;
+      readonly slotId: string;
+      readonly fromRole: CanonicalPlayerRole;
+      readonly toRole: CanonicalPlayerRole;
+    }
+  | {
+      readonly type: "tactic_change";
+      readonly minute: number;
+      readonly side: "home" | "away";
+      readonly before: TacticSetup;
+      readonly after: TacticSetup;
+    };
+
+/** Accepted tactical delta together with the caller that chose it. */
+export interface MatchTacticalCommandRecord {
+  readonly owner: MatchTacticalCommandOwner;
+  readonly fact: MatchTacticalCommandFact;
+}
+
+/** Initial fielded facts for one side of a durable match report. */
+export interface MatchReportTacticalSideContext {
+  /** Exact catalog formation, or honest absence for a caller-imposed custom XI. */
+  readonly formation: FormationKey | "not_observed";
+  readonly lateralFocus: LateralFocus;
+}
+
+/** Raw tactical facts from which history and chapters are derived. */
+export interface MatchReportTacticalContext {
+  readonly home: MatchReportTacticalSideContext;
+  readonly away: MatchReportTacticalSideContext;
+  readonly commands: readonly MatchTacticalCommandRecord[];
+}
 
 /** Stable kind of accepted change that opened a new tactical chapter. */
 export type MatchTacticalChapterChangeKind = "substitution" | "formation" | "role" | "tactic";

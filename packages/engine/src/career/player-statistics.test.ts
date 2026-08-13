@@ -419,6 +419,11 @@ function matchReport(id: Fixture["id"]): MatchReport {
         goalkeeperPlayerId: KEEPER_ID,
       },
     ],
+    tacticalContext: {
+      home: { formation: "4-3-3", lateralFocus: "balanced" },
+      away: { formation: "4-4-2", lateralFocus: "balanced" },
+      commands: [],
+    },
   };
 }
 
@@ -428,6 +433,7 @@ function shotContext(side: "home" | "away", minute: number) {
     minute,
     side,
     quality: 0.6,
+    expectedGoals: 0.36,
     isShotOnTarget: true,
     shotType: "normal" as const,
     chanceType: "open_play" as const,

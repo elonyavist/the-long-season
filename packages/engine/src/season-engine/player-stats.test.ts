@@ -271,6 +271,11 @@ function matchReport(
       ...saveEvents("away", homeGoalkeeperSaves),
       ...saveEvents("home", awayGoalkeeperSaves),
     ],
+    tacticalContext: {
+      home: { formation: "4-3-3", lateralFocus: "balanced" },
+      away: { formation: "4-4-2", lateralFocus: "balanced" },
+      commands: [],
+    },
   };
 }
 
@@ -289,6 +294,7 @@ function goalEvents(
         minute: index + 1,
         side,
         quality: 0.8,
+        expectedGoals: 0.64,
         isShotOnTarget: true,
         shotType: "normal",
         chanceType: "open_play",
@@ -318,6 +324,7 @@ function saveEvents(side: "home" | "away", goalkeepers: readonly ReturnType<type
       minute: index + 20,
       side,
       quality: 0.55,
+      expectedGoals: 0.3,
       isShotOnTarget: true,
       shotType: "normal",
       chanceType: "open_play",

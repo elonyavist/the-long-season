@@ -4,6 +4,7 @@ import { test } from "vitest";
 
 import {
   clubId,
+  CAREER_STATE_SCHEMA_VERSION,
   competitionId,
   createCareerState,
   fixtureId,
@@ -61,7 +62,7 @@ test("world rows round-trip ordered players, clubs, states, roles, abilities, an
  * column was simply absent from the statement - and no test had ever loaded a
  * report back. Only a load can prove a save.
  */
-test("a played match report survives a real save and load, routes and all", () => {
+test("a played match report survives a real save and load with all raw tactical facts", () => {
   const state = withPersistableCareerFacts(
     withRoutedMatchReport(worldFixture("save:report-round-trip", "report-round-trip")),
   );
@@ -91,6 +92,10 @@ test("a played match report survives a real save and load, routes and all", () =
     events,
     state.gameState.fixtures[fixtureId("fixture:played")]?.result?.report?.events,
   );
+  deepStrictEqual(
+    loaded.gameState.fixtures[fixtureId("fixture:played")]?.result?.report?.tacticalContext,
+    state.gameState.fixtures[fixtureId("fixture:played")]?.result?.report?.tacticalContext,
+  );
 });
 
 test("world mapping rejects duplicate deterministic order before any SQL write", () => {
@@ -107,7 +112,7 @@ test("world mapping rejects duplicate deterministic order before any SQL write",
 });
 
 test("migration ledger exposes the clean Phase 80A persistence baseline", () => {
-  deepStrictEqual(SQLITE_CAREER_MIGRATIONS.map((migration) => migration.version), [23]);
+  deepStrictEqual(SQLITE_CAREER_MIGRATIONS.map((migration) => migration.version), [24]);
   const statements = SQLITE_CAREER_MIGRATIONS[0]?.statements ?? [];
   equal(statements.some((statement) => statement.includes("CREATE TABLE IF NOT EXISTS players")), true);
   equal(statements.some((statement) => statement.includes("CREATE TABLE IF NOT EXISTS active_match")), false);
@@ -202,12 +207,50 @@ function withRoutedMatchReport(state: CareerState): CareerState {
               },
               events: [
                 { type: "kickoff", minute: 0 },
-                { type: "goal", shot: { minute: 12, side: "home", quality: 0.62, isShotOnTarget: true, shotType: "header", chanceType: "cross", route: "left" }, scorerPlayerId: home, assistPlayerId: away, creatorPlayerId: away },
-                { type: "save", shot: { minute: 41, side: "away", quality: 0.4, isShotOnTarget: true, shotType: "normal", chanceType: "counter", route: "transition" }, shooterPlayerId: away, goalkeeperPlayerId: home },
-                { type: "miss", shot: { minute: 47, side: "away", quality: 0.9, isShotOnTarget: false, shotType: "set_piece", chanceType: "dead_ball" }, shooterPlayerId: away },
-                { type: "block", shot: { minute: 52, side: "home", quality: 0.31, isShotOnTarget: false, shotType: "normal", chanceType: "open_play", route: "central" }, shooterPlayerId: home, primaryDefenderPlayerId: away },
+                { type: "goal", shot: { minute: 12, side: "home", quality: 0.62, expectedGoals: 0.44, isShotOnTarget: true, shotType: "header", chanceType: "cross", route: "left" }, scorerPlayerId: home, assistPlayerId: away, creatorPlayerId: away },
+                { type: "save", shot: { minute: 41, side: "away", quality: 0.4, expectedGoals: 0.18, isShotOnTarget: true, shotType: "normal", chanceType: "counter", route: "transition" }, shooterPlayerId: away, goalkeeperPlayerId: home },
+                { type: "miss", shot: { minute: 47, side: "away", quality: 0.9, expectedGoals: 0.76, isShotOnTarget: false, shotType: "set_piece", chanceType: "dead_ball" }, shooterPlayerId: away },
+                { type: "block", shot: { minute: 52, side: "home", quality: 0.31, expectedGoals: 0.12, isShotOnTarget: false, shotType: "normal", chanceType: "open_play", route: "central" }, shooterPlayerId: home, primaryDefenderPlayerId: away },
                 { type: "full_time", minute: 90, score: { home: 2, away: 1 } },
               ],
+              tacticalContext: {
+                home: { formation: "4-3-3", lateralFocus: "left" },
+                away: { formation: "not_observed", lateralFocus: "balanced" },
+                commands: [
+                  {
+                    owner: "manager",
+                    fact: {
+                      type: "formation_change",
+                      minute: 45,
+                      side: "home",
+                      fromFormation: "4-3-3",
+                      toFormation: "4-2-3-1",
+                    },
+                  },
+                  {
+                    owner: "manager",
+                    fact: {
+                      type: "role_change",
+                      minute: 46,
+                      side: "home",
+                      playerId: home,
+                      slotId: "slot:home-01",
+                      fromRole: "central_midfielder",
+                      toRole: "defensive_midfielder",
+                    },
+                  },
+                  {
+                    owner: "ai",
+                    fact: {
+                      type: "tactic_change",
+                      minute: 60,
+                      side: "away",
+                      before: { mentality: "balanced", pressing: 0.5, directness: 0.5, width: 0.5, risk: 0.5 },
+                      after: { mentality: "attacking", pressing: 0.7, directness: 0.6, width: 0.5, risk: 0.7 },
+                    },
+                  },
+                ],
+              },
             },
           },
         },
@@ -256,7 +299,7 @@ function worldFixture(rawSaveId: string, seed: string): CareerState {
 
   return createCareerState({
     saveId: saveId(rawSaveId),
-    schemaVersion: 2,
+    schemaVersion: CAREER_STATE_SCHEMA_VERSION,
     selectedClubId: homeId,
     gameState: {
       meta: {

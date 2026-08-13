@@ -21,6 +21,7 @@ export {
 export {
   createMatchExplanationTrace,
   createMatchTacticalChapters,
+  createMatchTacticalChaptersFromReport,
   MATCH_EXPLANATION_TRACE_SCHEMA_VERSION,
   type CreateMatchExplanationTraceInput,
   type CreateMatchTacticalChaptersInput,

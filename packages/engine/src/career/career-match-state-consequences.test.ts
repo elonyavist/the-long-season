@@ -262,6 +262,11 @@ function reportFixture(input: {
       },
     },
     events: input.events,
+    tacticalContext: {
+      home: { formation: "4-3-3", lateralFocus: "balanced" },
+      away: { formation: "4-4-2", lateralFocus: "balanced" },
+      commands: [],
+    },
   };
 }
 
@@ -270,6 +275,7 @@ function shot(side: "home" | "away"): ShotContext {
     minute: 12,
     side,
     quality: 0.5,
+    expectedGoals: 0.25,
     isShotOnTarget: true,
     shotType: "normal",
     chanceType: "open_play",

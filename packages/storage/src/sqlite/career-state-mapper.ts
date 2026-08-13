@@ -1,8 +1,11 @@
 import {
   isCanonicalPlayerRole,
+  isFormationKey,
+  isLateralFocus,
   isShotChanceType,
   isShotType,
   isTacticalRoute,
+  isTacticMentalityKey,
   clubFinanceLedgerEntryId,
   clubId,
   competitionId,
@@ -58,6 +61,7 @@ import {
   type ContractOfferEvaluation,
   type ContractOfferEvaluationReason,
   type ContractOfferTerms,
+  type FixtureId,
   type LeagueTableRow,
   type MatchEvent,
   type MatchInjurySeverity,
@@ -65,6 +69,8 @@ import {
   type MatchSuspensionReason,
   type PenaltyOutcome,
   type MatchReport,
+  type MatchReportTacticalContext,
+  type MatchTacticalCommandRecord,
   type MatchSideStats,
   type PlayerParticipationLedger,
   type PlayerParticipationRow,
@@ -81,6 +87,7 @@ import {
   type ShotChanceType,
   type ShotType,
   type TacticalRoute,
+  type TacticSetup,
   type TransferNegotiation,
   type TransferNegotiationState,
   type PreliminaryAgreement,
@@ -1720,10 +1727,14 @@ function insertMatchReport(database: SqliteWorldDatabase, save: SaveId, report: 
   database.run(`INSERT INTO match_reports
     (save_id, fixture_id, event_schema_version, final_minute, score_home, score_away,
      home_opportunities, home_shots, home_shots_on_target, home_goals,
-     away_opportunities, away_shots, away_shots_on_target, away_goals)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [save, report.fixtureId, report.eventSchemaVersion, report.finalMinute,
-    report.score.home, report.score.away, ...sideStatsValues(report.stats.home), ...sideStatsValues(report.stats.away)]);
+     away_opportunities, away_shots, away_shots_on_target, away_goals,
+     home_formation, away_formation, home_lateral_focus, away_lateral_focus)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [save, report.fixtureId, report.eventSchemaVersion, report.finalMinute,
+    report.score.home, report.score.away, ...sideStatsValues(report.stats.home), ...sideStatsValues(report.stats.away),
+    report.tacticalContext.home.formation, report.tacticalContext.away.formation,
+    report.tacticalContext.home.lateralFocus, report.tacticalContext.away.lateralFocus]);
   insertMatchEvents(database, save, "report", report.fixtureId, report.events);
+  insertMatchTacticalCommands(database, save, report);
 }
 
 function insertMatchEvents(database: SqliteWorldDatabase, save: SaveId, ownerKind: "report", ownerId: string, events: readonly MatchEvent[]): void {
@@ -1734,18 +1745,19 @@ function insertMatchEvents(database: SqliteWorldDatabase, save: SaveId, ownerKin
     const minute = shot?.minute ?? ("minute" in event ? event.minute : 0);
     database.run(`INSERT INTO match_events
       (save_id, owner_kind, owner_id, sort_order, event_type, event_minute, side, quality, is_shot_on_target,
-       shot_type, chance_type, route, scorer_player_id, assist_player_id, creator_player_id, shooter_player_id,
+       shot_type, chance_type, route, expected_goals, scorer_player_id, assist_player_id, creator_player_id, shooter_player_id,
        goalkeeper_player_id, primary_defender_player_id, score_home, score_away,
        committed_by_player_id, suffered_by_player_id, zone_danger, card_player_id, fouled_player_id,
        penalty_taker_player_id, penalty_outcome, injury_player_id, injury_severity,
        outgoing_player_id, incoming_player_id, slot_id, substitution_reason_key)
-      VALUES (${placeholders(33)})`, [save, ownerKind, ownerId, sortOrder, event.type, minute,
+      VALUES (${placeholders(34)})`, [save, ownerKind, ownerId, sortOrder, event.type, minute,
       side ?? null, shot?.quality ?? null, shot === undefined ? null : shot.isShotOnTarget ? 1 : 0,
       shot?.shotType ?? null, shot?.chanceType ?? null,
       // Null for a penalty, which is awarded rather than worked, and null for
       // every non-shot event. Absence is the fact; it is never written as a
       // default route.
       shot?.route ?? null,
+      shot?.expectedGoals ?? null,
       "scorerPlayerId" in event ? event.scorerPlayerId : null,
       "assistPlayerId" in event ? event.assistPlayerId ?? null : null,
       "creatorPlayerId" in event ? event.creatorPlayerId ?? null : null,
@@ -1766,6 +1778,32 @@ function insertMatchEvents(database: SqliteWorldDatabase, save: SaveId, ownerKin
       event.type === "substitution" ? event.incomingPlayerId : null,
       event.type === "substitution" ? event.slotId : null,
       event.type === "substitution" ? event.reasonKey : null]);
+  });
+}
+
+function insertMatchTacticalCommands(
+  database: SqliteWorldDatabase,
+  save: SaveId,
+  report: MatchReport,
+): void {
+  report.tacticalContext.commands.forEach(({ owner, fact }, sortOrder) => {
+    const formation = fact.type === "formation_change" ? fact : undefined;
+    const role = fact.type === "role_change" ? fact : undefined;
+    const tactic = fact.type === "tactic_change" ? fact : undefined;
+    database.run(`INSERT INTO match_tactical_commands
+      (save_id, fixture_id, sort_order, owner, command_type, event_minute, side,
+       from_formation, to_formation, player_id, slot_id, from_role, to_role,
+       before_mentality, before_pressing, before_directness, before_width, before_risk,
+       after_mentality, after_pressing, after_directness, after_width, after_risk)
+      VALUES (${placeholders(23)})`, [
+      save, report.fixtureId, sortOrder, owner, fact.type, fact.minute, fact.side,
+      formation?.fromFormation ?? null, formation?.toFormation ?? null,
+      role?.playerId ?? null, role?.slotId ?? null, role?.fromRole ?? null, role?.toRole ?? null,
+      tactic?.before.mentality ?? null, tactic?.before.pressing ?? null,
+      tactic?.before.directness ?? null, tactic?.before.width ?? null, tactic?.before.risk ?? null,
+      tactic?.after.mentality ?? null, tactic?.after.pressing ?? null,
+      tactic?.after.directness ?? null, tactic?.after.width ?? null, tactic?.after.risk ?? null,
+    ]);
   });
 }
 
@@ -2116,7 +2154,8 @@ function attachFixtureReports(database: SqliteWorldDatabase, save: SaveId, gameS
     if (fixture?.result === undefined) throw mappingFailure(`match report has no compact fixture result: ${reportFixtureId}`);
     const report: MatchReport = { eventSchemaVersion: number(row, "event_schema_version") as MatchReport["eventSchemaVersion"], fixtureId: reportFixtureId,
       finalMinute: number(row, "final_minute"), score: { home: number(row, "score_home"), away: number(row, "score_away") },
-      stats: readStats(row), events: loadMatchEvents(database, save, "report", reportFixtureId) };
+      stats: readStats(row), events: loadMatchEvents(database, save, "report", reportFixtureId),
+      tacticalContext: loadMatchTacticalContext(database, save, reportFixtureId, row) };
     fixtures[reportFixtureId] = { ...fixture, result: { ...fixture.result, report } };
   }
   return { ...gameState, fixtures };
@@ -2138,12 +2177,86 @@ function readMatchEvent(row: Record<string, unknown>): MatchEvent {
   if (type === "penalty_outcome") return { type, minute, side, takerPlayerId: playerId(text(row, "penalty_taker_player_id")), goalkeeperPlayerId: playerId(text(row, "goalkeeper_player_id")), outcome: text(row, "penalty_outcome") as PenaltyOutcome };
   if (type === "injury") return { type, minute, side, playerId: playerId(text(row, "injury_player_id")), severity: text(row, "injury_severity") as MatchInjurySeverity };
   if (type === "substitution") return { type, minute, side, outgoingPlayerId: playerId(text(row, "outgoing_player_id")), incomingPlayerId: playerId(text(row, "incoming_player_id")), slotId: text(row, "slot_id"), reasonKey: text(row, "substitution_reason_key") as MatchSubstitutionReasonKey };
-  const shot = { minute, side, quality: number(row, "quality"), isShotOnTarget: boolean(row, "is_shot_on_target"), shotType: shotType(row), chanceType: shotChanceType(row), ...optionalRoute(row) };
+  const shot = { minute, side, quality: number(row, "quality"), expectedGoals: number(row, "expected_goals"), isShotOnTarget: boolean(row, "is_shot_on_target"), shotType: shotType(row), chanceType: shotChanceType(row), ...optionalRoute(row) };
   if (type === "goal") return { type, shot, scorerPlayerId: playerId(text(row, "scorer_player_id")), ...optionalPlayer(row, "assist_player_id", "assistPlayerId"), ...optionalPlayer(row, "creator_player_id", "creatorPlayerId") };
   if (type === "save") return { type, shot, ...optionalPlayer(row, "shooter_player_id", "shooterPlayerId"), goalkeeperPlayerId: playerId(text(row, "goalkeeper_player_id")) };
   if (type === "miss") return { type, shot, ...optionalPlayer(row, "shooter_player_id", "shooterPlayerId") };
   if (type === "block") return { type, shot, ...optionalPlayer(row, "shooter_player_id", "shooterPlayerId"), ...optionalPlayer(row, "primary_defender_player_id", "primaryDefenderPlayerId") };
   throw mappingFailure(`unsupported match event type: ${type}`);
+}
+
+function loadMatchTacticalContext(
+  database: SqliteWorldDatabase,
+  save: SaveId,
+  reportFixtureId: FixtureId,
+  reportRow: Record<string, unknown>,
+): MatchReportTacticalContext {
+  const commands = database.queryAll(
+    "SELECT * FROM match_tactical_commands WHERE save_id = ? AND fixture_id = ? ORDER BY sort_order",
+    [save, reportFixtureId],
+  ).map(readMatchTacticalCommand);
+  return {
+    home: {
+      formation: persistedFormationOrNotObserved(text(reportRow, "home_formation")),
+      lateralFocus: persistedLateralFocus(text(reportRow, "home_lateral_focus")),
+    },
+    away: {
+      formation: persistedFormationOrNotObserved(text(reportRow, "away_formation")),
+      lateralFocus: persistedLateralFocus(text(reportRow, "away_lateral_focus")),
+    },
+    commands,
+  };
+}
+
+function readMatchTacticalCommand(row: Record<string, unknown>): MatchTacticalCommandRecord {
+  const owner = text(row, "owner");
+  if (owner !== "manager" && owner !== "ai") throw mappingFailure(`unsupported tactical command owner: ${owner}`);
+  const type = text(row, "command_type");
+  const common = {
+    minute: number(row, "event_minute"),
+    side: persistedMatchSide(text(row, "side")),
+  };
+  if (type === "formation_change") {
+    return { owner, fact: { type, ...common, fromFormation: persistedFormation(text(row, "from_formation")), toFormation: persistedFormation(text(row, "to_formation")) } };
+  }
+  if (type === "role_change") {
+    return { owner, fact: { type, ...common, playerId: playerId(text(row, "player_id")), slotId: text(row, "slot_id"), fromRole: persistedCanonicalRole(text(row, "from_role")), toRole: persistedCanonicalRole(text(row, "to_role")) } };
+  }
+  if (type === "tactic_change") {
+    return { owner, fact: { type, ...common, before: readPersistedTactic(row, "before"), after: readPersistedTactic(row, "after") } };
+  }
+  throw mappingFailure(`unsupported tactical command type: ${type}`);
+}
+
+function persistedFormation(value: string): Exclude<MatchReportTacticalContext["home"]["formation"], "not_observed"> {
+  if (!isFormationKey(value)) throw mappingFailure(`unsupported formation: ${value}`);
+  return value;
+}
+
+function persistedFormationOrNotObserved(value: string): MatchReportTacticalContext["home"]["formation"] {
+  return value === "not_observed" ? value : persistedFormation(value);
+}
+
+function persistedLateralFocus(value: string): MatchReportTacticalContext["home"]["lateralFocus"] {
+  if (!isLateralFocus(value)) throw mappingFailure(`unsupported lateral focus: ${value}`);
+  return value;
+}
+
+function persistedMatchSide(value: string): "home" | "away" {
+  if (value !== "home" && value !== "away") throw mappingFailure(`unsupported match side: ${value}`);
+  return value;
+}
+
+function readPersistedTactic(row: Record<string, unknown>, prefix: "before" | "after"): TacticSetup {
+  const mentality = text(row, `${prefix}_mentality`);
+  if (!isTacticMentalityKey(mentality)) throw mappingFailure(`unsupported tactic mentality: ${mentality}`);
+  return {
+    mentality,
+    pressing: number(row, `${prefix}_pressing`),
+    directness: number(row, `${prefix}_directness`),
+    width: number(row, `${prefix}_width`),
+    risk: number(row, `${prefix}_risk`),
+  };
 }
 
 function optionalPlayer(row: Record<string, unknown>, column: string, property: string): Record<string, PlayerId> {

@@ -821,12 +821,18 @@ function reportFact(): MatchReport {
         minute: 40,
         side: "home",
         quality: 0.6,
+        expectedGoals: 0.36,
         isShotOnTarget: true,
         shotType: "normal",
         chanceType: "open_play",
       },
       scorerPlayerId: HOME_PLAYER,
     }],
+    tacticalContext: {
+      home: { formation: "4-3-3", lateralFocus: "balanced" },
+      away: { formation: "4-4-2", lateralFocus: "balanced" },
+      commands: [],
+    },
   };
 }
 

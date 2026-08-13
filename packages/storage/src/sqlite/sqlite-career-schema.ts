@@ -1,12 +1,11 @@
 /**
  * Current relational browser-career schema version.
  *
- * `23` added `match_events.route`. A database written at `22` stored shots
- * without the way they came down, so the fact is gone rather than absent and
- * cannot be recovered by reading harder. Beta databases are therefore reset
- * through the canonical flow instead of migrated.
+ * `24` adds resolver-owned shot xG and raw tactical match context. Older beta
+ * databases cannot reconstruct either fact, so they are reset through the
+ * canonical flow instead of migrated.
  */
-export const SQLITE_CAREER_SCHEMA_VERSION = 23;
+export const SQLITE_CAREER_SCHEMA_VERSION = 24;
 
 /** Stable OPFS database path shared by all web-career operations. */
 export const SQLITE_CAREER_DATABASE_PATH = "/the-long-season-careers.sqlite3";
@@ -459,6 +458,10 @@ const SQLITE_CAREER_STATE_SCHEMA_STATEMENTS = [
     away_shots INTEGER NOT NULL,
     away_shots_on_target INTEGER NOT NULL,
     away_goals INTEGER NOT NULL,
+    home_formation TEXT NOT NULL,
+    away_formation TEXT NOT NULL,
+    home_lateral_focus TEXT NOT NULL,
+    away_lateral_focus TEXT NOT NULL,
     PRIMARY KEY (save_id, fixture_id),
     FOREIGN KEY (save_id, fixture_id) REFERENCES fixtures(save_id, fixture_id) ON DELETE CASCADE
   ) STRICT`,
@@ -471,6 +474,7 @@ const SQLITE_CAREER_STATE_SCHEMA_STATEMENTS = [
     event_minute INTEGER NOT NULL,
     side TEXT,
     quality REAL,
+    expected_goals REAL,
     is_shot_on_target INTEGER,
     shot_type TEXT,
     chance_type TEXT,
@@ -497,6 +501,33 @@ const SQLITE_CAREER_STATE_SCHEMA_STATEMENTS = [
     slot_id TEXT,
     substitution_reason_key TEXT,
     PRIMARY KEY (save_id, owner_kind, owner_id, sort_order)
+  ) STRICT`,
+  `CREATE TABLE IF NOT EXISTS match_tactical_commands (
+    save_id TEXT NOT NULL REFERENCES career_saves(save_id) ON DELETE CASCADE,
+    fixture_id TEXT NOT NULL,
+    sort_order INTEGER NOT NULL,
+    owner TEXT NOT NULL CHECK (owner IN ('manager', 'ai')),
+    command_type TEXT NOT NULL CHECK (command_type IN ('formation_change', 'role_change', 'tactic_change')),
+    event_minute INTEGER NOT NULL,
+    side TEXT NOT NULL CHECK (side IN ('home', 'away')),
+    from_formation TEXT,
+    to_formation TEXT,
+    player_id TEXT,
+    slot_id TEXT,
+    from_role TEXT,
+    to_role TEXT,
+    before_mentality TEXT,
+    before_pressing REAL,
+    before_directness REAL,
+    before_width REAL,
+    before_risk REAL,
+    after_mentality TEXT,
+    after_pressing REAL,
+    after_directness REAL,
+    after_width REAL,
+    after_risk REAL,
+    PRIMARY KEY (save_id, fixture_id, sort_order),
+    FOREIGN KEY (save_id, fixture_id) REFERENCES match_reports(save_id, fixture_id) ON DELETE CASCADE
   ) STRICT`,
 ] as const;
 

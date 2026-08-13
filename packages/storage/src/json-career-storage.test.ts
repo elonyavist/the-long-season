@@ -444,9 +444,9 @@ test("career storage writes a career-specific JSON envelope", async () => {
     const storedPath = join(directoryPath, `${encodeURIComponent(saveId("save:career-demo"))}.career.json`);
     const raw = JSON.parse(await readFile(storedPath, "utf8")) as Readonly<Record<string, unknown>>;
 
-    assert.equal(raw.saveSchemaVersion, 14);
-    assert.equal(((raw.state as { readonly schemaVersion: number }).schemaVersion), 2);
-    assert.equal(CAREER_STATE_SCHEMA_VERSION, 2);
+    assert.equal(raw.saveSchemaVersion, 15);
+    assert.equal(((raw.state as { readonly schemaVersion: number }).schemaVersion), 3);
+    assert.equal(CAREER_STATE_SCHEMA_VERSION, 3);
     assert.equal((raw.metadata as { readonly saveId: string }).saveId, "save:career-demo");
     assert.equal((raw.state as { readonly selectedClubId: string }).selectedClubId, "club:pro01");
   } finally {
@@ -607,10 +607,15 @@ function careerStateWithRoutedMatchReport(): CareerState {
               },
               events: [
                 { type: "kickoff", minute: 0 },
-                { type: "goal", shot: { minute: 33, side: "home", quality: 0.71, isShotOnTarget: true, shotType: "normal", chanceType: "open_play", route: "right" }, scorerPlayerId: player },
-                { type: "miss", shot: { minute: 64, side: "away", quality: 0.88, isShotOnTarget: false, shotType: "set_piece", chanceType: "dead_ball" }, shooterPlayerId: player },
+                { type: "goal", shot: { minute: 33, side: "home", quality: 0.71, expectedGoals: 0.54, isShotOnTarget: true, shotType: "normal", chanceType: "open_play", route: "right" }, scorerPlayerId: player },
+                { type: "miss", shot: { minute: 64, side: "away", quality: 0.88, expectedGoals: 0.3, isShotOnTarget: false, shotType: "set_piece", chanceType: "dead_ball" }, shooterPlayerId: player },
                 { type: "full_time", minute: 90, score: { home: 1, away: 1 } },
               ],
+              tacticalContext: {
+                home: { formation: "4-3-3", lateralFocus: "right" },
+                away: { formation: "not_observed", lateralFocus: "balanced" },
+                commands: [],
+              },
             },
           },
         },

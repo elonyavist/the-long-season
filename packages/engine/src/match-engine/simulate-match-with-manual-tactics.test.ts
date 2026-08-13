@@ -101,7 +101,11 @@ test("segmented output remains compatible with reports and player stats", () => 
   const result = simulateMatchWithManualTactics(context, {
     manualTacticChanges: [manualChange("home", 4, validTeam("home", 20, 0.9))],
   });
-  const report = createMatchReport(result);
+  const report = createMatchReport(result, {
+    home: { formation: "not_observed", lateralFocus: "balanced" },
+    away: { formation: "not_observed", lateralFocus: "balanced" },
+    commands: result.tacticalCommandFacts ?? [],
+  });
   const rows = computePlayerMatchStats({
     report,
     playerRegistrations: [

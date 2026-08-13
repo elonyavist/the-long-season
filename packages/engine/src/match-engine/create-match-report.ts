@@ -2,6 +2,7 @@ import {
   MATCH_EVENT_SCHEMA_VERSION,
   type MatchEvent,
   type MatchReport,
+  type MatchReportTacticalContext,
   type MatchStats,
 } from "@game/domain";
 
@@ -14,7 +15,10 @@ import type { MatchStepEvent, MatchShotOutcomeStepEvent } from "./step-match.ts"
  * @example
  * const report = createMatchReport(simulateMatch(context));
  */
-export function createMatchReport(result: SimulateMatchResult): MatchReport {
+export function createMatchReport(
+  result: SimulateMatchResult,
+  tacticalContext: MatchReportTacticalContext,
+): MatchReport {
   return {
     eventSchemaVersion: MATCH_EVENT_SCHEMA_VERSION,
     fixtureId: result.fixtureId,
@@ -25,6 +29,7 @@ export function createMatchReport(result: SimulateMatchResult): MatchReport {
     },
     stats: copyStats(result.stats),
     events: result.events.map(toMatchEvent),
+    tacticalContext,
   };
 }
 
@@ -78,6 +83,7 @@ function toShotOutcomeEvent(event: MatchShotOutcomeStepEvent): MatchEvent {
     minute: event.minute,
     side: event.side,
     quality: event.quality,
+    expectedGoals: requiredExpectedGoals(event),
     isShotOnTarget: event.isShotOnTarget,
     shotType: event.shotType,
     chanceType: event.chanceType,
@@ -115,6 +121,18 @@ function toShotOutcomeEvent(event: MatchShotOutcomeStepEvent): MatchEvent {
           : { primaryDefenderPlayerId: event.primaryDefenderPlayerId }),
       };
   }
+}
+
+function requiredExpectedGoals(event: MatchShotOutcomeStepEvent): number {
+  if (
+    event.expectedGoals === undefined
+    || !Number.isFinite(event.expectedGoals)
+    || event.expectedGoals < 0
+    || event.expectedGoals > 1
+  ) {
+    throw new Error("Durable shot event requires resolver-owned expectedGoals inside 0..1");
+  }
+  return event.expectedGoals;
 }
 
 /**

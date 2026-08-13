@@ -2,7 +2,9 @@
 
 ## Status
 
-Not started; requires Steps 13-14 Done.
+Closed; requires Steps 14 and 14B Done. Its former targets assume the rejected
+opponent-aware/plan-execution model and are not executable under Amendment A11.
+They must be replaced, not silently weakened, after the 14B product decision.
 
 ## Goal
 

@@ -1,14 +1,14 @@
 import type { FixtureId } from "../types/ids.ts";
 import type { MatchEvent } from "./match-event.entity.ts";
+import type { MatchReportTacticalContext } from "../match/match-consequence.ts";
 
 /**
  * Current persisted match-event schema version.
  *
- * `8` added `ShotContext.route`. A report written at `7` or below carries no
- * route, which is why readers that want one gate on this number instead of
- * treating an absent field as `central`.
+ * `9` adds resolver-owned xG plus report-level kickoff/command context. Older
+ * reports cannot reconstruct either fact and are invalid beta data.
  */
-export const MATCH_EVENT_SCHEMA_VERSION = 8;
+export const MATCH_EVENT_SCHEMA_VERSION = 9;
 
 /**
  * Score for one completed or in-progress match.
@@ -64,4 +64,6 @@ export interface MatchReport {
   readonly stats: MatchStats;
   /** Sparse language-agnostic events. */
   readonly events: readonly MatchEvent[];
+  /** Raw initial/accepted tactical facts; chapter totals remain derived. */
+  readonly tacticalContext: MatchReportTacticalContext;
 }

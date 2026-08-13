@@ -122,8 +122,9 @@ from accepted manager/AI commands plus canonical shot facts and reconcile final
 goals, shots and xG without causal claims. The owner then explicitly prioritised
 generational renewal: Step 13A is Done with `GO` on fresh current-engine facts.
 Ready replacements improve `+0.1106/+0.1057` and generated leaders
-`+0.0690/+0.0500` in-sample/OOS with no new integrated failure. Step 14 must
-still align its AI preparation policy with option B.
+`+0.0690/+0.0500` in-sample/OOS with no new integrated failure. Step 14 is Done:
+raw kickoff/command/xG facts survive the single beta reset and rebuild identical
+chapters after reload. Step 14B is product-blocked before preparation semantics.
 
 This phase is governed by
 [`PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md`](../../audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md).
@@ -397,7 +398,8 @@ contexts; it never owns the analytic diversity gate.
 | 12I | [own-squad MVP acceptance](12i-own-squad-mvp-acceptance.md) | no | Done: smaller option-B MVP accepted |
 | 13 | [tactical chapters and canonical explanation](13-tactical-chapters-and-canonical-explanation.md) | report/UI | Done |
 | 13A | [integrated L6.31 renewal replay](13a-checkpoint-l6-31-integrated-renewal-replay.md) | no | Done: `GO` twice |
-| 14 | [preparation and single persistence integration](14-post-match-preparation-choice.md) | next-match state/save | Ready for A11 alignment |
+| 14 | [single tactical persistence integration](14-post-match-preparation-choice.md) | save/report | Done: one beta reset; exact round-trip |
+| 14B | [post-match preparation product decision](14b-post-match-preparation-product-decision.md) | no | Active: product decision required |
 | 15 | [Checkpoint E multi-match consequence](15-checkpoint-e-multi-match-consequence.md) | no | GO authorizes 16 |
 | 16 | [integrated cohort and phase closeout](16-integrated-cohort-and-phase-closeout.md) | no | Phase 81B handoff |
 

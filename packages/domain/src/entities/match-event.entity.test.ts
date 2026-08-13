@@ -39,6 +39,7 @@ test("an awarded penalty carries no route at all", () => {
       minute: 61,
       side: "home",
       quality: 0.76,
+      expectedGoals: 0.76,
       isShotOnTarget: true,
       shotType: "set_piece",
       chanceType: "dead_ball",
@@ -60,10 +61,8 @@ test("the route survives onto every shot-outcome event that has one", () => {
   assert.equal(save.shot.route, "right");
 });
 
-test("the schema version is the one the route was added at", () => {
-  // A reader that wants a route gates on this number instead of treating an
-  // absent field as `central`, so the version and the field move together.
-  assert.equal(MATCH_EVENT_SCHEMA_VERSION, 8);
+test("the schema version includes resolver-owned expected goals", () => {
+  assert.equal(MATCH_EVENT_SCHEMA_VERSION, 9);
 });
 
 /** Builds one open-play shot context down an explicit route. */
@@ -72,6 +71,7 @@ function openPlayShot(route: ShotContext["route"]): ShotContext {
     minute: 18,
     side: "home",
     quality: 0.55,
+    expectedGoals: 0.31,
     isShotOnTarget: true,
     shotType: "normal",
     chanceType: "open_play",

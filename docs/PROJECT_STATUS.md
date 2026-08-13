@@ -23,9 +23,9 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **Steps 13 and 13A are Done; Step 14 is next.** Chapters are green;
-  fresh integrated L6.31 is `GO` in-sample/OOS. Option-B AI remains
-  opponent-blind before matches; persistence still belongs to Step 14.
+- Phase 81A **Step 14 is Done; Step 14B is product-blocked.** Match event `9`,
+  career `3`, SQLite `24` and envelope `15` round-trip raw tactics/xG after one
+  beta reset. Option-B AI stays opponent-blind; preparation needs a product choice.
 - **L6.31 integrated replay is green twice:** runway improves ready replacements
   `+0.1106/+0.1057` and generated leaders `+0.0690/+0.0500`, no new red.
 - Phase 81A **L6.3F `GO`:** `3500` yields `0.2624` penalties/match; conversion

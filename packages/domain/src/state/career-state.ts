@@ -38,7 +38,7 @@ import {
 } from "../career/club-competitive-tier.ts";
 
 /** Current schema version for durable career-state snapshots. */
-export const CAREER_STATE_SCHEMA_VERSION = 2;
+export const CAREER_STATE_SCHEMA_VERSION = 3;
 
 /**
  * One completed permanent transfer stored in the career timeline.

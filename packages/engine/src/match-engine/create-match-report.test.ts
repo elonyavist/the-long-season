@@ -10,10 +10,22 @@ import {
 } from "@game/domain";
 
 import {
-  createMatchReport,
+  createMatchReport as createDurableMatchReport,
+  createMatchTacticalChapters,
+  createMatchTacticalChaptersFromReport,
   type MatchStepEvent,
   type SimulateMatchResult,
 } from "../index.ts";
+
+const TACTICAL_CONTEXT = {
+  home: { formation: "4-3-3", lateralFocus: "left" },
+  away: { formation: "4-4-2", lateralFocus: "balanced" },
+  commands: [],
+} as const;
+
+function createMatchReport(result: SimulateMatchResult): MatchReport {
+  return createDurableMatchReport(result, TACTICAL_CONTEXT);
+}
 
 /**
  * Match-report tests prove that engine-local simulation output maps to durable
@@ -36,7 +48,7 @@ test("report contains event schema version", () => {
 });
 
 test("match event schema version is bumped for durable causal context", () => {
-  assert.equal(MATCH_EVENT_SCHEMA_VERSION, 8);
+  assert.equal(MATCH_EVENT_SCHEMA_VERSION, 9);
 });
 
 test("the route a chance came down survives into the durable report", () => {
@@ -139,6 +151,7 @@ test("report preserves structured shot context for every shot outcome", () => {
         minute: 8,
         side: "home",
         quality: 0.74,
+        expectedGoals: 0.61,
         isShotOnTarget: true,
         shotType: "normal",
         chanceType: "open_play",
@@ -148,6 +161,7 @@ test("report preserves structured shot context for every shot outcome", () => {
         minute: 12,
         side: "away",
         quality: 0.63,
+        expectedGoals: 0.42,
         isShotOnTarget: true,
         shotType: "normal",
         chanceType: "counter",
@@ -157,6 +171,7 @@ test("report preserves structured shot context for every shot outcome", () => {
         minute: 25,
         side: "home",
         quality: 0.48,
+        expectedGoals: 0.21,
         isShotOnTarget: false,
         shotType: "normal",
         chanceType: "open_play",
@@ -166,6 +181,7 @@ test("report preserves structured shot context for every shot outcome", () => {
         minute: 52,
         side: "home",
         quality: 0.36,
+        expectedGoals: 0.14,
         isShotOnTarget: false,
         shotType: "header",
         chanceType: "cross",
@@ -175,6 +191,7 @@ test("report preserves structured shot context for every shot outcome", () => {
         minute: 77,
         side: "away",
         quality: 0.81,
+        expectedGoals: 0.7,
         isShotOnTarget: true,
         shotType: "normal",
         chanceType: "open_play",
@@ -231,6 +248,21 @@ test("match report is serializable", () => {
   assert.deepEqual(JSON.parse(JSON.stringify(report)), report);
 });
 
+test("durable raw facts rebuild the same tactical chapters as live events", () => {
+  const result = simulatedResultWithGoals();
+  const report = createMatchReport(result);
+
+  assert.deepEqual(
+    createMatchTacticalChaptersFromReport(report),
+    createMatchTacticalChapters({
+      score: result.score,
+      stats: result.stats,
+      events: result.events,
+      tacticalCommandFacts: [],
+    }),
+  );
+});
+
 /**
  * Builds a simulation result with all aggregate shot outcomes represented.
  */
@@ -268,6 +300,7 @@ function simulatedResultWithGoals(): SimulateMatchResult {
         side: "home",
         outcome: "goal",
         quality: 0.74,
+        expectedGoals: 0.61,
         isShotOnTarget: true,
         shotType: "normal",
         chanceType: "open_play",
@@ -281,6 +314,7 @@ function simulatedResultWithGoals(): SimulateMatchResult {
         side: "away",
         outcome: "save",
         quality: 0.63,
+        expectedGoals: 0.42,
         isShotOnTarget: true,
         shotType: "normal",
         chanceType: "counter",
@@ -294,6 +328,7 @@ function simulatedResultWithGoals(): SimulateMatchResult {
         side: "home",
         outcome: "miss",
         quality: 0.48,
+        expectedGoals: 0.21,
         isShotOnTarget: false,
         shotType: "normal",
         chanceType: "open_play",
@@ -314,6 +349,7 @@ function simulatedResultWithGoals(): SimulateMatchResult {
         side: "home",
         outcome: "block",
         quality: 0.36,
+        expectedGoals: 0.14,
         isShotOnTarget: false,
         shotType: "header",
         chanceType: "cross",
@@ -327,6 +363,7 @@ function simulatedResultWithGoals(): SimulateMatchResult {
         side: "away",
         outcome: "goal",
         quality: 0.81,
+        expectedGoals: 0.7,
         isShotOnTarget: true,
         shotType: "normal",
         chanceType: "open_play",
@@ -367,6 +404,7 @@ function resultWithPenaltyGoal(): SimulateMatchResult {
         side: "home",
         outcome: "goal",
         quality: 0.76,
+        expectedGoals: 0.76,
         isShotOnTarget: true,
         shotType: "set_piece",
         chanceType: "dead_ball",

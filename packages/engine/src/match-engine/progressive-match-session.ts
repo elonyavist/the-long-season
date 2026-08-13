@@ -17,6 +17,7 @@ import {
   type LiveMatchTeamState,
   type LiveMatchUnavailablePlayer,
   type MatchEventSide,
+  type MatchTacticalCommandRecord,
   type MatchTacticalCommandOwner,
   type PlayerId,
   type TacticSetup,
@@ -164,10 +165,7 @@ export type AppliedLiveMatchCommandFact =
     };
 
 /** A retained tactical delta with the caller that actually chose it. */
-export interface AppliedLiveMatchTacticalCommandFact {
-  readonly owner: MatchTacticalCommandOwner;
-  readonly fact: Exclude<AppliedLiveMatchCommandFact, { readonly type: "substitution" }>;
-}
+export type AppliedLiveMatchTacticalCommandFact = MatchTacticalCommandRecord;
 
 /** Result of validating and applying one canonical live command. */
 export type ApplyValidatedLiveMatchCommandResult =

@@ -579,7 +579,11 @@ function buildManualTacticFixture(
       ...(includeFixtureExplanation ? { includeExplanationTrace: true } : {}),
     },
   );
-  const report = createMatchReport(simulated);
+  const report = createMatchReport(simulated, {
+    home: { formation: "not_observed", lateralFocus: "balanced" },
+    away: { formation: "not_observed", lateralFocus: "balanced" },
+    commands: simulated.tacticalCommandFacts ?? [],
+  });
 
   return {
     fixture: {

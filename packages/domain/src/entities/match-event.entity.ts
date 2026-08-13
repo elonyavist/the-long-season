@@ -69,6 +69,8 @@ export interface ShotContext {
   readonly side: MatchEventSide;
   /** Normalized opportunity quality in the `[0, 1]` range. */
   readonly quality: number;
+  /** Canonical goal probability after shot, defence and goalkeeper context. */
+  readonly expectedGoals: number;
   /** Whether the shot counted as on target. */
   readonly isShotOnTarget: boolean;
   /** Structured execution type for the shot. */

@@ -12,6 +12,8 @@ import {
   type Fixture,
   type FixtureId,
   type LateralFocus,
+  isFormationKey,
+  type FormationKey,
   type MatchReport,
   type MarketBehaviorCalibrationConfig,
   type MatchPlayerConsequence,
@@ -562,6 +564,8 @@ interface ResolvedTeamContext {
   readonly context: MatchTeamContext;
   /** The selection-owned focus consumed at kickoff without a second evaluation. */
   readonly lateralFocus: LateralFocus;
+  /** Selection-owned kickoff formation, or honest absence for a custom XI. */
+  readonly formation: FormationKey | "not_observed";
 }
 
 type ResolveTeamContextResult =
@@ -608,7 +612,11 @@ function resolveTeamContext(
       status: "resolved",
       context: suppliedContext === undefined
         ? undefined
-        : { context: suppliedContext, lateralFocus: "balanced" },
+        : {
+            context: suppliedContext,
+            lateralFocus: "balanced",
+            formation: selectedPreparationFormation(careerState, clubId),
+          },
     };
   }
 
@@ -634,6 +642,7 @@ function resolveTeamContext(
       context: {
         context: selection.teamContext,
         lateralFocus: selection.tacticalPolicy.ownFit.lateralFocus,
+        formation: selection.formation,
       },
     };
   } catch (error) {
@@ -679,7 +688,11 @@ function simulateFixtureAndCreateReport(
   });
 
   return {
-    report: createMatchReport(simulatedMatch),
+    report: createMatchReport(simulatedMatch, {
+      home: { formation: home.formation, lateralFocus: home.lateralFocus },
+      away: { formation: away.formation, lateralFocus: away.lateralFocus },
+      commands: [],
+    }),
     playerRatings: buildPlayerMatchRatings({
       events: simulatedMatch.events,
       playerRegistrations: playerRatingRegistrationsFromContext({
@@ -693,6 +706,16 @@ function simulateFixtureAndCreateReport(
     }),
     ...(simulatedMatch.explanationTrace === undefined ? {} : { explanationTrace: simulatedMatch.explanationTrace }),
   };
+}
+
+/** Reads a selected-club formation only when preparation stored a real key. */
+function selectedPreparationFormation(
+  careerState: CareerState,
+  clubId: ClubId,
+): FormationKey | "not_observed" {
+  if (clubId !== careerState.selectedClubId) return "not_observed";
+  const value = careerState.matchPreparation?.baseFormationId;
+  return isFormationKey(value) ? value : "not_observed";
 }
 
 /** Reads both kickoff elevens off the participation facts already assembled. */

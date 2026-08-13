@@ -162,12 +162,18 @@ test("advanceCareerOneSeason archives player statistics before participation res
         minute: 25,
         side: "home",
         quality: 0.7,
+        expectedGoals: 0.49,
         isShotOnTarget: true,
         shotType: "normal",
         chanceType: "open_play",
       },
       scorerPlayerId,
     }],
+    tacticalContext: {
+      home: { formation: "4-3-3", lateralFocus: "balanced" },
+      away: { formation: "4-4-2", lateralFocus: "balanced" },
+      commands: [],
+    },
   };
   const playerParticipationLedger = accruePlayerFixtureParticipation(
     createEmptyPlayerParticipationLedger(),

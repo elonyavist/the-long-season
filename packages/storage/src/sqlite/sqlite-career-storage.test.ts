@@ -12,10 +12,10 @@ import { SQLITE_CAREER_SCHEMA_VERSION } from "./sqlite-career-schema.ts";
 
 describe("SQLite career storage failure boundaries", () => {
   it("uses the clean Phase 80A baseline for fresh databases", () => {
-    expect(SQLITE_CAREER_SCHEMA_VERSION).toBe(23);
-    expect(SQLITE_CAREER_MIGRATIONS.map((migration) => migration.version)).toEqual([23]);
-    expect(planSqliteCareerMigrations(0).map((migration) => migration.version)).toEqual([23]);
-    expect(planSqliteCareerMigrations(23)).toEqual([]);
+    expect(SQLITE_CAREER_SCHEMA_VERSION).toBe(24);
+    expect(SQLITE_CAREER_MIGRATIONS.map((migration) => migration.version)).toEqual([24]);
+    expect(planSqliteCareerMigrations(0).map((migration) => migration.version)).toEqual([24]);
+    expect(planSqliteCareerMigrations(24)).toEqual([]);
     expect(SQLITE_CAREER_MIGRATIONS[0]?.statements.some((statement) => (
       /^ALTER TABLE/u.test(statement)
     ))).toBe(false);
@@ -70,13 +70,13 @@ describe("SQLite career storage failure boundaries", () => {
   it("rejects older beta, future, and invalid schema versions without destructive recovery", () => {
     // `22` joins the obsolete list rather than being migrated: it stored shots
     // with no route column, so the fact is gone rather than absent.
-    for (let version = 1; version <= 22; version += 1) {
+    for (let version = 1; version <= 23; version += 1) {
       expect(() => planSqliteCareerMigrations(version)).toThrowError(expect.objectContaining({
         code: "unsupported_schema_version",
         relation: "obsolete_beta",
       }));
     }
-    expect(() => planSqliteCareerMigrations(24)).toThrowError(expect.objectContaining({
+    expect(() => planSqliteCareerMigrations(25)).toThrowError(expect.objectContaining({
       code: "unsupported_schema_version",
       relation: "future",
     }));

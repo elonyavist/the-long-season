@@ -223,7 +223,11 @@ export function runLiveMatchControlGate(input: RunLiveMatchControlGateInput): Li
         gameState = applyMatchReportToFixture({
           state: gameState,
           fixtureId: fixture.id,
-          report: createMatchReport(result),
+          report: createMatchReport(result, {
+            home: { formation: setup.home.formation, lateralFocus: "balanced" },
+            away: { formation: setup.away.formation, lateralFocus: "balanced" },
+            commands: completed.state.appliedTacticalCommandFacts,
+          }),
         });
         const committed = gameState.fixtures[fixture.id]?.result;
         if (committed?.played !== true) {
