@@ -129,6 +129,52 @@ export const TACTICAL_AGENCY_B2_SEED_SETS = [
   },
 ] as const;
 
+/** Larger untouched population frozen by Step 06C12 before implementation. */
+export const TACTICAL_AGENCY_B2_DOWNSTREAM_REPLICATION_SEED_SETS = [
+  {
+    setName: "downstream replication A (untouched)",
+    seedPrefix: "phase81a-b2-downstream-replication-a",
+  },
+  {
+    setName: "downstream replication B (untouched)",
+    seedPrefix: "phase81a-b2-downstream-replication-b",
+  },
+] as const;
+
+/** Worlds per independently decided Step 06C12 set. */
+export const TACTICAL_AGENCY_B2_DOWNSTREAM_REPLICATION_WORLD_COUNT = 14;
+
+/** Reciprocal farthest-first contexts per independently decided Step 06C12 set. */
+export const TACTICAL_AGENCY_B2_DOWNSTREAM_REPLICATION_CONTEXT_COUNT = 64;
+
+interface TacticalAgencyConditionedPopulationContract {
+  readonly seedSets: readonly {
+    readonly setName: string;
+    readonly seedPrefix: string;
+  }[];
+  readonly worldCount: number;
+  readonly maximumReplayContextCount: number;
+  readonly selectionSeedPrefix: string;
+  readonly replaySeedPrefix: string;
+}
+
+const TACTICAL_AGENCY_B2_CURRENT_CONTRACT: TacticalAgencyConditionedPopulationContract = {
+  seedSets: TACTICAL_AGENCY_B2_SEED_SETS,
+  worldCount: DEFAULT_TACTICAL_AGENCY_WORLD_COUNT,
+  maximumReplayContextCount: 32,
+  selectionSeedPrefix: "phase81a-b2-selection-v1",
+  replaySeedPrefix: "phase81a-b2-replay-v1",
+};
+
+const TACTICAL_AGENCY_B2_DOWNSTREAM_REPLICATION_CONTRACT:
+TacticalAgencyConditionedPopulationContract = {
+  seedSets: TACTICAL_AGENCY_B2_DOWNSTREAM_REPLICATION_SEED_SETS,
+  worldCount: TACTICAL_AGENCY_B2_DOWNSTREAM_REPLICATION_WORLD_COUNT,
+  maximumReplayContextCount: TACTICAL_AGENCY_B2_DOWNSTREAM_REPLICATION_CONTEXT_COUNT,
+  selectionSeedPrefix: "phase81a-b2-downstream-replication-selection-v1",
+  replaySeedPrefix: "phase81a-b2-downstream-replication-replay-v1",
+};
+
 /**
  * Runs the low-block guardrail on the legacy chart and reuses the current arm.
  *
@@ -284,6 +330,9 @@ export interface TacticalAgencyB2MaterialityProfileFacts {
     readonly setName: string;
     readonly worldSeeds: readonly string[];
     readonly analysis: TacticalAgencyConditionedAnalysis;
+    readonly populationRows: readonly TacticalAgencyConditionedPopulationRow[];
+    readonly population: readonly LeagueDiversityOpeningGateVerdict[];
+    readonly clubSelections: readonly TacticalAgencyConditionedClubSelection[];
     readonly phaseOneDecision: "PASS_PHASE_1" | "REFINE" | "STOP_RETHINK";
     readonly populationHeld: boolean;
     readonly attribution: TacticalAgencyConditionedMaterialitySummary | null;
@@ -303,6 +352,9 @@ export interface TacticalAgencyB2CurrentMaterialityProfileFacts {
     readonly setName: string;
     readonly worldSeeds: readonly string[];
     readonly analysis: TacticalAgencyConditionedAnalysis;
+    readonly populationRows: readonly TacticalAgencyConditionedPopulationRow[];
+    readonly population: readonly LeagueDiversityOpeningGateVerdict[];
+    readonly clubSelections: readonly TacticalAgencyConditionedClubSelection[];
     readonly phaseOneDecision: "PASS_PHASE_1" | "REFINE" | "STOP_RETHINK";
     readonly populationHeld: boolean;
     readonly attribution: TacticalAgencyConditionedMaterialitySummary | null;
@@ -322,6 +374,9 @@ interface TacticalAgencyB2MaterialityMeasurement {
     readonly setName: string;
     readonly worldSeeds: readonly string[];
     readonly analysis: TacticalAgencyConditionedAnalysis;
+    readonly populationRows: readonly TacticalAgencyConditionedPopulationRow[];
+    readonly population: readonly LeagueDiversityOpeningGateVerdict[];
+    readonly clubSelections: readonly TacticalAgencyConditionedClubSelection[];
     readonly phaseOneDecision: "PASS_PHASE_1" | "REFINE" | "STOP_RETHINK";
     readonly populationHeld: boolean;
     readonly attribution: TacticalAgencyConditionedMaterialitySummary | null;
@@ -576,7 +631,36 @@ export async function createTacticalAgencyB2MaterialityProfileFacts(input: {
 export async function createTacticalAgencyB2CurrentMaterialityProfileFacts(input: {
   readonly workerCount: number;
 }): Promise<TacticalAgencyB2CurrentMaterialityProfileFacts> {
-  const measured = await measureTacticalAgencyB2Materiality(input.workerCount);
+  return createTacticalAgencyCurrentMaterialityFacts({
+    workerCount: input.workerCount,
+    contract: TACTICAL_AGENCY_B2_CURRENT_CONTRACT,
+    calibrationVersionKey: "tacticalAgencyCurrentMateriality",
+    calibrationVersion: "phase81a-b2-current-materiality-v1",
+  });
+}
+
+/** Runs 06C12's larger untouched owner replication without changing B2. */
+export async function createTacticalAgencyB2DownstreamReplicationProfileFacts(input: {
+  readonly workerCount: number;
+}): Promise<TacticalAgencyB2CurrentMaterialityProfileFacts> {
+  return createTacticalAgencyCurrentMaterialityFacts({
+    workerCount: input.workerCount,
+    contract: TACTICAL_AGENCY_B2_DOWNSTREAM_REPLICATION_CONTRACT,
+    calibrationVersionKey: "tacticalAgencyDownstreamReplication",
+    calibrationVersion: "phase81a-b2-downstream-replication-v1",
+  });
+}
+
+async function createTacticalAgencyCurrentMaterialityFacts(input: {
+  readonly workerCount: number;
+  readonly contract: TacticalAgencyConditionedPopulationContract;
+  readonly calibrationVersionKey: string;
+  readonly calibrationVersion: string;
+}): Promise<TacticalAgencyB2CurrentMaterialityProfileFacts> {
+  const measured = await measureTacticalAgencyB2Materiality(
+    input.workerCount,
+    input.contract,
+  );
   const sets = measured.sets.map((set) => ({
     ...set,
     materialityHeld: set.attribution !== null
@@ -603,7 +687,7 @@ export async function createTacticalAgencyB2CurrentMaterialityProfileFacts(input
     elapsedMilliseconds: measured.elapsedMilliseconds,
     calibrationVersions: {
       ...measured.calibrationVersions,
-      tacticalAgencyCurrentMateriality: "phase81a-b2-current-materiality-v1",
+      [input.calibrationVersionKey]: input.calibrationVersion,
     },
     worldSeeds: measured.worldSeeds,
   };
@@ -612,15 +696,19 @@ export async function createTacticalAgencyB2CurrentMaterialityProfileFacts(input
 /** One complete-row producer for accepted materiality attribution. */
 async function measureTacticalAgencyB2Materiality(
   workerCount: number,
+  contract: TacticalAgencyConditionedPopulationContract = TACTICAL_AGENCY_B2_CURRENT_CONTRACT,
 ): Promise<TacticalAgencyB2MaterialityMeasurement> {
   const startedAt = performance.now();
-  const measured = await measureTacticalAgencyConditionedPopulation(workerCount);
+  const measured = await measureTacticalAgencyConditionedPopulation(workerCount, contract);
   if (measured.decision !== "PASS_PHASE_1") {
     return {
       sets: measured.sets.map((set) => ({
         setName: set.setName,
         worldSeeds: set.worldSeeds,
         analysis: set.analysis,
+        populationRows: set.populationRows,
+        population: set.population,
+        clubSelections: set.clubSelections,
         phaseOneDecision: set.decision,
         populationHeld: set.populationHeld,
         attribution: null,
@@ -639,6 +727,7 @@ async function measureTacticalAgencyB2Materiality(
       responses: set.responses,
       contexts: set.contexts,
       matchups: set.matchups,
+      maximumContextCount: contract.maximumReplayContextCount,
     });
     const partitions = Array.from({ length: workerCount }, () =>
       [] as typeof selected[number][]);
@@ -652,8 +741,8 @@ async function measureTacticalAgencyB2Materiality(
         contexts,
         engineConfig: set.engineConfig,
         matchTacticsCalibration: set.matchTacticsCalibration,
-        selectionSeedPrefix: `phase81a-b2-selection-v1-${setIndex}`,
-        replaySeedPrefix: `phase81a-b2-replay-v1-${setIndex}`,
+        selectionSeedPrefix: `${contract.selectionSeedPrefix}-${setIndex}`,
+        replaySeedPrefix: `${contract.replaySeedPrefix}-${setIndex}`,
       })));
     const rows = completed
       .sort((left, right) => left.partitionIndex - right.partitionIndex)
@@ -667,6 +756,9 @@ async function measureTacticalAgencyB2Materiality(
       setName: set.setName,
       worldSeeds: set.worldSeeds,
       analysis: set.analysis,
+      populationRows: set.populationRows,
+      population: set.population,
+      clubSelections: set.clubSelections,
       phaseOneDecision: set.decision,
       populationHeld: set.populationHeld,
       attribution,
@@ -809,6 +901,7 @@ export async function createTacticalAgencyB21AProfileFacts(input: {
 /** One canonical producer shared by B2 and its attribution retry. */
 async function measureTacticalAgencyConditionedPopulation(
   workerCount: number,
+  contract: TacticalAgencyConditionedPopulationContract = TACTICAL_AGENCY_B2_CURRENT_CONTRACT,
 ): Promise<TacticalAgencyConditionedMeasurement> {
   if (workerCount !== 7) {
     throw new Error(`Checkpoint B2 requires exactly 7 workers: ${workerCount}`);
@@ -819,9 +912,9 @@ async function measureTacticalAgencyConditionedPopulation(
   const allWorldSeeds: string[] = [];
   const calibrationVersions = new Set<string>();
 
-  for (const seedSet of TACTICAL_AGENCY_B2_SEED_SETS) {
+  for (const seedSet of contract.seedSets) {
     const worldSeeds = Array.from(
-      { length: DEFAULT_TACTICAL_AGENCY_WORLD_COUNT },
+      { length: contract.worldCount },
       (_unused, index) => `${seedSet.seedPrefix}-${String(index + 1).padStart(3, "0")}`,
     );
     allWorldSeeds.push(...worldSeeds);

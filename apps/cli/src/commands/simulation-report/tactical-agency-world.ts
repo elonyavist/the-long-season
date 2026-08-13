@@ -101,6 +101,7 @@ export interface TacticalAgencyConditionedClubSelection {
   readonly bestStructuralScore: number;
   readonly secondStructuralScore: number | "not_observed";
   readonly tiedAtBestCount: number;
+  readonly outOfPositionSlotCount: number;
 }
 
 /** B2's opening row plus the formation distribution needed for attribution. */
@@ -285,6 +286,7 @@ export function runTacticalAgencyConditionedWorld(
         bestStructuralScore: observed.row.bestStructuralScore,
         secondStructuralScore: observed.row.secondStructuralScore ?? "not_observed",
         tiedAtBestCount: observed.row.tiedAtBestCount,
+        outOfPositionSlotCount: observed.row.outOfPositionSlotCount,
       });
     }
 

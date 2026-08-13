@@ -16,6 +16,11 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_DOWNSTREAM_OWNER_REPLICATION.md` — **`REFINE` before replay.**
+  Both larger structural sets pass, but one real free selection admits one
+  weak fit because the selector duplicates and widens domain coverage semantics.
+  Step 06C12A owns the correction; downstream owner is `not_evaluated`.
+
 - `PHASE_81A_CHANCE_TO_RESULT_MATERIALITY_ATTRIBUTION.md` — **`MIXED`.** The
   same canonical matches retain chances, xG, goals and results. In-sample
   `R^2=0.4872` names result resolution; OOS `0.5552` names xG magnitude. Both

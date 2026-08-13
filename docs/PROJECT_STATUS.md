@@ -23,10 +23,9 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **06C11 `MIXED`:** the same complete rows give xG-to-result
-  `R^2=0.4872/0.5552`; in-sample names resolution, OOS names xG magnitude.
-  Both branches are real, so no correction is authorized. Step 07 remains
-  closed pending the documented target/deeper-redesign/replication product fork.
+- Phase 81A **06C12 `REFINE` before replay:** both larger matrices pass, but one
+  real club admits one weak fit through the selector's duplicate coverage rule.
+  06C12A makes domain coverage canonical, then repeats the locked profile.
 - **L6.31 stays green twice:** routine-youth runway improves ready replacements
   `+0.1363/+0.1034`, leaders `+0.0810/+0.0905`, with exact immediate purity.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;

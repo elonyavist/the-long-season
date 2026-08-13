@@ -19,11 +19,13 @@ import {
   createTacticalAgencyB21ProfileFacts,
   createTacticalAgencyB21AProfileFacts,
   createTacticalAgencyB2CurrentMaterialityProfileFacts,
+  createTacticalAgencyB2DownstreamReplicationProfileFacts,
   createTacticalAgencyB2MaterialityProfileFacts,
   createTacticalAgencyB2ProfileFacts,
   createTacticalAgencyBProfileFacts,
   createTacticalAgencySectionFacts,
   TACTICAL_AGENCY_B_WORLD_SEED,
+  TACTICAL_AGENCY_B2_DOWNSTREAM_REPLICATION_WORLD_COUNT,
 } from "./tactical-agency-section.ts";
 import {
   DEFAULT_TACTICAL_SHAPE_FORMATION_PAIRED_SEEDS,
@@ -71,6 +73,7 @@ export const SIMULATION_REPORT_PROFILE_IDS = [
   "phase81a-b2",
   "phase81a-b2-materiality",
   "phase81a-b2-current-materiality",
+  "phase81a-b2-downstream-replication",
   "phase81a-b2-attribution",
   "phase81a-b2-identity-family",
   "phase81a-substitution-minute-l2-7x1",
@@ -489,6 +492,21 @@ export const SIMULATION_REPORT_PROFILES = {
       includedSectionIds: ["tactical_agency"],
       detail: "diagnostic",
       seedPrefix: DEFAULT_TACTICAL_AGENCY_WORLD_SEED,
+      workerCount: 7,
+    },
+  },
+  "phase81a-b2-downstream-replication": {
+    id: "phase81a-b2-downstream-replication",
+    titleKey: "simulationReport.profile.phase81aB2DownstreamReplication.title",
+    descriptionKey: "simulationReport.profile.phase81aB2DownstreamReplication.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-b2-downstream-replication",
+      worldCount: TACTICAL_AGENCY_B2_DOWNSTREAM_REPLICATION_WORLD_COUNT * 2,
+      seasonCount: 1,
+      includedSectionIds: ["tactical_agency"],
+      detail: "diagnostic",
+      seedPrefix: "phase81a-b2-downstream-replication",
       workerCount: 7,
     },
   },
@@ -1718,6 +1736,27 @@ export async function executeSimulationReportModule(
     }
     if (request.profileId === "phase81a-b2-current-materiality") {
       const facts = await createTacticalAgencyB2CurrentMaterialityProfileFacts({
+        workerCount: request.workerCount,
+      });
+      return {
+        data: toSimulationReportJsonValue({
+          sets: facts.sets,
+          downstreamOwner: facts.downstreamOwner,
+          downstreamAttributionHeld: facts.downstreamAttributionHeld,
+          decision: facts.decision,
+          execution: {
+            workerCount: facts.workerCount,
+            partitionCount: facts.workerCount,
+            elapsedMilliseconds: facts.elapsedMilliseconds,
+          },
+        }),
+        decision: facts.decision === "MATERIALITY_PASS" ? "NOT_EVALUATED" : "FAIL",
+        calibrationVersions: facts.calibrationVersions,
+        worldSeeds: facts.worldSeeds,
+      };
+    }
+    if (request.profileId === "phase81a-b2-downstream-replication") {
+      const facts = await createTacticalAgencyB2DownstreamReplicationProfileFacts({
         workerCount: request.workerCount,
       });
       return {

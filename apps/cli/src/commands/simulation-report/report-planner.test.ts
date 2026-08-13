@@ -103,6 +103,20 @@ describe("simulation-report planner", () => {
     });
   });
 
+  it("locks downstream replication to two untouched fourteen-world sets", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-b2-downstream-replication",
+      workerCount: 7,
+    });
+    expect(plan.measurementRequest).toMatchObject({
+      worldCount: 28,
+      seasonCount: 1,
+      workerCount: 7,
+      seedPrefix: "phase81a-b2-downstream-replication",
+      includedSectionIds: ["tactical_agency"],
+    });
+  });
+
   it("locks B2.1 attribution to the same population and seven workers", () => {
     const plan = createSimulationReportPlan({
       profileId: "phase81a-b2-attribution",
