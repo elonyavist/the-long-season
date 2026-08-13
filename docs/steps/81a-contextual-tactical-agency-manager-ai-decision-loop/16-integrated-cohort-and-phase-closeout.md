@@ -2,7 +2,7 @@
 
 ## Status
 
-Not started; requires Checkpoint E GO.
+Not started; requires option-B Checkpoint E GO.
 
 ## Goal
 
@@ -19,10 +19,10 @@ that larger cohort and its diagnostic view.
 - complete uniform strategic-signature matrix;
 - equal-quality squads with different attributes;
 - generated career worlds;
-- informed, blind, and exposed manager policies;
-- pre-match and live AI;
+- own-squad pre-match manager/AI policies;
+- opponent-blind pre-match and state-reactive live AI;
 - mirrored lateral scenarios;
-- post-match preparation mini-seasons;
+- repeated-fixture recovery, availability and rotation;
 - save/load replay.
 
 Freeze sample size, seeds, exactly `7` workers, throughput, and wall clock before
@@ -36,20 +36,18 @@ report must fail closed if its effective worker count is not seven.
 - original `no_dominant_composition`, `no_dominant_tactic`, and
   `no_dominant_formation` readers at `0.55`;
 - analytic full-space `R / N_eff >= 0.25` and ubiquity multiple `<= 4`;
-- structural `+0.045/-0.045/0`;
-- five-component D baseline and full six-component manager
-  `+0.045/-0.045/0`, reported separately;
-- formation-history ablation remains reachable, adds at least `+0.015` in its
-  stable sufficient-history clusters, and stays ignored within `0.015` when
-  history is volatile or insufficient;
+- failed historical structural and season-point magnitude gates remain visible
+  limitations; the accepted smaller option-B effect is not relabelled;
+- pre-match selection remains own-squad/opponent-invariant and every accepted
+  live response remains reachable;
 - player-driven reversals and lateral mirroring;
 - low-block xG `>= 8%` and ratio `<= 2.0`;
-- AI/manager information parity and no fixed-formation exploit;
+- no opponent oracle, formation-history AI reader or fixed-formation exploit;
 - chapter reconciliation and save/load identity;
 - exactly one Phase 81A storage schema/event-envelope advance, owned by Step 14,
   with its post-reset career still loadable at F; Step 06B7F1's content bundle
   `v8` invalidation is separate and retains no beta compatibility path;
-- contextual post-match preparation;
+- explicit `not_implemented_in_mvp` post-match gameplay preparation boundary;
 - determinism, localization, accessibility, package, and regression gates.
 
 ## Expected Files

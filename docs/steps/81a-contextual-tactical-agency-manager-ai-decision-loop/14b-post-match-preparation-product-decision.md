@@ -2,9 +2,10 @@
 
 ## Status
 
-**Active; product decision required, no implementation authorized.** Step 14
-finished the persistence reset. This step is now the phase blocker because the
-previous three-option design conflicts with accepted Amendment A11.
+**Done: preparation deferred for the option-B MVP.** Step 14 finished the
+persistence reset. Amendment A12 records that Phase 81A closes on own-squad
+pre-match choice, live reactions and durable explanation; it does not add an
+unowned post-match allocation merely to preserve an obsolete step title.
 
 ## Conflict Found In Production Design
 
@@ -16,9 +17,9 @@ previous three-option design conflicts with accepted Amendment A11.
 - an option that is merely stored and displayed but never changes information,
   fitness, selection or development is dead product code and is forbidden.
 
-## Decision Needed
+## Decision
 
-Choose a future product boundary before code:
+The three candidate boundaries were:
 
 1. manager-only delayed opponent study plus recovery, accepting asymmetric
    post-match agency in the MVP;
@@ -28,14 +29,32 @@ Choose a future product boundary before code:
 3. defer post-match preparation entirely and close Phase 81A on pre-match
    own-squad selection, live reactions and durable explanation.
 
-No option is recommended by editing thresholds or by reviving the rejected
-tactical execution candidate. Whichever product is chosen receives its own
-frozen reachability and non-dominance checkpoint before implementation.
+Option 3 is adopted for this MVP.
+
+This follows the already-accepted option-B product rather than inventing a new
+one after its implementation:
+
+- manager and AI decisions remain complete inside the match they concern;
+- post-match chapters are durable evidence for the player, not a hidden input
+  or a gameplay bonus;
+- `opponent_study` remains a possible future manager feature, but cannot enter
+  before its information latency and AI parity are designed explicitly;
+- recovery and development keep their existing canonical owners. A future
+  allocation between them requires paired attribution before implementation.
+
+The historical preparation targets are superseded, not passed. Step 15 is
+therefore rewritten as a falsifiable option-B multi-match continuity checkpoint
+rather than a four-policy preparation experiment that production cannot run.
 
 ## Expected Files
 
 - this document;
-- `15-checkpoint-e-multi-match-consequence.md` after the product decision;
-- the Phase 81A design contract/amendment that records the decision.
+- `15-checkpoint-e-multi-match-consequence.md`;
+- `16-integrated-cohort-and-phase-closeout.md`;
+- `docs/audits/PHASE_81A_OPTION_B_CLOSEOUT_AMENDMENT.md` **(new)**;
+- `docs/audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md`;
+- `docs/audits/README.md`;
+- this phase `README.md`;
+- `docs/PROJECT_STATUS.md`.
 
-No production file is in scope until the decision is explicit.
+No production file was needed. The next action is Checkpoint E.

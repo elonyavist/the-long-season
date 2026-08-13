@@ -1618,6 +1618,33 @@ isolato. Il comando fallisce se il conteggio effettivo non è sette.
 
 ---
 
+## Emendamento A12 - Confine post-partita dell'MVP option B
+
+L'Emendamento A11 viene applicato fino alla chiusura della fase. L'MVP non
+aggiunge una scelta di preparazione post-partita:
+
+- l'AI sceglie prima della partita usando soltanto rosa disponibile e stato
+  corrente;
+- durante la partita reagisce soltanto a punteggio, tempo, fatica, infortunio ed
+  espulsione;
+- dopo la partita i capitoli tattici persistiti spiegano i fatti canonici, ma
+  non modificano la partita successiva.
+
+I vecchi target di recupero/prova-piano/studio-avversario del Checkpoint E e i
+gate finali basati su `OpponentRead` sono **superseded**, non superati. Lo Step
+15 misura invece continuità multi-partita, rotazione, reazioni live e identità
+save/load del prodotto option B. Lo Step 16 deve riportare la preparazione
+post-partita come limite esplicito dell'MVP, senza conservarla come fallimento
+annidato dentro la nuova decisione.
+
+Qualunque futura allocazione recupero/sviluppo richiede prima attribuzione
+accoppiata contro i due owner esistenti. Qualunque futuro studio dell'avversario
+richiede un contratto di latenza visibile al manager e parità informativa per
+l'AI. Non si spedisce un placeholder privo di conseguenza.
+
+L'artefatto normativo completo è
+`PHASE_81A_OPTION_B_CLOSEOUT_AMENDMENT.md`.
+
 ## Artefatto richiesto a ogni checkpoint
 
 Ogni checkpoint deve produrre un Markdown nella futura cartella di fase con:

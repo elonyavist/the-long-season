@@ -16,6 +16,11 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_OPTION_B_CLOSEOUT_AMENDMENT.md` — Amendment A12. Post-match
+  preparation is explicitly deferred for the own-squad option-B MVP; Step 15
+  validates multi-match continuity, live reactions and durable explanation
+  without reviving opponent reads or duplicating recovery/development.
+
 - `PHASE_81A_CHECKPOINT_L6_31_INTEGRATED_REPLAY.md` — **`GO` in-sample and
   OOS on fresh current-engine facts.** The stationary routine-youth runway still
   raises ready replacements by `+0.1106/+0.1057` and generated leaders by

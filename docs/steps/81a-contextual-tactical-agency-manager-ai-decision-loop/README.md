@@ -124,7 +124,10 @@ generational renewal: Step 13A is Done with `GO` on fresh current-engine facts.
 Ready replacements improve `+0.1106/+0.1057` and generated leaders
 `+0.0690/+0.0500` in-sample/OOS with no new integrated failure. Step 14 is Done:
 raw kickoff/command/xG facts survive the single beta reset and rebuild identical
-chapters after reload. Step 14B is product-blocked before preparation semantics.
+chapters after reload. Amendment A12 resolves Step 14B by explicitly deferring
+post-match gameplay preparation for the option-B MVP. Step 15 is now a
+multi-match continuity, live-reaction and persistence checkpoint; it does not
+rename the obsolete preparation experiment as a pass.
 
 This phase is governed by
 [`PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md`](../../audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md).
@@ -178,8 +181,9 @@ consume the manager's same evidence rather than hidden facts.
   Interface with the same facts and latency and no future or hidden state.
 - `lateralFocus = balanced | left | right` is the single owner of lateral
   commitment. Formation remains geometry; players own execution.
-- Post-match choice affects only the next match: marginal recovery, plan
-  rehearsal, or opponent study, with one priority excluding the other two.
+- Post-match tactical chapters are durable explanation only in the option-B
+  MVP. Recovery/development allocation and delayed opponent study remain future
+  product work with separate attribution and information-latency contracts.
 - The fictional first division uses the frozen Big Five baseline: champion
   cohort mean `72..88` on `34` matches, with total goals/draws retained as
   guardrails. Lower divisions do not inherit those bands.
@@ -399,8 +403,8 @@ contexts; it never owns the analytic diversity gate.
 | 13 | [tactical chapters and canonical explanation](13-tactical-chapters-and-canonical-explanation.md) | report/UI | Done |
 | 13A | [integrated L6.31 renewal replay](13a-checkpoint-l6-31-integrated-renewal-replay.md) | no | Done: `GO` twice |
 | 14 | [single tactical persistence integration](14-post-match-preparation-choice.md) | save/report | Done: one beta reset; exact round-trip |
-| 14B | [post-match preparation product decision](14b-post-match-preparation-product-decision.md) | no | Active: product decision required |
-| 15 | [Checkpoint E multi-match consequence](15-checkpoint-e-multi-match-consequence.md) | no | GO authorizes 16 |
+| 14B | [post-match preparation product decision](14b-post-match-preparation-product-decision.md) | no | Done: preparation deferred by A12 |
+| 15 | [Checkpoint E option-B multi-match continuity](15-checkpoint-e-multi-match-consequence.md) | no | Ready: GO authorizes 16 |
 | 16 | [integrated cohort and phase closeout](16-integrated-cohort-and-phase-closeout.md) | no | Phase 81B handoff |
 
 No later step starts while its preceding checkpoint is unresolved.
