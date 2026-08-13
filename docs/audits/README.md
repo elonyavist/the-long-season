@@ -16,6 +16,11 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_L6_31_INTEGRATED_REPLAY.md` — **`GO` in-sample and
+  OOS on fresh current-engine facts.** The stationary routine-youth runway still
+  raises ready replacements by `+0.1106/+0.1057` and generated leaders by
+  `+0.0690/+0.0500`, with exact immediate purity and no new integrated failure.
+
 - `PHASE_81A_MVP_AGENCY_ACCEPTANCE_AMENDMENT.md` — Amendment A11. The user
   accepts the smaller own-squad option-B MVP after both execution candidates
   fail and are removed. Failed gates remain failed; Step 13 may explain only

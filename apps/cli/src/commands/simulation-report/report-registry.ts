@@ -273,10 +273,10 @@ const CAREER_PROFILE_CACHE_SUFFIX = {
   "phase81a-renewal-ladder-l6-26-cached": "-facts-v1",
   "phase81a-population-stationarity-l6-27-cached": "-facts-v1",
   "phase81a-generation-time-stationary-l6-29a-7x10": "-facts-v1",
-  "phase81a-routine-youth-runway-l6-31-control-7x10": "-facts-v2",
-  "phase81a-routine-youth-runway-l6-31-candidate-7x10": "-facts-v2",
-  "phase81a-routine-youth-runway-l6-31-oos-control-7x10": "-facts-v2",
-  "phase81a-routine-youth-runway-l6-31-oos-candidate-7x10": "-facts-v2",
+  "phase81a-routine-youth-runway-l6-31-control-7x10": "-facts-v3",
+  "phase81a-routine-youth-runway-l6-31-candidate-7x10": "-facts-v3",
+  "phase81a-routine-youth-runway-l6-31-oos-control-7x10": "-facts-v3",
+  "phase81a-routine-youth-runway-l6-31-oos-candidate-7x10": "-facts-v3",
   "phase81a-renewal-ablation-l6-1-control-7x10": "-facts-v2",
   "phase81a-renewal-ablation-l6-1-market-7x10": "-facts-v2",
   "phase81a-renewal-ablation-l6-1-blueprint-7x10": "-facts-v2",
@@ -2157,8 +2157,8 @@ async function leagueDiversityExecution(
           : "phase81a-routine-youth-runway-l6-31-control-7x10",
         checkpointDirectoryPath: await resolveWorkspaceOutputPath(
           careerProfileId === "phase81a-routine-youth-runway-l6-31-oos-candidate-7x10"
-            ? "saves/long-run-checkpoints/phase81a-routine-youth-runway-l6-31-oos-control-7x10-facts-v2"
-            : "saves/long-run-checkpoints/phase81a-routine-youth-runway-l6-31-control-7x10-facts-v2",
+            ? "saves/long-run-checkpoints/phase81a-routine-youth-runway-l6-31-oos-control-7x10-facts-v3"
+            : "saves/long-run-checkpoints/phase81a-routine-youth-runway-l6-31-control-7x10-facts-v3",
         ),
       }
     : undefined;

@@ -23,12 +23,11 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **Step 13 is Done; Step 14 is next after A11 alignment.** Canonical
-  current-session chapters reconcile goals/shots exactly and event xG, retain
-  explicit manager/AI ownership and make no causal point claim. Option-B AI
-  remains opponent-blind before matches; persistence still belongs to Step 14.
-- **L6.31 stays green twice:** runway improves ready replacements
-  `+0.1363/+0.1034` and leaders `+0.0810/+0.0905`.
+- Phase 81A **Steps 13 and 13A are Done; Step 14 is next.** Chapters are green;
+  fresh integrated L6.31 is `GO` in-sample/OOS. Option-B AI remains
+  opponent-blind before matches; persistence still belongs to Step 14.
+- **L6.31 integrated replay is green twice:** runway improves ready replacements
+  `+0.1106/+0.1057` and generated leaders `+0.0690/+0.0500`, no new red.
 - Phase 81A **L6.3F `GO`:** `3500` yields `0.2624` penalties/match; conversion
   `0.7260` and ordinary assisted share `0.7540` remain healthy.
 - Phase 81A **L6.3G `REFINE`:** `8000` yields `1.4692/1.4645` direct-free-kick
