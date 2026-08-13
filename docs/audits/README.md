@@ -16,6 +16,10 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_MVP_OWN_SQUAD_AGENCY_AMENDMENT.md` — Amendment A7. Retains the
+  failed adversarial target for future opponent-aware AI and freezes the current
+  MVP's own-squad, season-point contract before Steps 10-11 implementation.
+
 - `PHASE_81A_CHECKPOINT_C_PLAYER_CONTEXT.md` — **`REFINE: product premise
   review`.** All player-context, diversity, dominance and blind-neutral gates
   pass across `42` worlds; only the historical `+0.045/-0.045` adversarial

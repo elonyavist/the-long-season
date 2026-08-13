@@ -397,7 +397,7 @@ here.
   `05-contested-routes-and-lateral-focus.md`,
   `06-checkpoint-b-structural-ceiling.md`,
   `09-checkpoint-c-player-context.md`,
-  `12-checkpoint-d-manager-ai-agency.md`,
+  `12-checkpoint-d-own-squad-agency.md`,
   `15-checkpoint-e-multi-match-consequence.md` and
   `16-integrated-cohort-and-phase-closeout.md` - exact Phase 81A files whose
   executable reproduction commands or expected report owner move.

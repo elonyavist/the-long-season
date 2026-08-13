@@ -93,8 +93,8 @@ remaining lateral execution before any target review. Step 08 then proves the
 chain is already canonical and adds no duplicate multiplier. Checkpoint C
 records `REFINE: product_premise_review`: all player-context and structural
 gates pass, while the historical adversarial `+0.045/-0.045` target alone is
-red. Step 09A now freezes the accepted own-squad MVP contract; Steps 07-08 are
-not reopened.
+red. Amendment A7 now freezes the accepted own-squad MVP contract and rewrites
+Steps 10-12; Steps 07-08 are not reopened. Step 10 is next.
 
 This phase is governed by
 [`PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md`](../../audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md).
@@ -353,10 +353,10 @@ contexts; it never owns the analytic diversity gate.
 | 07 | [player task execution](07-player-task-execution.md) | yes | Done: task identity accepted; Step 08 |
 | 08 | [squad identity and lateral execution](08-squad-identity-and-lateral-execution.md) | yes | Done: canonical chain; Step 09 |
 | 09 | [Checkpoint C player context](09-checkpoint-c-player-context.md) | no | **`REFINE: product premise review`** |
-| 09A | [MVP own-squad agency contract](09a-mvp-own-squad-agency-contract.md) | no | rewrites 10-12 before implementation |
-| 10 | [manager opponent read](10-manager-opponent-read.md) | information | A1 rescope required before start |
-| 11 | [MVP AI policy - historical opponent-read plan superseded](11-ai-shared-opponent-read.md) | yes | A1 rescope required after B2 |
-| 12 | [Checkpoint D - historical shared-read plan superseded](12-checkpoint-d-manager-ai-agency.md) | no | A1 rescope required after B2 |
+| 09A | [MVP own-squad agency contract](09a-mvp-own-squad-agency-contract.md) | no | **Done; Step 10 open** |
+| 10 | [manager own-squad tactical read](10-manager-own-squad-tactical-read.md) | information | Ready after A7 |
+| 11 | [AI own-squad and live-state policy](11-ai-own-squad-and-live-state-policy.md) | yes | Step 10 |
+| 12 | [Checkpoint D own-squad agency](12-checkpoint-d-own-squad-agency.md) | no | frozen paired season-scale gate |
 | 13 | [tactical chapters and canonical explanation](13-tactical-chapters-and-canonical-explanation.md) | report/UI | Step 14 |
 | 14 | [preparation and single persistence integration](14-post-match-preparation-choice.md) | next-match state/save | Step 15 |
 | 15 | [Checkpoint E multi-match consequence](15-checkpoint-e-multi-match-consequence.md) | no | GO authorizes 16 |
@@ -530,8 +530,8 @@ graphify update .
   expected delta remains zero.
 - Manager agency realizes the structural ceiling from observable information.
   Amendment A1 requires the exact D population and MVP AI acceptance gate to be
-  preregistered after B2 and before Step 10; the historical shared-read D is not
-  an exit criterion.
+  preregistered by Amendment A7 before Step 10; the historical shared-read D is
+  retained only as the future opponent-aware contract.
 - The contribution of `formation_history` is re-preregistered with that revised
   D/E design before implementation; its historical AI-parity wording is
   superseded.

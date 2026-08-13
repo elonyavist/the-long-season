@@ -1921,3 +1921,39 @@ da sola non lo è mai. Solo 06B18 e 06B19 hanno documenti di step: 06B20A-C e 06
 possono essere scritti prima del verdetto del checkpoint che li apre, perché
 nominare la correzione prima dell'attribuzione è l'errore che questa tranche
 chiude.
+
+## Amendment A7 - Own-Squad Tactical Agency MVP
+
+Checkpoint C, eseguito il 2026-08-13 su `14` mondi A2 e `28` mondi downstream
+intatti, ha restituito `REFINE: product_premise_review`. Tutti i gate su
+giocatori, identità rosa, varietà, riordino catalogo, dominanza e neutralità
+cieca passano. Gli estremi ottimistici `+0.02258/-0.01832` e
+`+0.02162/-0.01629` non raggiungono il contratto avversariale
+`+0.045/-0.045`.
+
+Il target storico non viene abbassato. Resta il contratto di una futura AI che
+legge l'avversario attraverso gli stessi fatti visibili al manager. Le sezioni
+storiche Step 10-12 di questo documento non governano più l'MVP corrente.
+
+L'MVP corrente sceglie formazione, XI, profilo tattico e focus laterale soltanto
+da rosa propria, disponibilità, fitness, forma, morale, carico recente e stato
+live corrente. Nessun fatto dell'avversario entra nella selezione pre-match.
+Formazione e giocatori restano i proprietari di geometria ed esecuzione; la
+policy non aggiunge forza, xG, gol o risultato.
+
+Il nuovo Checkpoint D usa due set mai ispezionati da sette mondi, un club stabile
+per ognuna delle otto identità, il calendario da `34` partite e otto seed
+accoppiati per braccio. I punti reali `3/1/0` vengono aggregati come delta
+stagionale contro non-commitment. In entrambi i set: fit proprio deve valere
+`+1.5..+6.0`, mismatch `-6.0..-1.5`, blind `-0.5..+0.5` con intervallo al 95%
+che attraversa zero, e fit meno mismatch almeno `3.0` punti. I limiti sono
+congelati prima di Steps 10-11: sotto `1.5` la scelta non è percepibile, sopra
+`6.0` sostituisce la costruzione della rosa.
+
+Tutti i reader esistenti su upset Big Five, gol, pareggi, classifica, A2 e
+dominanza restano invariati. Il ricambio generazionale L6.31 è obbligatorio nel
+checkpoint integrato `7 x 10`; il D focalizzato lo registra `not_evaluated`, mai
+PASS.
+
+La specifica esecutiva e le popolazioni complete vivono in
+[`PHASE_81A_MVP_OWN_SQUAD_AGENCY_AMENDMENT.md`](./PHASE_81A_MVP_OWN_SQUAD_AGENCY_AMENDMENT.md).

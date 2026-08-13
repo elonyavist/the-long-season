@@ -270,6 +270,11 @@ identity.
 
 ### `OpponentRead` (Step 10 builds, Step 11 shares)
 
+**Historical contract, deferred by Amendment A7 after Checkpoint C.** The
+interface remains the required future seam, but the active MVP Steps 10-12 use
+only the manager/AI club's own squad and current match state. No production
+caller is authorized by this paragraph.
+
 Six named, total components: `formation_history`, `route_history`,
 `pressing_risk_history`, `lateral_history`, `half_time_change_history`,
 `sample_confidence`. Checkpoint D preregisters the **five**-component profile and
