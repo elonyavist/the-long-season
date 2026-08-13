@@ -3,6 +3,9 @@ import {
   TACTICAL_ROUTE_DEFINITION,
   TACTICAL_SHAPE_CAPACITIES,
   type TacticKnob,
+  type MatchTacticalChapterChangeKind,
+  type MatchTacticalChapterFact,
+  type MatchTacticalChapterSideFact,
   type TacticalShapeCapacity,
 } from "@game/domain";
 
@@ -289,6 +292,58 @@ export interface TacticalConsequenceView {
   readonly observations: readonly TacticalConsequenceObservationView[];
   /** Translation key for the section summary line. */
   readonly summaryKey: TacticalConsequenceSummaryKey;
+}
+
+/** Translation key describing why one observable match chapter began. */
+export type TacticalChapterTriggerLabelKey =
+  `career.tacticalChapter.trigger.${"kickoff" | "manager" | "ai" | "combined"}`;
+
+/** Translation key for one accepted change kind. */
+export type TacticalChapterChangeLabelKey =
+  `career.tacticalChapter.change.${"substitution" | "formation" | "role" | "tactic"}`;
+
+const TACTICAL_CHAPTER_CHANGE_LABEL_KEY = {
+  substitution: "career.tacticalChapter.change.substitution",
+  formation: "career.tacticalChapter.change.formation",
+  role: "career.tacticalChapter.change.role",
+  tactic: "career.tacticalChapter.change.tactic",
+} as const satisfies Readonly<Record<MatchTacticalChapterChangeKind, TacticalChapterChangeLabelKey>>;
+
+/** Presentation-safe chapter with selected club and opponent already oriented. */
+export interface TacticalChapterView {
+  readonly startMinute: number;
+  readonly endMinute: number;
+  readonly triggerLabelKey: TacticalChapterTriggerLabelKey;
+  readonly changeLabelKeys: readonly TacticalChapterChangeLabelKey[];
+  readonly selected: MatchTacticalChapterSideFact;
+  readonly opponent: MatchTacticalChapterSideFact;
+}
+
+/** Orients canonical chapter facts without adding a football formula. */
+export function buildTacticalChapterViews(
+  chapters: readonly MatchTacticalChapterFact[],
+  selectedSide: "home" | "away",
+): readonly TacticalChapterView[] {
+  return chapters.map((chapter) => ({
+    startMinute: chapter.startMinute,
+    endMinute: chapter.endMinute,
+    triggerLabelKey: tacticalChapterTriggerLabelKey(chapter),
+    changeLabelKeys: chapter.trigger.type === "kickoff"
+      ? []
+      : chapter.trigger.changeKinds.map((kind) => TACTICAL_CHAPTER_CHANGE_LABEL_KEY[kind]),
+    selected: chapter[selectedSide],
+    opponent: chapter[selectedSide === "home" ? "away" : "home"],
+  }));
+}
+
+function tacticalChapterTriggerLabelKey(
+  chapter: MatchTacticalChapterFact,
+): TacticalChapterTriggerLabelKey {
+  if (chapter.trigger.type === "kickoff") return "career.tacticalChapter.trigger.kickoff";
+  if (chapter.trigger.owners.length > 1) return "career.tacticalChapter.trigger.combined";
+  return chapter.trigger.owners[0] === "ai"
+    ? "career.tacticalChapter.trigger.ai"
+    : "career.tacticalChapter.trigger.manager";
 }
 
 /**

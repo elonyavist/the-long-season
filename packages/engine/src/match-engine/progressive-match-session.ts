@@ -17,6 +17,7 @@ import {
   type LiveMatchTeamState,
   type LiveMatchUnavailablePlayer,
   type MatchEventSide,
+  type MatchTacticalCommandOwner,
   type PlayerId,
   type TacticSetup,
 } from "@game/domain";
@@ -64,6 +65,8 @@ export interface ProgressiveMatchSessionState {
   readonly pendingDecision?: LiveMatchPendingDecision;
   readonly availability: ProgressiveMatchAvailability;
   readonly appliedSubstitutions: readonly AppliedMatchSubstitution[];
+  /** Accepted tactical deltas; substitutions remain owned by their events. */
+  readonly appliedTacticalCommandFacts: readonly AppliedLiveMatchTacticalCommandFact[];
 }
 
 /** Read-only minute projection exposed to batch, career, and web drivers. */
@@ -126,6 +129,8 @@ export interface ApplyConfirmedProgressiveTeamChangesInput {
   readonly team: MatchTeamContext;
   readonly availability: ProgressiveMatchTeamAvailability;
   readonly substitutions: readonly AppliedMatchSubstitution[];
+  /** Owner and non-substitution facts returned by the validated command. */
+  readonly tacticalCommandFacts?: readonly AppliedLiveMatchTacticalCommandFact[];
 }
 
 /** Structured fact emitted when one accepted command changes the live team. */
@@ -157,6 +162,12 @@ export type AppliedLiveMatchCommandFact =
       readonly before: TacticSetup;
       readonly after: TacticSetup;
     };
+
+/** A retained tactical delta with the caller that actually chose it. */
+export interface AppliedLiveMatchTacticalCommandFact {
+  readonly owner: MatchTacticalCommandOwner;
+  readonly fact: Exclude<AppliedLiveMatchCommandFact, { readonly type: "substitution" }>;
+}
 
 /** Result of validating and applying one canonical live command. */
 export type ApplyValidatedLiveMatchCommandResult =
@@ -210,6 +221,7 @@ export function createProgressiveMatchSession(
     ...(options.controlledSide === undefined ? {} : { controlledSide: options.controlledSide }),
     availability: copyAvailability(availability),
     appliedSubstitutions: [],
+    appliedTacticalCommandFacts: [],
   };
 }
 
@@ -418,6 +430,12 @@ export function applyConfirmedProgressiveTeamChanges(
       `Confirmed substitutions must belong to ${input.side} at completed minute ${state.simulation.minute}`,
     );
   }
+  if (input.tacticalCommandFacts?.some(({ fact }) => fact.side !== input.side || fact.minute !== state.simulation.minute)) {
+    throw new ProgressiveMatchSessionError(
+      "invalid_substitution_minute",
+      `Confirmed tactical facts must belong to ${input.side} at completed minute ${state.simulation.minute}`,
+    );
+  }
 
   const context = withTeam(state.simulation.context, input.side, input.team);
   const availability = withAvailability(state.availability, input.side, input.availability);
@@ -436,6 +454,10 @@ export function applyConfirmedProgressiveTeamChanges(
     events: [...state.events, ...substitutionEvents],
     availability,
     appliedSubstitutions: [...state.appliedSubstitutions, ...input.substitutions],
+    appliedTacticalCommandFacts: [
+      ...state.appliedTacticalCommandFacts,
+      ...(input.tacticalCommandFacts ?? []),
+    ],
   };
 }
 

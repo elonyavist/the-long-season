@@ -2,7 +2,11 @@
 
 ## Status
 
-Not started; requires Step 13 Done.
+**Ready for contract alignment.** Step 13 is Done. Before implementation, this
+step must remove its obsolete same-facts AI premise and preserve Amendment
+A11: pre-match AI may optimize only from its own squad and current condition,
+never from opponent information. No production file is open until that local
+contract correction is complete.
 
 ## Goal
 

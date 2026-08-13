@@ -54,6 +54,47 @@ export function MatchdayFullTimePhase({
           ) : (
             <MatchdayStatistics mode="complete" text={text} view={review.statistics} />
           )}
+          {review.tacticalChapters.length === 0 ? null : (
+            <section className="tls-matchday-card" aria-label={text("career.matchday.tacticalChapters.title")}>
+              <header className="tls-match-centre-card-heading">
+                <div>
+                  <h3>{text("career.matchday.tacticalChapters.title")}</h3>
+                  <p>{text("career.matchday.tacticalChapters.hint")}</p>
+                </div>
+              </header>
+              <ol className="tls-matchday-tactical-chapters">
+                {review.tacticalChapters.map((chapter) => (
+                  <li key={`${chapter.startMinute}-${chapter.endMinute}`}>
+                    <p>
+                      <strong>{text(chapter.triggerLabelKey)}</strong>
+                      {` · ${chapter.startMinute}'–${chapter.endMinute}'`}
+                    </p>
+                    {chapter.changeLabelKeys.length === 0 ? null : (
+                      <p>{chapter.changeLabelKeys.map((key) => text(key)).join(" · ")}</p>
+                    )}
+                    <dl>
+                      <div>
+                        <dt>{review.selectedClubName}</dt>
+                        <dd>
+                          {chapter.selected.goals} {text("career.matchday.statistics.goals")}
+                          {` · ${chapter.selected.shots} `}{text("career.matchday.statistics.shots")}
+                          {` · ${chapter.selected.expectedGoals.toFixed(2)} `}{text("career.matchday.statistics.expectedGoals")}
+                        </dd>
+                      </div>
+                      <div>
+                        <dt>{review.opponentClubName}</dt>
+                        <dd>
+                          {chapter.opponent.goals} {text("career.matchday.statistics.goals")}
+                          {` · ${chapter.opponent.shots} `}{text("career.matchday.statistics.shots")}
+                          {` · ${chapter.opponent.expectedGoals.toFixed(2)} `}{text("career.matchday.statistics.expectedGoals")}
+                        </dd>
+                      </div>
+                    </dl>
+                  </li>
+                ))}
+              </ol>
+            </section>
+          )}
         </section>
       ),
     },

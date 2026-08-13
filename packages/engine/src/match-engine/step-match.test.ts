@@ -140,6 +140,10 @@ test("one resolved shot per side accumulates truthful causal statistics and cond
     possessionShare: projection.statistics.away.possessionShare,
   });
   const telemetry = telemetryFor(result.simulation);
+  assert.equal(
+    result.events.find((event) => event.type === "shot_outcome")?.expectedGoals,
+    0.42,
+  );
   assert.ok((telemetry.playerCondition[playerId("player:home-field")] ?? 100) < 100);
   assert.ok(
     (telemetry.playerCondition[playerId("player:home-gk")] ?? 0) >

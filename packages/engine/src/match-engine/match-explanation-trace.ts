@@ -5,16 +5,23 @@ import {
   type FixtureId,
   type TacticMentalityKey,
   type PlayerId,
+  type MatchTacticalChapterChangeKind,
+  type MatchTacticalChapterFact,
+  type MatchTacticalChapterSideFact,
+  type MatchTacticalCommandOwner,
   type TacticalRoute,
   type TacticalShapeCapacity,
 } from "@game/domain";
 
 import type { MatchContext, MatchTeamContext } from "./match-context.ts";
+import type { AppliedLiveMatchTacticalCommandFact } from "./progressive-match-session.ts";
 import { deriveOpportunityRoutePlan, opportunityRouteSaturation } from "./opportunity-route.ts";
 import type { MatchScore, MatchSide, MatchSimulationStats } from "./match-simulation-state.ts";
 import {
   BALANCED_MATCH_LATERAL_FOCUS_BY_SIDE,
+  PENALTY_EXPECTED_GOALS,
   type MatchLateralFocusBySide,
+  type MatchShotOutcomeStepEvent,
   type MatchStepEvent,
 } from "./step-match.ts";
 
@@ -29,7 +36,7 @@ import {
  * this shape *could* open, and these say which one the chances actually came
  * down and who was on the end of them.
  */
-export const MATCH_EXPLANATION_TRACE_SCHEMA_VERSION = 2;
+export const MATCH_EXPLANATION_TRACE_SCHEMA_VERSION = 3;
 
 /**
  * Stable high-level factors that can shape a match result.
@@ -255,6 +262,8 @@ export interface MatchExplanationTrace {
   readonly away: MatchExplanationTeamSnapshot;
   /** Match opportunity and shot-context summary. */
   readonly opportunitySummary: MatchExplanationOpportunitySummary;
+  /** Temporally local football chapters derived from accepted commands and shots. */
+  readonly tacticalChapters: readonly MatchTacticalChapterFact[];
   /** Data-only variance summary. */
   readonly variance: MatchExplanationVarianceSnapshot;
 }
@@ -273,6 +282,8 @@ export interface CreateMatchExplanationTraceInput {
   readonly events: readonly MatchStepEvent[];
   /** Lateral plan the minute loop consumed. */
   readonly lateralFocusBySide?: MatchLateralFocusBySide;
+  /** Accepted tactical deltas; substitutions remain canonical match events. */
+  readonly tacticalCommandFacts?: readonly AppliedLiveMatchTacticalCommandFact[];
 }
 
 /**
@@ -307,12 +318,255 @@ export function createMatchExplanationTrace(input: CreateMatchExplanationTraceIn
       home: createOpportunitySideSummary("home", input.stats, input.events),
       away: createOpportunitySideSummary("away", input.stats, input.events),
     },
+    tacticalChapters: createMatchTacticalChapters({
+      score: input.score,
+      stats: input.stats,
+      events: input.events,
+      tacticalCommandFacts: input.tacticalCommandFacts ?? [],
+    }),
     variance: {
       rngStreamName: "match",
       fixtureKey: input.context.fixtureId,
       markers: createVarianceMarkers(input.context, input.score, input.stats),
     },
   };
+}
+
+/** Input facts for the chapter derivation, kept separate for focused tests. */
+export interface CreateMatchTacticalChaptersInput {
+  readonly score: MatchScore;
+  readonly stats: MatchSimulationStats;
+  readonly events: readonly MatchStepEvent[];
+  readonly tacticalCommandFacts: readonly AppliedLiveMatchTacticalCommandFact[];
+}
+
+interface ChapterBoundaryAccumulator {
+  readonly effectiveMinute: number;
+  readonly owners: Set<MatchTacticalCommandOwner>;
+  readonly sides: Set<MatchSide>;
+  readonly changeKinds: Set<MatchTacticalChapterChangeKind>;
+}
+
+/**
+ * Builds closed minute chapters without reconstructing any historical team.
+ *
+ * Accepted changes at minute N first affect minute N+1. Shot events are the
+ * canonical observable outcome, so chapter totals can reconcile exactly with
+ * final match facts and no presentation formula needs to estimate control.
+ */
+export function createMatchTacticalChapters(
+  input: CreateMatchTacticalChaptersInput,
+): readonly MatchTacticalChapterFact[] {
+  const finalMinute = fullTimeMinute(input.events);
+  const boundaries = new Map<number, ChapterBoundaryAccumulator>();
+
+  for (const retained of input.tacticalCommandFacts) {
+    addChapterBoundary(
+      boundaries,
+      retained.fact.minute + 1,
+      retained.owner,
+      retained.fact.side,
+      tacticalChangeKind(retained.fact.type),
+      finalMinute,
+    );
+  }
+  for (const event of input.events) {
+    if (event.type !== "substitution") continue;
+    addChapterBoundary(
+      boundaries,
+      event.minute + 1,
+      event.reasonKey === "ai_decision" ? "ai" : "manager",
+      event.side,
+      "substitution",
+      finalMinute,
+    );
+  }
+
+  const orderedBoundaries = [...boundaries.values()].toSorted(
+    (left, right) => left.effectiveMinute - right.effectiveMinute,
+  );
+  const starts = [1, ...orderedBoundaries.map(({ effectiveMinute }) => effectiveMinute)];
+  const chapters = starts.flatMap((startMinute, index): readonly MatchTacticalChapterFact[] => {
+    const endMinute = index + 1 < starts.length
+      ? (starts[index + 1] as number) - 1
+      : finalMinute;
+    if (startMinute > endMinute) return [];
+    const boundary = index === 0 ? undefined : orderedBoundaries[index - 1];
+    const trigger = boundary === undefined
+      ? { type: "kickoff" as const }
+      : {
+          type: "command" as const,
+          owners: orderedOwners(boundary.owners),
+          sides: orderedSides(boundary.sides),
+          changeKinds: orderedChangeKinds(boundary.changeKinds),
+        };
+    return [{
+      startMinute,
+      endMinute,
+      trigger,
+      home: chapterSideFacts("home", startMinute, endMinute, input.events),
+      away: chapterSideFacts("away", startMinute, endMinute, input.events),
+    }];
+  });
+
+  assertChapterReconciliation(chapters, input);
+  return chapters;
+}
+
+function addChapterBoundary(
+  boundaries: Map<number, ChapterBoundaryAccumulator>,
+  effectiveMinute: number,
+  owner: MatchTacticalCommandOwner,
+  side: MatchSide,
+  changeKind: MatchTacticalChapterChangeKind,
+  finalMinute: number,
+): void {
+  if (effectiveMinute > finalMinute) return;
+  const existing = boundaries.get(effectiveMinute);
+  if (existing === undefined) {
+    boundaries.set(effectiveMinute, {
+      effectiveMinute,
+      owners: new Set([owner]),
+      sides: new Set([side]),
+      changeKinds: new Set([changeKind]),
+    });
+    return;
+  }
+  existing.owners.add(owner);
+  existing.sides.add(side);
+  existing.changeKinds.add(changeKind);
+}
+
+function chapterSideFacts(
+  side: MatchSide,
+  startMinute: number,
+  endMinute: number,
+  events: readonly MatchStepEvent[],
+): MatchTacticalChapterSideFact {
+  const routedShots: MatchShotOutcomeStepEvent[] = [];
+  let shots = 0;
+  let goals = 0;
+  let expectedGoals = 0;
+  for (const event of events) {
+    if (event.minute < startMinute || event.minute > endMinute || !("side" in event) || event.side !== side) {
+      continue;
+    }
+    if (event.type === "penalty_outcome") {
+      shots += 1;
+      goals += event.outcome === "scored" ? 1 : 0;
+      expectedGoals += PENALTY_EXPECTED_GOALS;
+      continue;
+    }
+    if (!isShotOutcome(event) || event.deadBallKind === "penalty") continue;
+    routedShots.push(event);
+    shots += 1;
+    goals += event.outcome === "goal" ? 1 : 0;
+    expectedGoals += event.expectedGoals ?? event.quality;
+  }
+  return {
+    shots,
+    goals,
+    expectedGoals,
+    averageChanceQuality: shots === 0 ? "not_observed" : expectedGoals / shots,
+    attemptedRoutes: routeCounts(routedShots),
+    scoringRoutes: routeCounts(routedShots.filter(({ outcome }) => outcome === "goal")),
+  };
+}
+
+function routeCounts(
+  shots: readonly MatchShotOutcomeStepEvent[],
+): MatchTacticalChapterSideFact["attemptedRoutes"] {
+  return TACTICAL_ROUTES.map((route) => ({
+    route,
+    count: shots.filter((shot) => shot.route === route).length,
+  })).filter(({ count }) => count > 0);
+}
+
+function isShotOutcome(event: MatchStepEvent): event is MatchShotOutcomeStepEvent {
+  return event.type === "shot_outcome";
+}
+
+function fullTimeMinute(events: readonly MatchStepEvent[]): number {
+  const fullTime = events.findLast((event) => event.type === "full_time");
+  if (fullTime === undefined) throw new Error("Tactical chapters require a full-time event");
+  return fullTime.minute;
+}
+
+function tacticalChangeKind(
+  type: Exclude<AppliedLiveMatchTacticalCommandFact["fact"]["type"], "substitution">,
+): MatchTacticalChapterChangeKind {
+  switch (type) {
+    case "formation_change": return "formation";
+    case "role_change": return "role";
+    case "tactic_change": return "tactic";
+  }
+}
+
+const COMMAND_OWNER_ORDER: readonly MatchTacticalCommandOwner[] = ["manager", "ai"];
+const MATCH_SIDE_ORDER: readonly MatchSide[] = ["home", "away"];
+const CHAPTER_CHANGE_KIND_ORDER: readonly MatchTacticalChapterChangeKind[] = [
+  "substitution",
+  "formation",
+  "role",
+  "tactic",
+];
+
+function orderedOwners(values: ReadonlySet<MatchTacticalCommandOwner>): readonly MatchTacticalCommandOwner[] {
+  return COMMAND_OWNER_ORDER.filter((value) => values.has(value));
+}
+
+function orderedSides(values: ReadonlySet<MatchSide>): readonly MatchSide[] {
+  return MATCH_SIDE_ORDER.filter((value) => values.has(value));
+}
+
+function orderedChangeKinds(
+  values: ReadonlySet<MatchTacticalChapterChangeKind>,
+): readonly MatchTacticalChapterChangeKind[] {
+  return CHAPTER_CHANGE_KIND_ORDER.filter((value) => values.has(value));
+}
+
+function assertChapterReconciliation(
+  chapters: readonly MatchTacticalChapterFact[],
+  input: Pick<CreateMatchTacticalChaptersInput, "score" | "stats" | "events">,
+): void {
+  for (const side of MATCH_SIDE_ORDER) {
+    const shots = chapters.reduce((total, chapter) => total + chapter[side].shots, 0);
+    const goals = chapters.reduce((total, chapter) => total + chapter[side].goals, 0);
+    const expectedGoals = chapters.reduce((total, chapter) => total + chapter[side].expectedGoals, 0);
+    const telemetryExpectedGoals = input.stats.telemetry?.stats[side].expectedGoals;
+    if (shots !== input.stats[side].shots || goals !== input.score[side]) {
+      throw new Error(`Tactical chapter ${side} totals do not reconcile with match facts`);
+    }
+    if (telemetryExpectedGoals !== undefined) {
+      const sourceExpectedGoals = canonicalEventExpectedGoals(side, input.events);
+      if (sourceExpectedGoals !== telemetryExpectedGoals) {
+        throw new Error(`Tactical chapter ${side} source xG does not reconcile with match telemetry`);
+      }
+      if (Math.abs(expectedGoals - telemetryExpectedGoals) > 1e-12) {
+        throw new Error(`Tactical chapter ${side} xG does not reconcile with match telemetry`);
+      }
+    }
+  }
+}
+
+/** Replays only the event-owned xG additions, in original simulation order. */
+function canonicalEventExpectedGoals(
+  side: MatchSide,
+  events: readonly MatchStepEvent[],
+): number {
+  let total = 0;
+  for (const event of events) {
+    if (!("side" in event) || event.side !== side) continue;
+    if (event.type === "penalty_outcome") {
+      total += PENALTY_EXPECTED_GOALS;
+    } else if (event.type === "shot_outcome" && event.deadBallKind !== "penalty") {
+      if (event.expectedGoals === undefined) {
+        throw new Error("Tactical chapter source event is missing canonical xG");
+      }
+      total += event.expectedGoals;
+    }
+  }
+  return total;
 }
 
 /**

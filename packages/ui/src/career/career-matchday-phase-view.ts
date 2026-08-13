@@ -5,6 +5,7 @@ import type {
   LiveMatchRunState,
   MatchPlayerConsequence,
   MatchPhase,
+  MatchTacticalChapterFact,
 } from "@game/domain";
 
 import type {
@@ -148,6 +149,8 @@ export interface BuildCareerMatchdayPhaseViewInput {
   readonly playerStateChanges?: readonly CareerMatchdayPlayerStateChangeInput[];
   /** Full-time-only public injury and suspension outcomes. */
   readonly availabilityConsequences?: readonly MatchPlayerConsequence[];
+  /** Full-time-only tactical chapters derived by the engine. */
+  readonly tacticalChapters?: readonly MatchTacticalChapterFact[];
   /** Stable next action when known. */
   readonly nextActionId?: CareerMatchdayPhaseActionId;
 }
@@ -226,6 +229,8 @@ export interface CareerMatchdayPhaseView {
   readonly playerStateChanges: readonly CareerMatchdayPlayerStateChangeInput[];
   /** Full-time-only public injury and suspension outcomes. */
   readonly availabilityConsequences: readonly MatchPlayerConsequence[];
+  /** Full-time-only tactical chapters; empty before completion. */
+  readonly tacticalChapters: readonly MatchTacticalChapterFact[];
   /** Stable next action when known. */
   readonly nextActionId?: CareerMatchdayPhaseActionId;
 }
@@ -270,6 +275,7 @@ export function buildCareerMatchdayPhaseView(input: BuildCareerMatchdayPhaseView
     availabilityConsequences: isFullTime
       ? structuredClone(input.availabilityConsequences ?? [])
       : [],
+    tacticalChapters: isFullTime ? structuredClone(input.tacticalChapters ?? []) : [],
     ...(input.nextActionId === undefined ? {} : { nextActionId: input.nextActionId }),
   };
 }

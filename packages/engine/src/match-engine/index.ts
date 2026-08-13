@@ -20,8 +20,10 @@ export {
 
 export {
   createMatchExplanationTrace,
+  createMatchTacticalChapters,
   MATCH_EXPLANATION_TRACE_SCHEMA_VERSION,
   type CreateMatchExplanationTraceInput,
+  type CreateMatchTacticalChaptersInput,
   type MatchExplanationConditionSnapshot,
   type MatchExplanationCountBucket,
   type MatchExplanationEffectDirection,
@@ -118,6 +120,7 @@ export {
   type AdvanceProgressiveMatchMinuteOptions,
   type ApplyConfirmedProgressiveTeamChangesInput,
   type AppliedLiveMatchCommandFact,
+  type AppliedLiveMatchTacticalCommandFact,
   type ApplyValidatedLiveMatchCommandResult,
   type CreateProgressiveMatchSessionOptions,
   type ProgressiveMatchAvailability,

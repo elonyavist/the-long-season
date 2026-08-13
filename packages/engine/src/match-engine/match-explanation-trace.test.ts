@@ -20,6 +20,7 @@ import {
 import {
   createLineupSlot,
   createMatchExplanationTrace,
+  createMatchTacticalChapters,
   MATCH_EXPLANATION_TRACE_SCHEMA_VERSION,
   type MatchContext,
   type MatchEngineConfig,
@@ -134,6 +135,68 @@ test("a built trace stays deterministic and JSON serializable with routes", () =
   assert.deepEqual(JSON.parse(JSON.stringify(trace)), trace);
 });
 
+test("accepted commands open temporally local chapters on the following minute", () => {
+  const chapters = traceOverEvents().tacticalChapters;
+
+  assert.deepEqual(chapters.map(({ startMinute, endMinute, trigger }) => ({
+    startMinute,
+    endMinute,
+    trigger,
+  })), [
+    { startMinute: 1, endMinute: 31, trigger: { type: "kickoff" } },
+    {
+      startMinute: 32,
+      endMinute: 90,
+      trigger: {
+        type: "command",
+        owners: ["manager"],
+        sides: ["home"],
+        changeKinds: ["tactic"],
+      },
+    },
+  ]);
+  assert.deepEqual(chapters.map(({ home, away }) => ({
+    homeShots: home.shots,
+    homeGoals: home.goals,
+    homeXg: home.expectedGoals,
+    awayShots: away.shots,
+  })), [
+    { homeShots: 2, homeGoals: 1, homeXg: 1.2999999999999998, awayShots: 0 },
+    { homeShots: 1, homeGoals: 0, homeXg: 0.4, awayShots: 1 },
+  ]);
+});
+
+test("a missed penalty is one unrouted shot with the minute loop's canonical xG", () => {
+  const chapters = createMatchTacticalChapters({
+    score: { home: 0, away: 0 },
+    stats: {
+      home: { opportunities: 1, shots: 1, shotsOnTarget: 0, goals: 0 },
+      away: { opportunities: 0, shots: 0, shotsOnTarget: 0, goals: 0 },
+    },
+    events: [
+      {
+        type: "penalty_outcome",
+        minute: 20,
+        side: "home",
+        takerPlayerId: playerId("player:home-taker"),
+        goalkeeperPlayerId: playerId("player:away-keeper"),
+        outcome: "missed",
+      },
+      { type: "full_time", minute: 90, score: { home: 0, away: 0 } },
+    ],
+    tacticalCommandFacts: [],
+  });
+
+  assert.deepEqual(chapters[0]?.home, {
+    shots: 1,
+    goals: 0,
+    expectedGoals: 0.76,
+    averageChanceQuality: 0.76,
+    attemptedRoutes: [],
+    scoringRoutes: [],
+  });
+});
+
 /**
  * Builds a trace through the real entry point rather than as a literal, which
  * is the only way to exercise the route wiring.
@@ -154,12 +217,12 @@ function builtTrace(): MatchExplanationTrace {
 
   return createMatchExplanationTrace({
     context,
-    score: { home: 1, away: 0 },
+    score: { home: 0, away: 0 },
     stats: {
-      home: { opportunities: 6, shots: 5, shotsOnTarget: 3, goals: 1 },
-      away: { opportunities: 4, shots: 3, shotsOnTarget: 1, goals: 0 },
+      home: { opportunities: 0, shots: 0, shotsOnTarget: 0, goals: 0 },
+      away: { opportunities: 0, shots: 0, shotsOnTarget: 0, goals: 0 },
     },
-    events: [],
+    events: [{ type: "full_time", minute: 90, score: { home: 0, away: 0 } }],
   });
 }
 
@@ -193,6 +256,7 @@ function traceOverEvents(): MatchExplanationTrace {
         side: "home",
         outcome: "goal",
         quality: 0.7,
+        expectedGoals: 0.7,
         isShotOnTarget: true,
         shotType: "normal",
         chanceType: "open_play",
@@ -205,6 +269,7 @@ function traceOverEvents(): MatchExplanationTrace {
         side: "home",
         outcome: "save",
         quality: 0.6,
+        expectedGoals: 0.6,
         isShotOnTarget: true,
         shotType: "header",
         chanceType: "cross",
@@ -218,6 +283,7 @@ function traceOverEvents(): MatchExplanationTrace {
         side: "home",
         outcome: "miss",
         quality: 0.4,
+        expectedGoals: 0.4,
         isShotOnTarget: false,
         shotType: "normal",
         chanceType: "cross",
@@ -230,12 +296,24 @@ function traceOverEvents(): MatchExplanationTrace {
         side: "away",
         outcome: "goal",
         quality: 0.76,
+        expectedGoals: 0.76,
         isShotOnTarget: true,
         shotType: "set_piece",
         chanceType: "dead_ball",
         scorerPlayerId: playerId("player:away-taker"),
       },
+      { type: "full_time", minute: 90, score: { home: 1, away: 1 } },
     ],
+    tacticalCommandFacts: [{
+      owner: "manager",
+      fact: {
+        type: "tactic_change",
+        minute: 31,
+        side: "home",
+        before: { mentality: "balanced", pressing: 0.5, directness: 0.5, width: 0.5, risk: 0.5 },
+        after: { mentality: "attacking", pressing: 0.7, directness: 0.4, width: 0.8, risk: 0.7 },
+      },
+    }],
   });
 }
 
@@ -282,7 +360,7 @@ function tacticallyBuiltTrace(options: { readonly width: number }): MatchExplana
       home: { opportunities: 0, shots: 0, shotsOnTarget: 0, goals: 0 },
       away: { opportunities: 0, shots: 0, shotsOnTarget: 0, goals: 0 },
     },
-    events: [],
+    events: [{ type: "full_time", minute: 90, score: { home: 0, away: 0 } }],
   });
 }
 
@@ -433,6 +511,7 @@ function sampleTrace(): MatchExplanationTrace {
         shooterCounts: [{ key: "player:away-000001", count: 3 }],
       },
     },
+    tacticalChapters: [],
     variance: {
       rngStreamName: "match",
       fixtureKey: fixtureId("fixture:trace-000001"),

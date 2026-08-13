@@ -208,6 +208,8 @@ export interface CommitCompletedCareerFixtureInput {
   readonly playerRatings?: readonly PlayerMatchRatingRow[];
   /** Competition-owned discipline rules for the completed fixture. */
   readonly competitionMatchRules: CompetitionMatchRules;
+  /** Already-derived trace for this exact completed minute state. */
+  readonly explanationTrace?: MatchExplanationTrace;
 }
 
 /**
@@ -244,7 +246,7 @@ export function commitCompletedCareerFixture(
     ? input.initialContext.home
     : input.initialContext.away;
 
-  return applyCareerFixtureReport({
+  const applied = applyCareerFixtureReport({
     careerState: input.careerState,
     wagePolicy: input.wagePolicy,
     marketBehaviorPolicy: input.marketBehaviorPolicy,
@@ -264,6 +266,8 @@ export function commitCompletedCareerFixture(
     ...(input.playerRatings === undefined ? {} : { playerRatings: input.playerRatings }),
     competitionMatchRules: input.competitionMatchRules,
   });
+  if (applied.status === "invalid" || input.explanationTrace === undefined) return applied;
+  return { ...applied, explanationTrace: input.explanationTrace };
 }
 
 /**

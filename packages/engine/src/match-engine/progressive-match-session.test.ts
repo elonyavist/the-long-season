@@ -88,6 +88,16 @@ test("a confirmed paused command preserves the prefix and applies from the next 
       slotId: "slot:home:field",
       reasonKey: "manager_decision",
     }],
+    tacticalCommandFacts: [{
+      owner: "manager",
+      fact: {
+        type: "tactic_change",
+        minute: 5,
+        side: "home",
+        before: context.home.tacticalDistribution,
+        after: changedHome.tacticalDistribution,
+      },
+    }],
   });
 
   const paused = createProgressiveMatchMinuteSnapshot(commanded);
@@ -105,6 +115,16 @@ test("a confirmed paused command preserves the prefix and applies from the next 
   assert.equal(paused.home.team.lineup[1]?.playerId, playerId("player:home-substitute"));
   assert.equal(paused.home.bench[0]?.status, "substituted_out");
   assert.equal(paused.appliedSubstitutions.length, 1);
+  assert.deepEqual(commanded.appliedTacticalCommandFacts, [{
+    owner: "manager",
+    fact: {
+      type: "tactic_change",
+      minute: 5,
+      side: "home",
+      before: context.home.tacticalDistribution,
+      after: changedHome.tacticalDistribution,
+    },
+  }]);
 
   commanded = resumeProgressiveMatchSession(commanded);
   commanded = advanceProgressiveMatchMinute(commanded, commandedRng);

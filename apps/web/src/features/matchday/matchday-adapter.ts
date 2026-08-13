@@ -14,6 +14,7 @@ import {
   commitCompletedCareerFixture,
   createLineupSlot,
   createMatchReport,
+  createMatchExplanationTrace,
   createProgressiveMatchMinuteSnapshot,
   createProgressiveMatchSession,
   computePlayerMatchStats,
@@ -250,6 +251,8 @@ export interface WebLiveMatchdayFullTimeReview {
   readonly playerStateChanges: NonNullable<BuildCareerMatchdayPhaseViewInput["playerStateChanges"]>;
   /** Public injury and suspension outcomes for both fixture sides. */
   readonly availabilityConsequences: readonly MatchPlayerConsequence[];
+  /** Derived tactical chapters from this in-memory completed match. */
+  readonly tacticalChapters: NonNullable<BuildCareerMatchdayPhaseViewInput["tacticalChapters"]>;
 }
 
 /**
@@ -596,6 +599,8 @@ export function applyWebLiveMatchTeamChanges(
       unavailable: nextTeam.unavailable,
     },
     substitutions: appliedSubstitutions,
+    tacticalCommandFacts: validation.facts.flatMap((fact) =>
+      fact.type === "substitution" ? [] : [{ owner: "manager" as const, fact }]),
   });
   if (engineState.pendingDecision !== undefined && engineState.pendingDecision.type !== "half_time") {
     engineState = resolveProgressiveMatchIncidentDecision(engineState, { action: "acknowledge" });
@@ -834,6 +839,9 @@ function buildWebMatchdayPhaseInput(state: WebMatchdayState): BuildCareerMatchda
           availabilityConsequences: playedResult === undefined
             ? fullTimeReview!.availabilityConsequences
             : playedResult.playerAvailabilityConsequences,
+          tacticalChapters: playedResult === undefined
+            ? fullTimeReview!.tacticalChapters
+            : playedResult.explanationTrace?.tacticalChapters ?? [],
         }),
     ...(isFullTime ? { nextActionId: "back_to_dashboard" as const } : {}),
   };
@@ -1133,6 +1141,7 @@ function projectLiveProgress(session: WebLiveMatchdaySession): WebLiveMatchdayPr
             conditionChanges: structuredClone(previewInput.conditionChanges),
             playerStateChanges: structuredClone(previewInput.playerStateChanges),
             availabilityConsequences: structuredClone(previewResult.playerAvailabilityConsequences),
+            tacticalChapters: structuredClone(previewResult.explanationTrace?.tacticalChapters ?? []),
           },
         }),
   };
@@ -1507,6 +1516,14 @@ function commitProgressiveWebMatchday(
     stats: finalState.simulation.stats,
     events: finalState.events,
   });
+  const explanationTrace = createMatchExplanationTrace({
+    context: finalState.initialContext,
+    score: finalState.simulation.score,
+    stats: finalState.simulation.stats,
+    events: finalState.events,
+    lateralFocusBySide: session.lateralFocusBySide,
+    tacticalCommandFacts: finalState.appliedTacticalCommandFacts,
+  });
   return commitCompletedCareerFixture({
     careerState: session.careerState,
     report,
@@ -1514,6 +1531,7 @@ function commitProgressiveWebMatchday(
     finalContext: finalState.simulation.context,
     selectedClubBenchPlayerIds: session.selectedBenchPlayerIds,
     appliedSubstitutions: finalState.appliedSubstitutions,
+    explanationTrace,
     playerRatings: livePlayerRatings(projectLiveProgress(session)),
     competitionMatchRules: matchdayContentConfig(session.careerState).competitionMatchRules,
     wagePolicy: selectPlayerWagePolicyConfig(

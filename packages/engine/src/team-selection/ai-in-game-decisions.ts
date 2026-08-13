@@ -36,6 +36,7 @@ import {
   pauseProgressiveMatchSession,
   resumeProgressiveMatchSession,
   type AppliedLiveMatchCommandFact,
+  type AppliedLiveMatchTacticalCommandFact,
   type ProgressiveMatchAvailability,
   type ProgressiveMatchSessionState,
 } from "../match-engine/progressive-match-session.ts";
@@ -530,6 +531,7 @@ export function applyProgressiveAiInGameDecisions(
         unavailable: team.unavailable,
       },
       substitutions: applied.facts.flatMap((fact) => fact.type === "substitution" ? [fact.substitution] : []),
+      tacticalCommandFacts: tacticalCommandFacts("ai", applied.facts),
     });
     domainSession = applied.session;
   }
@@ -539,6 +541,14 @@ export function applyProgressiveAiInGameDecisions(
     team,
     decisions,
   };
+}
+
+/** Retains only facts that do not already live as substitution events. */
+function tacticalCommandFacts(
+  owner: AppliedLiveMatchTacticalCommandFact["owner"],
+  facts: readonly AppliedLiveMatchCommandFact[],
+): readonly AppliedLiveMatchTacticalCommandFact[] {
+  return facts.flatMap((fact) => fact.type === "substitution" ? [] : [{ owner, fact }]);
 }
 
 /**

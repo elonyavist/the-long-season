@@ -126,6 +126,12 @@ describe("progressive web matchday adapter", () => {
 
     const completedView = buildWebMatchdayPhaseView(completed.matchdayState);
     expect(completedView.phase).toBe("full_time");
+    expect(completedView.tacticalChapters.length).toBeGreaterThan(0);
+    expect(
+      completedView.tacticalChapters.reduce((total, chapter) => total + chapter.home.shots, 0),
+    ).toBe(completedView.statistics?.home.shots);
+    expect(completed.session.completionPreview?.explanationTrace?.tacticalChapters)
+      .toEqual(completedView.tacticalChapters);
     expect(completedView.timelineEvents.some((event) => event.kind === "foul")).toBe(false);
     expect(completedView.timelineEvents.every((event) => [
       "career.matchday.event.goal",

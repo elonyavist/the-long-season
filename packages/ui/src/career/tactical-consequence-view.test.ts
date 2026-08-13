@@ -7,6 +7,7 @@ import {
 } from "@game/domain";
 
 import {
+  buildTacticalChapterViews,
   buildTacticalConsequenceView,
   MAX_TACTICAL_CONSEQUENCES,
   TACTICAL_CONSEQUENCE_EMPHASIS_AT_LEAST,
@@ -21,6 +22,43 @@ import {
   type TacticalConsequenceShapeReading,
   type TacticalConsequenceTacticReading,
 } from "./tactical-consequence-view.ts";
+
+it("orients canonical chapters and retains manager versus AI ownership", () => {
+  const empty = {
+    shots: 0,
+    goals: 0,
+    expectedGoals: 0,
+    averageChanceQuality: "not_observed" as const,
+    attemptedRoutes: [],
+    scoringRoutes: [],
+  };
+  const views = buildTacticalChapterViews([
+    { startMinute: 1, endMinute: 45, trigger: { type: "kickoff" }, home: empty, away: empty },
+    {
+      startMinute: 46,
+      endMinute: 90,
+      trigger: {
+        type: "command",
+        owners: ["ai"],
+        sides: ["home"],
+        changeKinds: ["formation", "tactic"],
+      },
+      home: { ...empty, shots: 3, expectedGoals: 0.8 },
+      away: { ...empty, shots: 2, goals: 1, expectedGoals: 0.6 },
+    },
+  ], "away");
+
+  expect(views[0]?.triggerLabelKey).toBe("career.tacticalChapter.trigger.kickoff");
+  expect(views[1]).toMatchObject({
+    triggerLabelKey: "career.tacticalChapter.trigger.ai",
+    changeLabelKeys: [
+      "career.tacticalChapter.change.formation",
+      "career.tacticalChapter.change.tactic",
+    ],
+    selected: { shots: 2, goals: 1 },
+    opponent: { shots: 3, goals: 0 },
+  });
+});
 
 /** An eleven that is ordinary in every respect, with no tactic chosen yet. */
 function ordinaryReading(

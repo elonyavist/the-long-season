@@ -558,6 +558,7 @@ const GOLDEN_MATCH_RESULT: SimulateMatchResult = {
       // them this was - which is the whole reason the finer fact is persisted.
       outcome: "save",
       quality: 0.48933851918195415,
+      expectedGoals: 0.112,
       isShotOnTarget: true,
       shotType: "normal",
       chanceType: "open_play",
@@ -572,6 +573,7 @@ const GOLDEN_MATCH_RESULT: SimulateMatchResult = {
       side: "home",
       outcome: "save",
       quality: 0.5917270209652413,
+      expectedGoals: 0.128,
       isShotOnTarget: true,
       shotType: "normal",
       // This line moved earlier, when chance type stopped being inferred from

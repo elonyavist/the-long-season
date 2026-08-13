@@ -160,6 +160,7 @@ describe("buildCareerMatchdayPhaseView", () => {
       conditionChanges: [conditionChange()],
       playerStateChanges: [playerStateChange()],
       availabilityConsequences: [availabilityConsequence()],
+      tacticalChapters: [tacticalChapter()],
     });
     const fullTime = buildCareerMatchdayPhaseView({
       ...baseInput("full_time"),
@@ -168,16 +169,19 @@ describe("buildCareerMatchdayPhaseView", () => {
       conditionChanges: [conditionChange()],
       playerStateChanges: [playerStateChange()],
       availabilityConsequences: [availabilityConsequence()],
+      tacticalChapters: [tacticalChapter()],
       nextActionId: "back_to_dashboard",
     });
 
     expect(notFullTime.conditionChanges).toEqual([]);
     expect(notFullTime.playerStateChanges).toEqual([]);
     expect(notFullTime.availabilityConsequences).toEqual([]);
+    expect(notFullTime.tacticalChapters).toEqual([]);
     expect(fullTime.status).toBe("complete");
     expect(fullTime.conditionChanges).toHaveLength(1);
     expect(fullTime.playerStateChanges).toHaveLength(1);
     expect(fullTime.availabilityConsequences).toEqual([availabilityConsequence()]);
+    expect(fullTime.tacticalChapters).toEqual([tacticalChapter()]);
     expect(fullTime.nextActionId).toBe("back_to_dashboard");
     expect(fullTime.actions.map((action) => action.actionId)).toEqual(["back_to_dashboard"]);
   });
@@ -260,5 +264,23 @@ function availabilityConsequence() {
     playerId: playerId("player:quiet"),
     reason: "straight_red" as const,
     matches: 3,
+  };
+}
+
+function tacticalChapter() {
+  const empty = {
+    shots: 0,
+    goals: 0,
+    expectedGoals: 0,
+    averageChanceQuality: "not_observed" as const,
+    attemptedRoutes: [],
+    scoringRoutes: [],
+  };
+  return {
+    startMinute: 1,
+    endMinute: 90,
+    trigger: { type: "kickoff" as const },
+    home: empty,
+    away: empty,
   };
 }

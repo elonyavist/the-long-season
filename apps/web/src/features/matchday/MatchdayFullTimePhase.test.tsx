@@ -32,6 +32,9 @@ describe("MatchdayFullTimePhase", () => {
     expect(markup).toContain("Match summary");
     expect(markup).toContain("Possession");
     expect(markup).toContain("Shots on target");
+    expect(markup).toContain("Match chapters");
+    expect(markup).toContain("Initial plan");
+    expect(markup).toContain("After your change");
     expect(markup).not.toContain("Nico Rinaldi");
     expect(markup).not.toContain("Consequences");
     expect(markup).not.toContain("Next action");
@@ -197,6 +200,38 @@ function buildPhase() {
       moraleDelta: 0,
       reasonKeys: ["player_goal"],
     }],
+    tacticalChapters: [
+      {
+        startMinute: 1,
+        endMinute: 59,
+        trigger: { type: "kickoff" },
+        home: chapterSide(7, 1, 1.1),
+        away: chapterSide(4, 0, 0.6),
+      },
+      {
+        startMinute: 60,
+        endMinute: 90,
+        trigger: {
+          type: "command",
+          owners: ["manager"],
+          sides: ["away"],
+          changeKinds: ["substitution", "tactic"],
+        },
+        home: chapterSide(3, 1, 0.6),
+        away: chapterSide(3, 1, 0.8),
+      },
+    ],
     nextActionId: "back_to_dashboard",
   });
+}
+
+function chapterSide(shots: number, goals: number, expectedGoals: number) {
+  return {
+    shots,
+    goals,
+    expectedGoals,
+    averageChanceQuality: shots === 0 ? "not_observed" as const : expectedGoals / shots,
+    attemptedRoutes: [],
+    scoringRoutes: [],
+  };
 }

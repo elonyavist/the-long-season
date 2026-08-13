@@ -117,7 +117,10 @@ retains the meaningful point floor and freezes the route/task-quality redesign
 at `300 bp` before fresh G/H output. Step 12H recorded `STOP / RETHINK` and
 removed it after xG moved correctly but points missed every magnitude band.
 The user's Amendment A11 selects the smaller own-squad option-B MVP without
-renaming any red gate; Step 13 is Ready. L6.31 is not promoted without its
+renaming any red gate. Step 13 is Done: current-session tactical chapters derive
+from accepted manager/AI commands plus canonical shot facts and reconcile final
+goals, shots and xG without causal claims. Step 14 is next but must first align
+its AI preparation policy with option B. L6.31 is not promoted without its
 required integrated rerun.
 
 This phase is governed by
@@ -390,8 +393,8 @@ contexts; it never owns the analytic diversity gate.
 | 12G | [route/task plan execution contract](12g-route-task-plan-execution-contract.md) | no | Done: A10 frozen |
 | 12H | [route/task plan execution and checkpoint](12h-route-task-plan-execution-and-checkpoint.md) | yes | Done: `STOP / RETHINK`; candidate removed |
 | 12I | [own-squad MVP acceptance](12i-own-squad-mvp-acceptance.md) | no | Done: smaller option-B MVP accepted |
-| 13 | [tactical chapters and canonical explanation](13-tactical-chapters-and-canonical-explanation.md) | report/UI | Ready |
-| 14 | [preparation and single persistence integration](14-post-match-preparation-choice.md) | next-match state/save | Step 15 |
+| 13 | [tactical chapters and canonical explanation](13-tactical-chapters-and-canonical-explanation.md) | report/UI | Done |
+| 14 | [preparation and single persistence integration](14-post-match-preparation-choice.md) | next-match state/save | Ready for A11 alignment |
 | 15 | [Checkpoint E multi-match consequence](15-checkpoint-e-multi-match-consequence.md) | no | GO authorizes 16 |
 | 16 | [integrated cohort and phase closeout](16-integrated-cohort-and-phase-closeout.md) | no | Phase 81B handoff |
 

@@ -1,4 +1,6 @@
-import type {
+import {
+  buildTacticalChapterViews,
+  type TacticalChapterView,
   CareerMatchdayPhaseActionId,
   CareerMatchdayPhaseActionView,
   CareerMatchdayPhaseEventView,
@@ -205,6 +207,8 @@ export interface MatchdayFullTimeReviewView {
   readonly selectedTeamConsequences: readonly MatchdayFullTimeConsequenceView[];
   /** Public opponent consequences merged into the opponent rows. */
   readonly opponentConsequences: readonly MatchdayFullTimeConsequenceView[];
+  /** Observable match chapters, oriented to the selected club. */
+  readonly tacticalChapters: readonly TacticalChapterView[];
 }
 
 /** Complete matchday presentation contract consumed by React screens. */
@@ -371,6 +375,10 @@ export function buildMatchdayFullTimeReviewView(
       : { statistics: buildMatchdayStatisticsView(phaseView) }),
     selectedTeamConsequences,
     opponentConsequences,
+    tacticalChapters: buildTacticalChapterViews(
+      phaseView.tacticalChapters,
+      phaseView.fixture.selectedClubSide,
+    ),
   };
 }
 

@@ -90,6 +90,8 @@ export interface MatchGoalStepEvent {
   readonly outcome: "goal";
   /** Normalized opportunity quality in the `[0, 1]` range. */
   readonly quality: number;
+  /** Canonical goal probability after shot, defence and goalkeeper context. */
+  readonly expectedGoals?: number;
   /** Whether the shot counted as on target. */
   readonly isShotOnTarget: boolean;
   /** Structured execution type for the shot. */
@@ -124,6 +126,8 @@ export interface MatchNonGoalShotOutcomeStepEvent {
   readonly outcome: Exclude<OccasionOutcome, "goal">;
   /** Normalized opportunity quality in the `[0, 1]` range. */
   readonly quality: number;
+  /** Canonical goal probability after shot, defence and goalkeeper context. */
+  readonly expectedGoals?: number;
   /** Whether the shot counted as on target. */
   readonly isShotOnTarget: boolean;
   /** Structured execution type for the shot. */
@@ -555,7 +559,8 @@ function applyOccasionToTelemetry(
 /** Stable RNG stream for choosing which route a side takes this minute. */
 const OPPORTUNITY_ROUTE_STREAM = "opportunity-route";
 
-const PENALTY_EXPECTED_GOALS = 0.76;
+/** Canonical xG assigned to every penalty outcome by the minute loop. */
+export const PENALTY_EXPECTED_GOALS = 0.76;
 
 /**
  * Applies one resolved opportunity to accumulated stats.
@@ -657,6 +662,7 @@ function applyPenaltyResolution(
       side: penalty.side,
       outcome: "goal",
       quality: PENALTY_EXPECTED_GOALS,
+      expectedGoals: PENALTY_EXPECTED_GOALS,
       isShotOnTarget: true,
       shotType: "set_piece",
       chanceType: "dead_ball",
@@ -694,6 +700,7 @@ function applyDirectFreeKickResolution(
     minute,
     side: directFreeKick.side,
     quality: directFreeKick.expectedGoals,
+    expectedGoals: directFreeKick.expectedGoals,
     isShotOnTarget: isScored || isSaved,
     shotType: "set_piece" as const,
     chanceType: "dead_ball" as const,
@@ -740,6 +747,7 @@ function createShotOutcomeEvent(
     minute: occasion.minute,
     side: occasion.attackingSide,
     quality: resolution.quality,
+    expectedGoals: resolution.expectedGoals,
     isShotOnTarget: resolution.isShotOnTarget,
     shotType: occasion.shotType,
     chanceType: occasion.chanceType,

@@ -417,6 +417,8 @@ test("progressive AI uses the canonical command path and resumes an internally p
   assert.equal(applied.state.pauseReason, undefined);
   assert.equal(applied.state.appliedSubstitutions.length, 1);
   assert.equal(applied.state.events.at(-1)?.type, "substitution");
+  assert.equal(applied.state.appliedTacticalCommandFacts.length > 0, true);
+  assert.equal(applied.state.appliedTacticalCommandFacts.every(({ owner }) => owner === "ai"), true);
   assert.equal(applied.team.substitutionsUsed, 1);
   assert.equal(applied.decisions.length, 2);
 });
