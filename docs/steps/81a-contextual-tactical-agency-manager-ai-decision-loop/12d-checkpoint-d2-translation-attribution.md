@@ -2,8 +2,9 @@
 
 ## Status
 
-**Ready after D2 `REFINE`.** This is observational only. No gameplay correction
-is authorized.
+**Done — `plan_execution_not_established`.** Correct fit improves net xG twice;
+mismatch does not reliably make it worse. Step 12E owns the explicit plan-
+execution contract. No gameplay value moved here.
 
 ## Goal
 
@@ -63,6 +64,9 @@ owner.
 
 - `packages/simulation-tools/src/tactical-agency/own-squad-agency-audit.ts`
 - `packages/simulation-tools/src/tactical-agency/own-squad-agency-audit.test.ts`
+- `packages/simulation-tools/src/index.ts`. The CLI consumes the attribution
+  through the package's existing public audit seam; a deep import would violate
+  package ownership.
 - `apps/cli/src/commands/simulation-report/own-squad-agency-section.ts`
 - `apps/cli/src/commands/simulation-report/own-squad-agency-section.test.ts`
 - `apps/cli/src/commands/simulation-report/report-registry.ts`
@@ -95,3 +99,18 @@ The attribution gate and `pnpm check` run separately.
 Both sets expose canonical intermediate facts, reconciliation and one frozen
 classification; no gameplay value moves and only an identically named owner may
 open.
+
+## Outcome — 2026-08-13
+
+The locked profile ran alone on seven workers for `40,742 ms`, exited `0` and
+wrote hash `be8076c039630484336a9e82b489ecc6`. Own fit changes net xG by
+`+0.6033/+0.5255`, with both 95% intervals above zero. Mismatch changes it by
+`+0.1478/-0.2001`, with both intervals crossing zero. Both sets therefore name
+`plan_execution_not_established` before the goal and point stages.
+
+The code owner is concrete: versioned profile demand is consumed only by the
+selector. The match receives anonymous knobs and focus, so it cannot derive
+whether the selected eleven can execute the named plan. Step 12E may carry the
+explicit plan identity and derive execution fit from the same shape and content;
+it may not carry a derived score, infer identity from knobs, add strength, read
+the opponent or alter a frozen target.

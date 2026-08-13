@@ -23,10 +23,10 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **Step 12C `REFINE`:** six specialised own-squad plans remain
-  varied and opponent-free, but D2-C/D2-D produce only `0.7946/0.6964` season-
-  point separation. Step 12D is active and observational: it must attribute the
-  first weak xG/goal/point translation stage before any owner correction.
+- Phase 81A **Step 12D attributed plan execution twice:** own fit raises net xG
+  `+0.6033/+0.5255`, while mismatch is unresolved at `+0.1478/-0.2001`.
+  Versioned plan demand has no match reader. Step 12E froze a bounded `750 bp`
+  own-squad execution link and fresh E/F validation; Step 12F is active.
 - **L6.31 stays green twice:** routine-youth runway improves ready replacements
   `+0.1363/+0.1034`, leaders `+0.0810/+0.0905`, with exact immediate purity.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;

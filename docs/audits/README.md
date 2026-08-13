@@ -22,6 +22,11 @@ Read these only when the current step asks for current long-run readiness contex
   Step 12D owns canonical xG/goal/point translation attribution; no coefficient
   or historical band is authorized to move.
 
+- `PHASE_81A_CHECKPOINT_D2_TRANSLATION_ATTRIBUTION.md` —
+  **`plan_execution_not_established`.** Own fit improves canonical net xG in
+  both sets, while mismatch establishes no negative direction. Versioned plan
+  demand has no match reader; Step 12E owns the explicit execution contract.
+
 - `PHASE_81A_OWN_SQUAD_CAPACITY_STANDARDISATION_AMENDMENT.md` — Amendment A9.
   Freezes the own-eleven capacity references, positive scales and relative-fit
   formula after A/B reachability falsified raw-scale comparison; D2 stays

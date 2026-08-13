@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import {
+  attributeOwnSquadAgencyTranslation,
   evaluateOwnSquadAgencySet,
+  evaluateOwnSquadAgencyTranslationSet,
   type OwnSquadAgencyScheduleResult,
 } from "./own-squad-agency-audit.ts";
 
@@ -27,21 +29,35 @@ function schedule(
     squadIdentityKey: identity,
     fixtureCount: 34,
     matchesPerArm: 272,
-    meanPointsByArm: {
-      own_fit: 50 + deltas.own,
-      mismatch: 50 + deltas.mismatch,
-      non_commit: 50,
-      blind: 50 + deltas.blind,
-    },
-    seasonPointDeltaByArm: {
-      own_fit: deltas.own,
-      mismatch: deltas.mismatch,
-      non_commit: 0,
-      blind: deltas.blind,
+    meanSeasonFactsByArm: {
+      own_fit: seasonFacts(50 + deltas.own, 102, 100, 32, 30, 43, 40),
+      mismatch: seasonFacts(50 + deltas.mismatch, 98, 100, 28, 30, 37, 40),
+      non_commit: seasonFacts(50, 100, 100, 30, 30, 40, 40),
+      blind: seasonFacts(50 + deltas.blind, 100, 100, 30, 30, 40, 40),
     },
     ownPolicyIds: Array.from({ length: 34 }, () => policyIds[identityIndex % policyIds.length] as string),
     formationKeys: Array.from({ length: 34 }, () => "4-4-2"),
     tiedAtBestCount: 0,
+  };
+}
+
+function seasonFacts(
+  points: number,
+  opportunitiesFor: number,
+  opportunitiesAgainst: number,
+  expectedGoalsFor: number,
+  expectedGoalsAgainst: number,
+  goalsFor: number,
+  goalsAgainst: number,
+) {
+  return {
+    points,
+    opportunitiesFor,
+    opportunitiesAgainst,
+    expectedGoalsFor,
+    expectedGoalsAgainst,
+    goalsFor,
+    goalsAgainst,
   };
 }
 
@@ -163,4 +179,59 @@ test("a missing identity or failed canonical guardrail cannot pass", () => {
     guardrails: { ...guardrails, noDominantReadersHeld: false, failed: ["no_dominant_formation"] },
   });
   assert.equal(result.decision, "REFINE");
+});
+
+test("attributes the first canonical translation stage without treating volume as a gate", () => {
+  const schedules = worldSeeds.flatMap((_worldSeed, worldIndex) =>
+    identities.map((identity, identityIndex) =>
+      schedule(worldIndex * identities.length + identityIndex, identity, {
+        own: 3,
+        mismatch: -3,
+        blind: identityIndex % 2 === 0 ? -0.25 : 0.25,
+      })));
+  const volumeReversed = schedules.map((row) => ({
+    ...row,
+    meanSeasonFactsByArm: {
+      ...row.meanSeasonFactsByArm,
+      own_fit: {
+        ...row.meanSeasonFactsByArm.own_fit,
+        opportunitiesFor: 90,
+        expectedGoalsFor: 32,
+      },
+    },
+  }));
+  const translated = evaluateOwnSquadAgencyTranslationSet({
+    setName: "translated",
+    schedules: volumeReversed,
+  });
+
+  assert.equal(translated.translation.firstFailedStage, "no_break");
+  assert.equal(translated.translation.arms[0]?.diagnostics.netOpportunityDelta, -10);
+  assert.equal(translated.translation.arms[0]?.netExpectedGoals.meanDelta, 2);
+});
+
+test("cross-set attribution is fail-closed when the first weak stage differs", () => {
+  const schedules = worldSeeds.flatMap((_worldSeed, worldIndex) =>
+    identities.map((identity, identityIndex) =>
+      schedule(worldIndex * identities.length + identityIndex, identity, {
+        own: 0.5,
+        mismatch: -0.5,
+        blind: identityIndex % 2 === 0 ? -0.25 : 0.25,
+      })));
+  const planBreak = evaluateOwnSquadAgencyTranslationSet({
+    setName: "plan-break",
+    schedules: schedules.map((row) => ({
+      ...row,
+      meanSeasonFactsByArm: {
+        ...row.meanSeasonFactsByArm,
+        own_fit: { ...row.meanSeasonFactsByArm.own_fit, expectedGoalsFor: 30 },
+      },
+    })),
+  });
+  const pointBreak = evaluateOwnSquadAgencyTranslationSet({ setName: "point-break", schedules });
+
+  assert.equal(planBreak.translation.firstFailedStage, "plan_execution_not_established");
+  assert.equal(pointBreak.translation.firstFailedStage, "goal_to_points_resolution");
+  assert.equal(attributeOwnSquadAgencyTranslation([planBreak, pointBreak]), "mixed_not_attributed");
+  assert.equal(attributeOwnSquadAgencyTranslation([pointBreak, pointBreak]), "goal_to_points_resolution");
 });

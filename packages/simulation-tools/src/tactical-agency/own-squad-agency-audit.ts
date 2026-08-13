@@ -50,7 +50,18 @@ export interface OwnSquadAgencyScheduleInput {
   readonly pairedSeedCount: number;
 }
 
-/** Paired season points and deltas for one whole club schedule. */
+/** Canonical mean season facts for one arm over the eight paired seeds. */
+export interface OwnSquadAgencySeasonFacts {
+  readonly points: number;
+  readonly opportunitiesFor: number;
+  readonly opportunitiesAgainst: number;
+  readonly expectedGoalsFor: number;
+  readonly expectedGoalsAgainst: number;
+  readonly goalsFor: number;
+  readonly goalsAgainst: number;
+}
+
+/** Paired canonical match facts for one whole club schedule. */
 export interface OwnSquadAgencyScheduleResult {
   readonly scheduleId: string;
   readonly worldSeed: string;
@@ -58,8 +69,7 @@ export interface OwnSquadAgencyScheduleResult {
   readonly squadIdentityKey: string;
   readonly fixtureCount: number;
   readonly matchesPerArm: number;
-  readonly meanPointsByArm: Readonly<Record<OwnSquadAgencyArm, number>>;
-  readonly seasonPointDeltaByArm: Readonly<Record<OwnSquadAgencyArm, number>>;
+  readonly meanSeasonFactsByArm: Readonly<Record<OwnSquadAgencyArm, OwnSquadAgencySeasonFacts>>;
   readonly ownPolicyIds: readonly string[];
   readonly formationKeys: readonly string[];
   readonly tiedAtBestCount: number;
@@ -79,6 +89,46 @@ export interface OwnSquadAgencyArmSummary {
   readonly meanSeasonPointDelta: number;
   readonly confidenceInterval: OwnSquadAgencyConfidenceInterval;
 }
+
+/** Arms whose deliberate direction can attribute match translation. */
+export type OwnSquadAgencyTranslationArm = "own_fit" | "mismatch";
+
+/** One paired channel estimate against non-commitment. */
+export interface OwnSquadAgencyChannelEstimate {
+  readonly meanDelta: number;
+  readonly confidenceInterval: OwnSquadAgencyConfidenceInterval;
+}
+
+/** Volume/quality diagnostics and causal channel estimates for one arm. */
+export interface OwnSquadAgencyTranslationArmSummary {
+  readonly arm: OwnSquadAgencyTranslationArm;
+  readonly netExpectedGoals: OwnSquadAgencyChannelEstimate;
+  readonly goalDifference: OwnSquadAgencyChannelEstimate;
+  readonly diagnostics: {
+    readonly netOpportunityDelta: number;
+    readonly attackingExpectedGoalsPerOpportunityDelta: number;
+    readonly concededExpectedGoalsPerOpportunityDelta: number;
+  };
+}
+
+/** First unestablished causal stage inside one independently decided set. */
+export type OwnSquadAgencyTranslationStage =
+  | "plan_execution_not_established"
+  | "xg_to_goal_resolution"
+  | "goal_to_points_resolution"
+  | "no_break";
+
+/** Translation result for one seed set. */
+export interface OwnSquadAgencyTranslationSetSummary {
+  readonly arms: readonly OwnSquadAgencyTranslationArmSummary[];
+  readonly firstFailedStage: OwnSquadAgencyTranslationStage;
+}
+
+/** Cross-set attribution; disagreement never selects a gameplay owner. */
+export type OwnSquadAgencyTranslationAttribution =
+  | Exclude<OwnSquadAgencyTranslationStage, "no_break">
+  | "mixed_not_attributed"
+  | "no_break";
 
 /** Diversity and provenance facts read from the same canonical evaluations. */
 export interface OwnSquadAgencyPolicySummary {
@@ -109,6 +159,7 @@ export interface OwnSquadAgencySetResult {
   readonly fixtureCount: number;
   readonly matchesPerArm: number;
   readonly arms: readonly OwnSquadAgencyArmSummary[];
+  readonly translation: OwnSquadAgencyTranslationSetSummary;
   readonly ownFitMinusMismatch: number;
   readonly policy: OwnSquadAgencyPolicySummary;
   readonly constantQualityPolicyMoves: number;
@@ -129,12 +180,10 @@ export function runOwnSquadAgencySchedule(
     throw new Error(`Checkpoint D2 requires exactly 8 paired seeds, received ${input.pairedSeedCount}`);
   }
 
-  const pointsByArm: Record<OwnSquadAgencyArm, number> = {
-    own_fit: 0,
-    mismatch: 0,
-    non_commit: 0,
-    blind: 0,
-  };
+  const factsByArm = Object.fromEntries(OWN_SQUAD_AGENCY_ARMS.map((arm) => [
+    arm,
+    emptySeasonFacts(),
+  ])) as Record<OwnSquadAgencyArm, MutableOwnSquadAgencySeasonFacts>;
   const ownPolicyIds: string[] = [];
   const formationKeys: string[] = [];
   let tiedAtBestCount = 0;
@@ -151,22 +200,21 @@ export function runOwnSquadAgencySchedule(
         String(pairedSeedIndex).padStart(2, "0"),
       ].join("|");
       for (const arm of OWN_SQUAD_AGENCY_ARMS) {
-        pointsByArm[arm] += controlledPoints(
+        accumulateSeasonFacts(factsByArm[arm], controlledMatchFacts(
           fixture,
           candidateForArm(fixture.evaluation, arm),
           seed,
           input.engineConfig,
           input.matchTacticsCalibration,
-        );
+        ));
       }
     }
   }
 
-  const meanPointsByArm = Object.fromEntries(OWN_SQUAD_AGENCY_ARMS.map((arm) => [
+  const meanSeasonFactsByArm = Object.fromEntries(OWN_SQUAD_AGENCY_ARMS.map((arm) => [
     arm,
-    pointsByArm[arm] / input.pairedSeedCount,
-  ])) as Record<OwnSquadAgencyArm, number>;
-  const nonCommit = meanPointsByArm.non_commit;
+    divideSeasonFacts(factsByArm[arm], input.pairedSeedCount),
+  ])) as Record<OwnSquadAgencyArm, OwnSquadAgencySeasonFacts>;
 
   return {
     scheduleId: input.scheduleId,
@@ -175,13 +223,7 @@ export function runOwnSquadAgencySchedule(
     squadIdentityKey: input.squadIdentityKey,
     fixtureCount: input.fixtures.length,
     matchesPerArm: input.fixtures.length * input.pairedSeedCount,
-    meanPointsByArm,
-    seasonPointDeltaByArm: {
-      own_fit: meanPointsByArm.own_fit - nonCommit,
-      mismatch: meanPointsByArm.mismatch - nonCommit,
-      non_commit: 0,
-      blind: meanPointsByArm.blind - nonCommit,
-    },
+    meanSeasonFactsByArm,
     ownPolicyIds,
     formationKeys,
     tiedAtBestCount,
@@ -208,17 +250,11 @@ export function evaluateOwnSquadAgencySet(input: {
     );
   }
 
-  const arms = OWN_SQUAD_AGENCY_ARMS.map((arm): OwnSquadAgencyArmSummary => {
-    const deltas = input.schedules.map((schedule) => schedule.seasonPointDeltaByArm[arm]);
-    return {
-      arm,
-      meanSeasonPointDelta: mean(deltas),
-      confidenceInterval: bootstrapScheduleMeanInterval(
-        deltas,
-        `${OWN_SQUAD_AGENCY_AUDIT_VERSION}|${input.setName}|${arm}`,
-      ),
-    };
+  const measured = evaluateOwnSquadAgencyTranslationSet({
+    setName: input.setName,
+    schedules: input.schedules,
   });
+  const arms = measured.arms;
   const ownFit = requiredArm(arms, "own_fit");
   const mismatch = requiredArm(arms, "mismatch");
   const blind = requiredArm(arms, "blind");
@@ -255,6 +291,7 @@ export function evaluateOwnSquadAgencySet(input: {
     fixtureCount: input.schedules.reduce((sum, row) => sum + row.fixtureCount, 0),
     matchesPerArm: input.schedules.reduce((sum, row) => sum + row.matchesPerArm, 0),
     arms,
+    translation: measured.translation,
     ownFitMinusMismatch,
     policy,
     constantQualityPolicyMoves: input.constantQualityPolicyMoves,
@@ -265,13 +302,201 @@ export function evaluateOwnSquadAgencySet(input: {
   };
 }
 
-function controlledPoints(
+/**
+ * Derives point, xG and goal translation from schedule facts once. Both the D2
+ * gate and its attribution profile call this owner, so the diagnostic cannot
+ * drift from the product result it explains.
+ */
+export function evaluateOwnSquadAgencyTranslationSet(input: {
+  readonly setName: string;
+  readonly schedules: readonly OwnSquadAgencyScheduleResult[];
+}): {
+  readonly setName: string;
+  readonly arms: readonly OwnSquadAgencyArmSummary[];
+  readonly translation: OwnSquadAgencyTranslationSetSummary;
+} {
+  const pointArms = OWN_SQUAD_AGENCY_ARMS.map((arm): OwnSquadAgencyArmSummary => {
+    const deltas = scheduleDeltas(input.schedules, arm, ({ points }) => points);
+    return {
+      arm,
+      meanSeasonPointDelta: mean(deltas),
+      confidenceInterval: bootstrapScheduleMeanInterval(
+        deltas,
+        `${OWN_SQUAD_AGENCY_AUDIT_VERSION}|${input.setName}|${arm}`,
+      ),
+    };
+  });
+  const translationArms = (["own_fit", "mismatch"] as const).map(
+    (arm): OwnSquadAgencyTranslationArmSummary => {
+      const netExpectedGoals = scheduleDeltas(
+        input.schedules,
+        arm,
+        (facts) => facts.expectedGoalsFor - facts.expectedGoalsAgainst,
+      );
+      const goalDifference = scheduleDeltas(
+        input.schedules,
+        arm,
+        (facts) => facts.goalsFor - facts.goalsAgainst,
+      );
+      return {
+        arm,
+        netExpectedGoals: channelEstimate(
+          netExpectedGoals,
+          `${OWN_SQUAD_AGENCY_AUDIT_VERSION}|${input.setName}|${arm}|net-xg`,
+        ),
+        goalDifference: channelEstimate(
+          goalDifference,
+          `${OWN_SQUAD_AGENCY_AUDIT_VERSION}|${input.setName}|${arm}|goal-difference`,
+        ),
+        diagnostics: {
+          netOpportunityDelta: mean(scheduleDeltas(
+            input.schedules,
+            arm,
+            (facts) => facts.opportunitiesFor - facts.opportunitiesAgainst,
+          )),
+          attackingExpectedGoalsPerOpportunityDelta: mean(scheduleDeltas(
+            input.schedules,
+            arm,
+            (facts) => rate(facts.expectedGoalsFor, facts.opportunitiesFor),
+          )),
+          concededExpectedGoalsPerOpportunityDelta: mean(scheduleDeltas(
+            input.schedules,
+            arm,
+            (facts) => rate(facts.expectedGoalsAgainst, facts.opportunitiesAgainst),
+          )),
+        },
+      };
+    },
+  );
+  return {
+    setName: input.setName,
+    arms: pointArms,
+    translation: {
+      arms: translationArms,
+      firstFailedStage: firstFailedTranslationStage(translationArms, pointArms),
+    },
+  };
+}
+
+/** Applies the preregistered cross-set rule without selecting an owner on disagreement. */
+export function attributeOwnSquadAgencyTranslation(
+  sets: readonly { readonly translation: OwnSquadAgencyTranslationSetSummary }[],
+): OwnSquadAgencyTranslationAttribution {
+  if (sets.length !== 2) {
+    throw new Error(`Checkpoint D2 attribution requires exactly two sets, received ${sets.length}`);
+  }
+  const [first, second] = sets.map(({ translation }) => translation.firstFailedStage);
+  return first === second ? first as OwnSquadAgencyTranslationAttribution : "mixed_not_attributed";
+}
+
+interface MutableOwnSquadAgencySeasonFacts {
+  points: number;
+  opportunitiesFor: number;
+  opportunitiesAgainst: number;
+  expectedGoalsFor: number;
+  expectedGoalsAgainst: number;
+  goalsFor: number;
+  goalsAgainst: number;
+}
+
+function emptySeasonFacts(): MutableOwnSquadAgencySeasonFacts {
+  return {
+    points: 0,
+    opportunitiesFor: 0,
+    opportunitiesAgainst: 0,
+    expectedGoalsFor: 0,
+    expectedGoalsAgainst: 0,
+    goalsFor: 0,
+    goalsAgainst: 0,
+  };
+}
+
+function accumulateSeasonFacts(
+  target: MutableOwnSquadAgencySeasonFacts,
+  observation: OwnSquadAgencySeasonFacts,
+): void {
+  target.points += observation.points;
+  target.opportunitiesFor += observation.opportunitiesFor;
+  target.opportunitiesAgainst += observation.opportunitiesAgainst;
+  target.expectedGoalsFor += observation.expectedGoalsFor;
+  target.expectedGoalsAgainst += observation.expectedGoalsAgainst;
+  target.goalsFor += observation.goalsFor;
+  target.goalsAgainst += observation.goalsAgainst;
+}
+
+function divideSeasonFacts(
+  facts: MutableOwnSquadAgencySeasonFacts,
+  divisor: number,
+): OwnSquadAgencySeasonFacts {
+  return {
+    points: facts.points / divisor,
+    opportunitiesFor: facts.opportunitiesFor / divisor,
+    opportunitiesAgainst: facts.opportunitiesAgainst / divisor,
+    expectedGoalsFor: facts.expectedGoalsFor / divisor,
+    expectedGoalsAgainst: facts.expectedGoalsAgainst / divisor,
+    goalsFor: facts.goalsFor / divisor,
+    goalsAgainst: facts.goalsAgainst / divisor,
+  };
+}
+
+function scheduleDeltas(
+  schedules: readonly OwnSquadAgencyScheduleResult[],
+  arm: OwnSquadAgencyArm,
+  read: (facts: OwnSquadAgencySeasonFacts) => number,
+): readonly number[] {
+  return schedules.map((schedule) =>
+    read(schedule.meanSeasonFactsByArm[arm]) - read(schedule.meanSeasonFactsByArm.non_commit));
+}
+
+function channelEstimate(values: readonly number[], seed: string): OwnSquadAgencyChannelEstimate {
+  return {
+    meanDelta: mean(values),
+    confidenceInterval: bootstrapScheduleMeanInterval(values, seed),
+  };
+}
+
+function firstFailedTranslationStage(
+  translationArms: readonly OwnSquadAgencyTranslationArmSummary[],
+  pointArms: readonly OwnSquadAgencyArmSummary[],
+): OwnSquadAgencyTranslationStage {
+  if (!translationArms.every((arm) => expectedDirectionEstablished(arm.arm, arm.netExpectedGoals))) {
+    return "plan_execution_not_established";
+  }
+  if (!translationArms.every((arm) => expectedDirectionEstablished(arm.arm, arm.goalDifference))) {
+    return "xg_to_goal_resolution";
+  }
+  const ownFit = requiredArm(pointArms, "own_fit").meanSeasonPointDelta;
+  const mismatch = requiredArm(pointArms, "mismatch").meanSeasonPointDelta;
+  return outside(ownFit, 1.5, 6) || outside(mismatch, -6, -1.5)
+    ? "goal_to_points_resolution"
+    : "no_break";
+}
+
+function expectedDirectionEstablished(
+  arm: OwnSquadAgencyTranslationArm,
+  estimate: OwnSquadAgencyChannelEstimate,
+): boolean {
+  return arm === "own_fit"
+    ? estimate.meanDelta > 0 && estimate.confidenceInterval.lower95 > 0
+    : estimate.meanDelta < 0 && estimate.confidenceInterval.upper95 < 0;
+}
+
+function rate(numerator: number, denominator: number): number {
+  return denominator === 0 ? 0 : numerator / denominator;
+}
+
+/**
+ * Measures the canonical translation channels without reconstructing engine
+ * formulas. Telemetry is mandatory because a missing xG fact would make the
+ * attribution silently answer a narrower question.
+ */
+function controlledMatchFacts(
   fixture: OwnSquadAgencyFixtureInput,
   candidate: OwnSquadTacticalPolicyCandidate,
   seed: string,
   engineConfig: MatchEngineConfig,
   matchTacticsCalibration: MatchTacticsCalibrationConfig,
-): number {
+): OwnSquadAgencySeasonFacts {
   const controlled = { ...fixture.controlled, tacticalDistribution: candidate.tactic };
   const home = fixture.controlledSide === "home" ? controlled : fixture.opponent;
   const away = fixture.controlledSide === "away" ? controlled : fixture.opponent;
@@ -289,7 +514,21 @@ function controlledPoints(
   });
   const ownGoals = fixture.controlledSide === "home" ? result.score.home : result.score.away;
   const opponentGoals = fixture.controlledSide === "home" ? result.score.away : result.score.home;
-  return ownGoals > opponentGoals ? 3 : ownGoals === opponentGoals ? 1 : 0;
+  const ownSide = fixture.controlledSide;
+  const opponentSide = ownSide === "home" ? "away" : "home";
+  const telemetry = result.stats.telemetry;
+  if (telemetry === undefined) {
+    throw new Error(`Checkpoint D2 attribution has no canonical telemetry for ${fixture.fixtureId}`);
+  }
+  return {
+    points: ownGoals > opponentGoals ? 3 : ownGoals === opponentGoals ? 1 : 0,
+    opportunitiesFor: result.stats[ownSide].opportunities,
+    opportunitiesAgainst: result.stats[opponentSide].opportunities,
+    expectedGoalsFor: telemetry.stats[ownSide].expectedGoals,
+    expectedGoalsAgainst: telemetry.stats[opponentSide].expectedGoals,
+    goalsFor: ownGoals,
+    goalsAgainst: opponentGoals,
+  };
 }
 
 function candidateForArm(

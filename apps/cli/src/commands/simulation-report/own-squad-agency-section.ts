@@ -7,11 +7,14 @@ import {
 } from "@game/content";
 import { generateRoundRobinCalendar } from "@game/engine";
 import {
+  attributeOwnSquadAgencyTranslation,
+  evaluateOwnSquadAgencyTranslationSet,
   evaluateOwnSquadAgencySet,
   observeTacticalAgencyTeamSelection,
   runOwnSquadAgencySchedule,
   type OwnSquadAgencyScheduleResult,
   type OwnSquadAgencySetResult,
+  type OwnSquadAgencyTranslationAttribution,
   type TacticalShapeInvariantResult,
 } from "@game/simulation-tools";
 
@@ -77,6 +80,26 @@ export interface OwnSquadAgencySectionFacts {
   readonly worldSeeds: readonly string[];
 }
 
+/** Focused D2 match-translation facts without a repeated historical career. */
+export interface OwnSquadAgencyTranslationAttributionFacts {
+  readonly sets: readonly ReturnType<typeof evaluateOwnSquadAgencyTranslationSet>[];
+  readonly attribution: OwnSquadAgencyTranslationAttribution;
+  readonly execution: {
+    readonly workerCount: 7;
+    readonly worldCountPerSet: 7;
+    readonly pairedSeedCount: 8;
+    readonly elapsedMilliseconds: number;
+  };
+  readonly calibrationVersions: Readonly<Record<string, string>>;
+  readonly worldSeeds: readonly string[];
+}
+
+interface OwnSquadAgencyFocusedSet {
+  readonly setName: string;
+  readonly worldSeeds: readonly string[];
+  readonly worlds: readonly OwnSquadAgencyWorldResult[];
+}
+
 /** Runs both locked sets serially; each set owns one seven-worker pool. */
 export async function createOwnSquadAgencySectionFacts(input: {
   readonly workerCount: number;
@@ -92,6 +115,7 @@ export async function createOwnSquadAgencySectionFacts(input: {
   );
   const noDominantReadersHeld = noDominantInvariants.length === 3
     && noDominantInvariants.every(({ status }) => status === "pass");
+  const focusedSets = await runOwnSquadAgencyFocusedSets(input.workerCount);
   const sets: OwnSquadAgencySetResult[] = [];
   const openingGates: Record<string, readonly LeagueDiversityOpeningGateVerdict[]> = {};
   const historicalFootball: Record<
@@ -101,21 +125,17 @@ export async function createOwnSquadAgencySectionFacts(input: {
   const versions = new Set<string>();
   const allWorldSeeds: string[] = [];
 
-  for (const seedSet of OWN_SQUAD_AGENCY_SEED_SETS) {
-    const worldSeeds = worldSeedsFor(seedSet.seedPrefix);
+  for (const focused of focusedSets) {
+    const { setName, worldSeeds, worlds } = focused;
     allWorldSeeds.push(...worldSeeds);
-    const worlds = await Promise.all(worldSeeds.map((worldSeed) => runOwnSquadAgencyWorldInWorker({
-      worldSeed,
-      matchSeedPrefix: `${seedSet.seedPrefix}-paired-v1`,
-    })));
     for (const world of worlds) versions.add(world.matchTacticsCalibrationVersion);
     const setOpeningGates = worlds.map(({ openingGate }) => openingGate);
-    openingGates[seedSet.setName] = setOpeningGates;
+    openingGates[setName] = setOpeningGates;
     const historical = await createOwnSquadAgencyHistoricalGuardrailFacts({
       worldSeeds,
       workerCount: input.workerCount,
     });
-    historicalFootball[seedSet.setName] = historical;
+    historicalFootball[setName] = historical;
     const counterfactual = runTacticalAgencyArchetypeCounterfactual({
       worldSeed: worldSeeds[0] as string,
       clubCount: 6,
@@ -130,7 +150,7 @@ export async function createOwnSquadAgencySectionFacts(input: {
       ...historical.failed.map((key) => `historical:${key}`),
     ];
     sets.push(evaluateOwnSquadAgencySet({
-      setName: seedSet.setName,
+      setName,
       worldSeeds,
       schedules: worlds.flatMap(({ schedules }) => schedules),
       declaredIdentityKeys: GENERATED_SQUAD_IDENTITY_KEYS,
@@ -169,6 +189,64 @@ export async function createOwnSquadAgencySectionFacts(input: {
     calibrationVersions: { matchTactics: [...versions][0] as string },
     worldSeeds: allWorldSeeds,
   };
+}
+
+/**
+ * Runs only the paired D2 match population. Historical careers were already
+ * decided by Step 12C and cannot help locate a match-translation stage.
+ */
+export async function createOwnSquadAgencyTranslationAttributionFacts(input: {
+  readonly workerCount: number;
+}): Promise<OwnSquadAgencyTranslationAttributionFacts> {
+  if (input.workerCount !== 7) {
+    throw new Error(`Checkpoint D2 attribution requires exactly 7 workers, received ${input.workerCount}`);
+  }
+  const startedAt = performance.now();
+  const focusedSets = await runOwnSquadAgencyFocusedSets(input.workerCount);
+  const versions = new Set<string>();
+  const worldSeeds: string[] = [];
+  const sets = focusedSets.map(({ setName, worldSeeds: setWorldSeeds, worlds }) => {
+    worldSeeds.push(...setWorldSeeds);
+    for (const world of worlds) versions.add(world.matchTacticsCalibrationVersion);
+    return evaluateOwnSquadAgencyTranslationSet({
+      setName,
+      schedules: worlds.flatMap(({ schedules }) => schedules),
+    });
+  });
+  if (versions.size !== 1) {
+    throw new Error(
+      `Checkpoint D2 attribution worlds disagree about match-tactics calibration: ${[...versions].join(", ")}`,
+    );
+  }
+  return {
+    sets,
+    attribution: attributeOwnSquadAgencyTranslation(sets),
+    execution: {
+      workerCount: 7,
+      worldCountPerSet: 7,
+      pairedSeedCount: 8,
+      elapsedMilliseconds: performance.now() - startedAt,
+    },
+    calibrationVersions: { matchTactics: [...versions][0] as string },
+    worldSeeds,
+  };
+}
+
+/** Shares the exact focused population between D2 and its attribution retry. */
+async function runOwnSquadAgencyFocusedSets(workerCount: number): Promise<readonly OwnSquadAgencyFocusedSet[]> {
+  if (workerCount !== 7) {
+    throw new Error(`Checkpoint D2 focused population requires exactly 7 workers, received ${workerCount}`);
+  }
+  const sets: OwnSquadAgencyFocusedSet[] = [];
+  for (const seedSet of OWN_SQUAD_AGENCY_SEED_SETS) {
+    const worldSeeds = worldSeedsFor(seedSet.seedPrefix);
+    const worlds = await Promise.all(worldSeeds.map((worldSeed) => runOwnSquadAgencyWorldInWorker({
+      worldSeed,
+      matchSeedPrefix: `${seedSet.seedPrefix}-paired-v1`,
+    })));
+    sets.push({ setName: seedSet.setName, worldSeeds, worlds });
+  }
+  return sets;
 }
 
 /** Builds one world and evaluates exactly one club per declared identity. */

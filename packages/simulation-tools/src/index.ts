@@ -36,14 +36,22 @@ export {
 export {
   OWN_SQUAD_AGENCY_ARMS,
   OWN_SQUAD_AGENCY_AUDIT_VERSION,
+  attributeOwnSquadAgencyTranslation,
   evaluateOwnSquadAgencySet,
+  evaluateOwnSquadAgencyTranslationSet,
   runOwnSquadAgencySchedule,
   type OwnSquadAgencyArm,
   type OwnSquadAgencyFixtureInput,
   type OwnSquadAgencyGuardrails,
   type OwnSquadAgencyScheduleInput,
   type OwnSquadAgencyScheduleResult,
+  type OwnSquadAgencySeasonFacts,
   type OwnSquadAgencySetResult,
+  type OwnSquadAgencyTranslationArm,
+  type OwnSquadAgencyTranslationArmSummary,
+  type OwnSquadAgencyTranslationAttribution,
+  type OwnSquadAgencyTranslationSetSummary,
+  type OwnSquadAgencyTranslationStage,
 } from "./tactical-agency/own-squad-agency-audit.ts";
 
 export {

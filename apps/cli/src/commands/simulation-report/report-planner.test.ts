@@ -78,6 +78,20 @@ describe("simulation-report planner", () => {
     });
   });
 
+  it("locks D2 attribution to the same focused worlds without repeating historical seasons", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-d2-translation-attribution",
+      workerCount: 7,
+    });
+    expect(plan.measurementRequest).toMatchObject({
+      worldCount: 14,
+      seasonCount: 1,
+      workerCount: 7,
+      seedPrefix: "phase81a-specialised-own-squad",
+      includedSectionIds: ["tactical_agency"],
+    });
+  });
+
   it("locks B2 to the canonical tactical module and seven-worker population", () => {
     const plan = createSimulationReportPlan({ profileId: "phase81a-b2", workerCount: 7 });
     expect(plan.measurementRequest).toMatchObject({

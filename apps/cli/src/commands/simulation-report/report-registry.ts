@@ -50,7 +50,10 @@ import {
   LOCKED_PROFILE_MEASUREMENTS,
   type LockedMigrationProfileId,
 } from "./locked-profile-sections.ts";
-import { createOwnSquadAgencySectionFacts } from "./own-squad-agency-section.ts";
+import {
+  createOwnSquadAgencySectionFacts,
+  createOwnSquadAgencyTranslationAttributionFacts,
+} from "./own-squad-agency-section.ts";
 import { resolveWorkspaceOutputPath } from "../workspace-output-path.ts";
 
 /** The three executable modules present at the Step 03C boundary. */
@@ -78,6 +81,7 @@ export const SIMULATION_REPORT_PROFILE_IDS = [
   "phase81a-b2-downstream-replication",
   "phase81a-c",
   "phase81a-d2-specialised-own-squad-agency",
+  "phase81a-d2-translation-attribution",
   "phase81a-b2-attribution",
   "phase81a-b2-identity-family",
   "phase81a-substitution-minute-l2-7x1",
@@ -539,6 +543,21 @@ export const SIMULATION_REPORT_PROFILES = {
       profileId: "phase81a-d2-specialised-own-squad-agency",
       worldCount: 14,
       seasonCount: 5,
+      includedSectionIds: ["tactical_agency"],
+      detail: "diagnostic",
+      seedPrefix: "phase81a-specialised-own-squad",
+      workerCount: 7,
+    },
+  },
+  "phase81a-d2-translation-attribution": {
+    id: "phase81a-d2-translation-attribution",
+    titleKey: "simulationReport.profile.phase81aD2Attribution.title",
+    descriptionKey: "simulationReport.profile.phase81aD2Attribution.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-d2-translation-attribution",
+      worldCount: 14,
+      seasonCount: 1,
       includedSectionIds: ["tactical_agency"],
       detail: "diagnostic",
       seedPrefix: "phase81a-specialised-own-squad",
@@ -1883,6 +1902,17 @@ export async function executeSimulationReportModule(
       return {
         data: toSimulationReportJsonValue(facts),
         decision: facts.decision === "GO" ? "PASS" : "FAIL",
+        calibrationVersions: facts.calibrationVersions,
+        worldSeeds: facts.worldSeeds,
+      };
+    }
+    if (request.profileId === "phase81a-d2-translation-attribution") {
+      const facts = await createOwnSquadAgencyTranslationAttributionFacts({
+        workerCount: request.workerCount,
+      });
+      return {
+        data: toSimulationReportJsonValue(facts),
+        decision: facts.attribution === "mixed_not_attributed" ? "FAIL" : "NOT_EVALUATED",
         calibrationVersions: facts.calibrationVersions,
         worldSeeds: facts.worldSeeds,
       };
