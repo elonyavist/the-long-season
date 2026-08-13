@@ -16,6 +16,10 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_E_OPTION_B_CONTINUITY.md` — **`GO`.** Fresh `7 x 2`
+  option-B careers cover `25,704` team-matches with all live reasons reachable,
+  zero fallback/reconciliation failure and exact tactical reload evidence.
+
 - `PHASE_81A_OPTION_B_CLOSEOUT_AMENDMENT.md` — Amendment A12. Post-match
   preparation is explicitly deferred for the own-squad option-B MVP; Step 15
   validates multi-match continuity, live reactions and durable explanation

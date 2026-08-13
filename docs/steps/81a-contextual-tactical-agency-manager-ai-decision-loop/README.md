@@ -404,8 +404,8 @@ contexts; it never owns the analytic diversity gate.
 | 13A | [integrated L6.31 renewal replay](13a-checkpoint-l6-31-integrated-renewal-replay.md) | no | Done: `GO` twice |
 | 14 | [single tactical persistence integration](14-post-match-preparation-choice.md) | save/report | Done: one beta reset; exact round-trip |
 | 14B | [post-match preparation product decision](14b-post-match-preparation-product-decision.md) | no | Done: preparation deferred by A12 |
-| 15 | [Checkpoint E option-B multi-match continuity](15-checkpoint-e-multi-match-consequence.md) | no | Ready: GO authorizes 16 |
-| 16 | [integrated cohort and phase closeout](16-integrated-cohort-and-phase-closeout.md) | no | Phase 81B handoff |
+| 15 | [Checkpoint E option-B multi-match continuity](15-checkpoint-e-multi-match-consequence.md) | no | Done: `GO`; 16 open |
+| 16 | [integrated cohort and phase closeout](16-integrated-cohort-and-phase-closeout.md) | no | Ready: Phase 81B handoff |
 
 No later step starts while its preceding checkpoint is unresolved.
 

@@ -2,9 +2,9 @@
 
 ## Status
 
-Ready after Step 14B. The targets below are frozen before the fresh population
-is executed. Amendment A12 supersedes the former four-policy preparation
-experiment; none of its thresholds is renamed as a pass.
+**Done: `GO`.** The targets below were frozen before the fresh population was
+executed. Amendment A12 supersedes the former four-policy preparation
+experiment; none of its thresholds is renamed as a pass. Step 16 is open.
 
 ## Goal
 
@@ -116,3 +116,30 @@ The report records the exact population, workers, wall clock, calibration
 versions, reason counts and decision. Focused storage tests cover the current
 schema, no obsolete preparation gate is hidden, and no code exists solely to
 make the checkpoint pass.
+
+## Outcome
+
+The isolated report exited `0` over `25,704` team-matches. Time-loss incidence
+was `21.9529/1000h`, mean substitutions `4.4007`, and the first substitution
+median `60`; every carried lifecycle, diversity and reconciliation gate held.
+All eight product live reasons were positive while `command_rejected` stayed
+zero. The maximum modal formation share was `0.2222` across `42` green
+competition-seasons, with no catalog fallback, unavailable selection, missing
+source or missing ID.
+
+The opponent-identity counterfactual now compares the complete AI selection and
+passes. Focused persistence/reload suites pass `89/89`. The complete evidence,
+population limitation and report hash are recorded in
+`PHASE_81A_CHECKPOINT_E_OPTION_B_CONTINUITY.md`.
+
+## Verification
+
+- locked report: exit `0`, decision `PASS`, seven fresh `facts-v1` shards;
+- profile/opponent-invariance tests: `79/79`;
+- focused persistence/reload tests: `89/89`;
+- `pnpm check`: exit `0`, `317` files / `2545` tests, `902` modules with no
+  dependency violations, typecheck and all custom checks green;
+- `git diff --check`: green; `PROJECT_STATUS.md`: `299` lines;
+- Graphify: `24,830` nodes / `47,426` edges.
+
+Step 16 is the next action.

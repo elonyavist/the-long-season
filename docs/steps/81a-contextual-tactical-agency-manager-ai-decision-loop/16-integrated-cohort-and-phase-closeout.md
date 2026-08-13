@@ -2,7 +2,7 @@
 
 ## Status
 
-Not started; requires option-B Checkpoint E GO.
+Ready; option-B Checkpoint E recorded `GO` on a fresh `7 x 2`.
 
 ## Goal
 

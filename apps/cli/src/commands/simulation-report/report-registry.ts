@@ -86,6 +86,7 @@ export const SIMULATION_REPORT_PROFILE_IDS = [
   "phase81a-b2-identity-family",
   "phase81a-substitution-minute-l2-7x1",
   "phase81a-availability-aging-l3-7x2",
+  "phase81a-e-option-b-continuity-7x2",
   "phase81a-generational-succession-l4-7x10",
   "phase81a-youth-minute-pathway-l4-1-7x10",
   "phase81a-career-exit-renewal-l4-2-7x10",
@@ -160,6 +161,7 @@ const CAREER_PROFILE_CHECKPOINT_KIND = {
   "phase81a-league-diversity-100x10": "league_diversity_l1",
   "phase81a-substitution-minute-l2-7x1": "substitution_minutes_l2",
   "phase81a-availability-aging-l3-7x2": "availability_aging_l3",
+  "phase81a-e-option-b-continuity-7x2": "availability_aging_l3",
   "phase81a-generational-succession-l4-7x10": "generational_succession_l4",
   "phase81a-youth-minute-pathway-l4-1-7x10": "youth_minute_pathway_l4_1",
   "phase81a-career-exit-renewal-l4-2-7x10": "career_exit_renewal_l4_2",
@@ -229,6 +231,7 @@ const CAREER_PROFILE_CACHE_SUFFIX = {
   "phase81a-league-diversity-100x10": "-facts-v3",
   "phase81a-substitution-minute-l2-7x1": "-facts-v7",
   "phase81a-availability-aging-l3-7x2": "-facts-v11",
+  "phase81a-e-option-b-continuity-7x2": "-facts-v1",
   "phase81a-generational-succession-l4-7x10": "-facts-v12",
   "phase81a-youth-minute-pathway-l4-1-7x10": "-facts-v4",
   "phase81a-career-exit-renewal-l4-2-7x10": "-facts-v4",
@@ -1287,6 +1290,24 @@ export const SIMULATION_REPORT_PROFILES = {
       includedSectionIds: ["formations"],
       detail: "diagnostic",
       seedPrefix: "phase81a-availability-aging-l3-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-e-option-b-continuity-7x2": {
+    id: "phase81a-e-option-b-continuity-7x2",
+    // The population is deliberately the canonical availability/aging
+    // checkpoint under fresh seeds. Reusing its label makes the shared reader
+    // visible instead of pretending E owns a second lifecycle definition.
+    titleKey: "simulationReport.profile.phase81aAvailabilityAgingL3.title",
+    descriptionKey: "simulationReport.profile.phase81aAvailabilityAgingL3.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-e-option-b-continuity-7x2",
+      worldCount: 7,
+      seasonCount: 2,
+      includedSectionIds: ["formations"],
+      detail: "diagnostic",
+      seedPrefix: "phase81a-e-option-b-continuity-v1",
       workerCount: 7,
     },
   },

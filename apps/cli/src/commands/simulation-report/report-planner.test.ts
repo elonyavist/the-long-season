@@ -650,6 +650,26 @@ describe("simulation-report planner", () => {
     })).toThrow(/refuses measurement overrides/);
   });
 
+  it("freezes E to fresh option-B continuity worlds and the canonical L3 reader", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-e-option-b-continuity-7x2",
+      workerCount: 7,
+    });
+
+    expect(plan.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 2,
+      workerCount: 7,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-e-option-b-continuity-v1",
+      includedSectionIds: ["formations"],
+    });
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-e-option-b-continuity-7x2",
+      seasonCount: 3,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
   it("freezes L4 to the canary worlds, ten seasons and exactly seven workers", () => {
     const plan = createSimulationReportPlan({
       profileId: "phase81a-generational-succession-l4-7x10",

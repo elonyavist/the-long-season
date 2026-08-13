@@ -700,7 +700,7 @@ test("a club the manager never meets still selects a typed eleven in a real shap
     matchTacticsCalibration: matchTacticsCalibrationFixture(),
     valuationConfig: playerValuationConfigFixture(),
   });
-  assert.deepEqual(changedOpponent.tacticalPolicy, stranger.tacticalPolicy);
+  assert.deepEqual(changedOpponent, stranger);
 });
 
 test("career AI can field a strong academy player without adding him to the senior roster", () => {

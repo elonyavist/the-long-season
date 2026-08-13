@@ -23,9 +23,9 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **Step 14B is Done; Step 15 is active.** Amendment A12 defers
-  post-match gameplay preparation for the option-B MVP. Fresh `7 x 2` E now
-  validates opponent-blind selection, live reactions, rotation and reload truth.
+- Phase 81A **Checkpoint E is `GO`; Step 16 is active.** Fresh `7 x 2` option-B
+  careers cover `25,704` team-matches: all live reasons reachable, zero
+  fallback/reconciliation failure, exact tactical reload; A12 defers preparation.
 - **L6.31 integrated replay is green twice:** runway improves ready replacements
   `+0.1106/+0.1057` and generated leaders `+0.0690/+0.0500`, no new red.
 - Phase 81A **L6.3F `GO`:** `3500` yields `0.2624` penalties/match; conversion
