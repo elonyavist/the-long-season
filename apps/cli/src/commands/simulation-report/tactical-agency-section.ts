@@ -281,6 +281,7 @@ export interface TacticalAgencyB2MaterialityProfileFacts {
   readonly sets: readonly {
     readonly setName: string;
     readonly worldSeeds: readonly string[];
+    readonly analysis: TacticalAgencyConditionedAnalysis;
     readonly phaseOneDecision: "PASS_PHASE_1" | "REFINE" | "STOP_RETHINK";
     readonly populationHeld: boolean;
     readonly attribution: TacticalAgencyConditionedMaterialitySummary | null;
@@ -294,10 +295,29 @@ export interface TacticalAgencyB2MaterialityProfileFacts {
   readonly worldSeeds: readonly string[];
 }
 
+/** Complete-row materiality of the currently loaded calibration. */
+export interface TacticalAgencyB2CurrentMaterialityProfileFacts {
+  readonly sets: readonly {
+    readonly setName: string;
+    readonly worldSeeds: readonly string[];
+    readonly analysis: TacticalAgencyConditionedAnalysis;
+    readonly phaseOneDecision: "PASS_PHASE_1" | "REFINE" | "STOP_RETHINK";
+    readonly populationHeld: boolean;
+    readonly attribution: TacticalAgencyConditionedMaterialitySummary | null;
+    readonly materialityHeld: boolean;
+  }[];
+  readonly decision: "MATERIALITY_PASS" | "REFINE" | "STOP_RETHINK";
+  readonly workerCount: number;
+  readonly elapsedMilliseconds: number;
+  readonly calibrationVersions: Readonly<Record<string, string>>;
+  readonly worldSeeds: readonly string[];
+}
+
 interface TacticalAgencyB2MaterialityMeasurement {
   readonly sets: readonly {
     readonly setName: string;
     readonly worldSeeds: readonly string[];
+    readonly analysis: TacticalAgencyConditionedAnalysis;
     readonly phaseOneDecision: "PASS_PHASE_1" | "REFINE" | "STOP_RETHINK";
     readonly populationHeld: boolean;
     readonly attribution: TacticalAgencyConditionedMaterialitySummary | null;
@@ -548,6 +568,35 @@ export async function createTacticalAgencyB2MaterialityProfileFacts(input: {
   };
 }
 
+/** Evaluates complete rows without pretending current content is historical 06C5. */
+export async function createTacticalAgencyB2CurrentMaterialityProfileFacts(input: {
+  readonly workerCount: number;
+}): Promise<TacticalAgencyB2CurrentMaterialityProfileFacts> {
+  const measured = await measureTacticalAgencyB2Materiality(input.workerCount);
+  const sets = measured.sets.map((set) => ({
+    ...set,
+    materialityHeld: set.attribution !== null
+      && set.attribution.optimisticCounterMoveCeiling.value >= 0.045
+      && set.attribution.optimisticCounterMoveExposure.value <= -0.045,
+  }));
+  return {
+    sets,
+    decision: sets.some(({ phaseOneDecision }) => phaseOneDecision === "STOP_RETHINK")
+      ? "STOP_RETHINK"
+      : sets.every(({ phaseOneDecision, populationHeld, materialityHeld }) =>
+          phaseOneDecision === "PASS_PHASE_1" && populationHeld && materialityHeld)
+        ? "MATERIALITY_PASS"
+        : "REFINE",
+    workerCount: measured.workerCount,
+    elapsedMilliseconds: measured.elapsedMilliseconds,
+    calibrationVersions: {
+      ...measured.calibrationVersions,
+      tacticalAgencyCurrentMateriality: "phase81a-b2-current-materiality-v1",
+    },
+    worldSeeds: measured.worldSeeds,
+  };
+}
+
 /** One complete-row producer for accepted materiality attribution. */
 async function measureTacticalAgencyB2Materiality(
   workerCount: number,
@@ -559,6 +608,7 @@ async function measureTacticalAgencyB2Materiality(
       sets: measured.sets.map((set) => ({
         setName: set.setName,
         worldSeeds: set.worldSeeds,
+        analysis: set.analysis,
         phaseOneDecision: set.decision,
         populationHeld: set.populationHeld,
         attribution: null,
@@ -604,6 +654,7 @@ async function measureTacticalAgencyB2Materiality(
     sets.push({
       setName: set.setName,
       worldSeeds: set.worldSeeds,
+      analysis: set.analysis,
       phaseOneDecision: set.decision,
       populationHeld: set.populationHeld,
       attribution,

@@ -469,6 +469,7 @@ function validSemantics(): TacticalSemanticsCalibrationConfig {
     scoreStateCommitmentBasisPoints: 600,
     shapeControlShareBasisPoints: 5_000,
     routeCapacitySeparationBasisPoints: 16_000,
+    possessionChanceInfluenceBasisPoints: 5_600,
     routeQualityBiasBasisPoints: 2_500,
     routeSelectionSharpness: 3,
   };
@@ -494,6 +495,18 @@ test("route-capacity separation is a bounded multiplier, not a share", () => {
   assert.throws(
     () => validateMatchTacticsCalibration(withSemantics({ routeCapacitySeparationBasisPoints: 40_001 })),
     /Route-capacity separation must be a positive fixed-point multiplier/,
+  );
+});
+
+test("possession-to-chance influence is a bounded multiplier", () => {
+  validateMatchTacticsCalibration(withSemantics({ possessionChanceInfluenceBasisPoints: 5_600 }));
+  assert.throws(
+    () => validateMatchTacticsCalibration(withSemantics({ possessionChanceInfluenceBasisPoints: 0 })),
+    /Possession-to-chance influence must be a positive fixed-point multiplier/,
+  );
+  assert.throws(
+    () => validateMatchTacticsCalibration(withSemantics({ possessionChanceInfluenceBasisPoints: 20_001 })),
+    /Possession-to-chance influence must be a positive fixed-point multiplier/,
   );
 });
 

@@ -36,8 +36,8 @@ export function deriveMatchMinuteControl(
   return {
     possession: { home: homeShare, away: awayShare },
     chanceCreationMultiplier: {
-      home: chanceCreationMultiplier(homeShare, plans.home),
-      away: chanceCreationMultiplier(awayShare, plans.away),
+      home: opportunityChanceCreationMultiplier(homeShare, plans.home),
+      away: opportunityChanceCreationMultiplier(awayShare, plans.away),
     },
   };
 }
@@ -91,10 +91,16 @@ function controlWeight(
   );
 }
 
-function chanceCreationMultiplier(possessionShare: number, plan: OpportunityRoutePlan): number {
-  const possessionInfluence = 0.72 + possessionShare * 0.56;
+export function opportunityChanceCreationMultiplier(
+  possessionShare: number,
+  plan: OpportunityRoutePlan,
+): number {
+  const slope = plan.possessionChanceInfluence;
+  const minimum = 1 - slope / 2;
+  const maximum = 1 + slope / 2;
+  const possessionInfluence = minimum + possessionShare * slope;
   const counterRelief = (1 - possessionShare) * plan.counterOpportunityRelief;
-  return clamp(possessionInfluence + counterRelief, 0.72, 1.28);
+  return clamp(possessionInfluence + counterRelief, minimum, maximum);
 }
 
 function averageLineupCondition(team: MatchTeamContext, telemetry: MatchSimulationTelemetry): number {

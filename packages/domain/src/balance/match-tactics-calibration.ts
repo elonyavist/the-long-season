@@ -443,6 +443,11 @@ export interface TacticalSemanticsCalibrationConfig {
    */
   readonly routeCapacitySeparationBasisPoints: number;
   /**
+   * Symmetric slope translating possession share around `0.5` into chance
+   * frequency. This is a positive fixed-point multiplier, not a share.
+   */
+  readonly possessionChanceInfluenceBasisPoints: number;
+  /**
    * How far the route actually taken moves the quality of the chance it made,
    * in basis points, measured from an even contest.
    *
@@ -656,6 +661,7 @@ export type MatchTacticsCalibrationErrorCode =
   | "invalid_score_state_commitment"
   | "invalid_shape_control_share"
   | "invalid_route_capacity_separation"
+  | "invalid_possession_chance_influence"
   | "invalid_route_quality_bias"
   | "invalid_route_selection_sharpness"
   | "incomplete_coordination_multipliers"
@@ -907,6 +913,18 @@ export function validateTacticalSemanticsCalibration(config: TacticalSemanticsCa
     );
   }
 
+  const possessionChanceInfluence = config.possessionChanceInfluenceBasisPoints;
+  if (
+    !Number.isSafeInteger(possessionChanceInfluence)
+    || possessionChanceInfluence <= 0
+    || possessionChanceInfluence > MAXIMUM_POSSESSION_CHANCE_INFLUENCE_BASIS_POINTS
+  ) {
+    throw new MatchTacticsCalibrationError(
+      "invalid_possession_chance_influence",
+      `Possession-to-chance influence must be a positive fixed-point multiplier no greater than ${MAXIMUM_POSSESSION_CHANCE_INFLUENCE_BASIS_POINTS}: ${possessionChanceInfluence}`,
+    );
+  }
+
   const sharpness = config.routeSelectionSharpness;
   if (
     !Number.isSafeInteger(sharpness)
@@ -925,6 +943,9 @@ const MINIMUM_ROUTE_SELECTION_SHARPNESS = 1;
 
 /** Prevents route-volume conversion from exceeding the preregistered domain. */
 const MAXIMUM_ROUTE_CAPACITY_SEPARATION_BASIS_POINTS = 40_000;
+
+/** At two, neutral possession can still map to a non-negative frequency. */
+const MAXIMUM_POSSESSION_CHANCE_INFLUENCE_BASIS_POINTS = 20_000;
 
 /**
  * Hardest a side may commit to its best ways through.
@@ -1017,7 +1038,7 @@ export function lateralChannelShares(
 }
 
 /** Schema version of the match-tactics calibration asset. */
-export const MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION = 5;
+export const MATCH_TACTICS_CALIBRATION_SCHEMA_VERSION = 6;
 
 /**
  * Derives the exact budget allocated by one role row.

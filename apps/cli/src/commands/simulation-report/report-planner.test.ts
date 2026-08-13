@@ -89,6 +89,20 @@ describe("simulation-report planner", () => {
     });
   });
 
+  it("locks current B2 materiality to the same population and seven workers", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-b2-current-materiality",
+      workerCount: 7,
+    });
+    expect(plan.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 1,
+      workerCount: 7,
+      seedPrefix: "phase81a-agency-before-state",
+      includedSectionIds: ["tactical_agency"],
+    });
+  });
+
   it("locks B2.1 attribution to the same population and seven workers", () => {
     const plan = createSimulationReportPlan({
       profileId: "phase81a-b2-attribution",

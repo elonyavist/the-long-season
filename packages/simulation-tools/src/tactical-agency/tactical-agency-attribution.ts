@@ -58,7 +58,7 @@ export interface TacticalAgencyB21FocusTacticRow {
 export type TacticalAgencyB21ComponentKey =
   | "control"
   | "volume"
-  | "route_saturation"
+  | "route_pressure"
   | "lateral_allocation"
   | "route_quality";
 
@@ -303,7 +303,7 @@ export function firstCoherentTacticalAgencyComponent(
 const COMPONENT_KEYS = [
   "control",
   "volume",
-  "route_saturation",
+  "route_pressure",
   "lateral_allocation",
   "route_quality",
 ] as const satisfies readonly TacticalAgencyB21ComponentKey[];
@@ -358,9 +358,9 @@ function candidateReconciles(candidate: TacticalAgencyConditionedContextRow["can
 function threatFromComponents(components: TacticalAgencyAnalyticThreatComponents): number {
   return Math.max(
     0,
-    components.volumeMultiplier
+    components.routePressure
+      * components.volumeMultiplier
       * components.effectiveControl
-      * components.routeSaturation
       * components.expectedRouteQuality,
   );
 }
@@ -379,7 +379,7 @@ function componentValue(
 ): number {
   if (componentKey === "control") return components.effectiveControl;
   if (componentKey === "volume") return components.volumeMultiplier;
-  if (componentKey === "route_saturation") return components.routeSaturation;
+  if (componentKey === "route_pressure") return components.routePressure;
   if (componentKey === "lateral_allocation") {
     return components.leftAllocation + components.rightAllocation;
   }

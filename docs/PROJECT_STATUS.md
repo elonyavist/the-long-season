@@ -23,9 +23,10 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **06C8 `STOP / RETHINK`:** combined quality/volume reaches only
-  `+.0300/-.0345` and `+.0391/-.0300`; candidates removed. Step 06C9 attributes
-  structural minute-path dilution; Step 07 remains closed.
+- Phase 81A **06C10 canonical Phase 1 `GO`, materiality `REFINE`:** shared
+  opportunity math retains `6/9` best-response signatures twice, but complete
+  rows reach only about `+0.025/-0.021`. Step 06C11 attributes chance/xG versus
+  result dilution; Step 07 remains closed.
 - **L6.31 stays green twice:** routine-youth runway improves ready replacements
   `+0.1363/+0.1034`, leaders `+0.0810/+0.0905`, with exact immediate purity.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;

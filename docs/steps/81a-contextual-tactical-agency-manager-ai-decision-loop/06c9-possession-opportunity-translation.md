@@ -2,8 +2,8 @@
 
 ## Status
 
-Active. Quality, route volume and their endpoint interaction are insufficient;
-all candidates were removed.
+Done: candidate `STOP / RETHINK`; `5600` is retained and the ownership
+migration is bit-exact.
 
 ## Goal
 
@@ -60,6 +60,9 @@ the frozen `0.045` product premise rather than increasing coefficients.
 - `packages/content/src/balance/match-tactics-calibration.json`, schema and
   content/schema tests;
 - engine and simulation-tools calibration fixtures;
+- `packages/engine/src/match-engine/opportunity-route.ts` and test; the derived
+  plan carries the one versioned slope to match control, so control cannot
+  reread content or duplicate its value;
 - `packages/engine/src/match-engine/match-control.ts` and test; remove all three
   duplicated hardcoded slope/min/max values;
 - `apps/cli/src/commands/simulation-report/tactical-agency-section.ts`,
@@ -98,3 +101,15 @@ graphify update .
 The hardcoded compression is gone, `5600` proves exact equivalence, the first
 passing candidate is adopted or all are removed, the durable current profile is
 runnable on final content, and no target or non-contextual bonus is introduced.
+
+## Result
+
+`5600` reproduces accepted 06C5 values exactly. `9000`, `12000` and `15000`
+all keep Phase 1 and populations green but produce ceilings of only
+`0.0204..0.0225`; every candidate is removed. The durable
+`phase81a-b2-current-materiality` profile runs on final content and correctly
+returns `REFINE`, real exit `1`.
+
+The failed sweep exposes parallel threat formulas rather than another weak
+coefficient. Step 06C10 must align the analytic oracle with the exact canonical
+minute derivations before further gameplay work.

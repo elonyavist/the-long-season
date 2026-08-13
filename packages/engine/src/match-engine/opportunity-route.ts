@@ -62,10 +62,14 @@ export interface OpportunityRoutePlan {
   readonly controlMultiplier: number;
   /** Relief direct play receives when this side has less of the ball. */
   readonly counterOpportunityRelief: number;
+  /** Versioned possession-share slope consumed by match control. */
+  readonly possessionChanceInfluence: number;
   /** Integer power used when derived route saturations become selection weights. */
   readonly routeSelectionSharpness: number;
   /** Magnitude that turns route saturation into a chance-quality edge. */
   readonly routeQualityBias: number;
+  /** Fixed-point content multiplier already converted to engine units. */
+  readonly routeCapacitySeparation: number;
 }
 
 /** Input for planning one side's minute. */
@@ -239,8 +243,10 @@ export function deriveOpportunityRoutePlan(input: DeriveOpportunityRoutePlanInpu
     volumeMultiplier: deriveVolumeMultiplier(input, semantics),
     controlMultiplier: derivePlanControlMultiplier(input, allocationByRoute),
     counterOpportunityRelief: knobIntensity(ownTactics, caps, "directness") * COUNTER_RELIEF_AT_FULL_DIRECTNESS,
+    possessionChanceInfluence: share(semantics.possessionChanceInfluenceBasisPoints),
     routeSelectionSharpness: semantics.routeSelectionSharpness,
     routeQualityBias: share(semantics.routeQualityBiasBasisPoints),
+    routeCapacitySeparation: semantics.routeCapacitySeparationBasisPoints / 10_000,
   };
 }
 
@@ -306,8 +312,10 @@ export function opportunityRouteStrategicSignature(plan: OpportunityRoutePlan): 
     fixedPointBasisPoints(plan.volumeMultiplier),
     fixedPointBasisPoints(plan.controlMultiplier),
     fixedPointBasisPoints(plan.counterOpportunityRelief),
+    fixedPointBasisPoints(plan.possessionChanceInfluence),
     String(plan.routeSelectionSharpness),
     fixedPointBasisPoints(plan.routeQualityBias),
+    fixedPointBasisPoints(plan.routeCapacitySeparation),
   );
 
   return fields.join("|");
@@ -328,6 +336,31 @@ export function expectedRouteSaturation(plan: OpportunityRoutePlan): number {
   }
 
   return total;
+}
+
+/**
+ * Canonical pre-clamp opportunity rate consumed by both minute play and audit.
+ *
+ * The caller supplies the base rate so the exact production multiplication
+ * order stays here. Analysis passes `1` to obtain the corresponding multiplier.
+ */
+export function opportunityRateBeforeClamp(
+  baseRate: number,
+  plan: OpportunityRoutePlan,
+  opponentPlan: OpportunityRoutePlan,
+  chanceCreationMultiplier: number,
+): number {
+  const routePressure = opportunityRoutePressure(plan, opponentPlan);
+  return baseRate * routePressure * plan.volumeMultiplier * chanceCreationMultiplier;
+}
+
+/** Relative route advantage translated by the versioned separation slope. */
+export function opportunityRoutePressure(
+  plan: OpportunityRoutePlan,
+  opponentPlan: OpportunityRoutePlan,
+): number {
+  const routeAdvantage = expectedRouteSaturation(plan) - expectedRouteSaturation(opponentPlan);
+  return 1 + routeAdvantage * plan.routeCapacitySeparation;
 }
 
 /**

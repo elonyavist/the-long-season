@@ -134,6 +134,7 @@ const FIXTURE_TACTICAL_SEMANTICS = {
   scoreStateCommitmentBasisPoints: 550,
   shapeControlShareBasisPoints: 5_500,
   routeCapacitySeparationBasisPoints: 16_000,
+  possessionChanceInfluenceBasisPoints: 5_600,
   routeQualityBiasBasisPoints: 2_500,
   routeSelectionSharpness: 3,
 } as const satisfies TacticalSemanticsCalibrationConfig;

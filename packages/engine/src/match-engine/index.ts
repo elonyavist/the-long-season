@@ -82,6 +82,7 @@ export {
 export {
   accumulateControlUnits,
   deriveMatchMinuteControl,
+  opportunityChanceCreationMultiplier,
   type MatchMinuteControl,
 } from "./match-control.ts";
 export { progressOnPitchCondition } from "./match-condition.ts";
@@ -255,9 +256,11 @@ export {
   OPPORTUNITY_ROUTE_CHANCE_TYPE,
   opportunityRouteBudget,
   opportunityRouteQualityEdge,
+  opportunityRoutePressure,
   opportunityRouteSaturation,
   opportunityRouteStrategicSignature,
   opportunityRouteWeights,
+  opportunityRateBeforeClamp,
   OpportunityRouteError,
   selectOpportunityRoute,
   type DeriveOpportunityRoutePlanInput,

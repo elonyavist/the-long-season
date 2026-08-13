@@ -1,6 +1,6 @@
 {
-  "schemaVersion": 5,
-  "version": "match-tactics-calibration-v7",
+  "schemaVersion": 6,
+  "version": "match-tactics-calibration-v8",
   "classification": "explicit_game_design_target",
   "chanceActorSelection": {
     "nonSetPieceAssistEligibilityBasisPoints": 7512,
@@ -242,6 +242,7 @@
     "scoreStateCommitmentBasisPoints": 550,
     "shapeControlShareBasisPoints": 5500,
     "routeCapacitySeparationBasisPoints": 16000,
+    "possessionChanceInfluenceBasisPoints": 5600,
     "routeQualityBiasBasisPoints": 2500,
     "routeSelectionSharpness": 3
   }

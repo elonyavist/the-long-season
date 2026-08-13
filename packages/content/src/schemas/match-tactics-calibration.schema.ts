@@ -105,6 +105,7 @@ const tacticalSemanticsSchema = v.strictObject({
   scoreStateCommitmentBasisPoints: basisPoints,
   shapeControlShareBasisPoints: basisPoints,
   routeCapacitySeparationBasisPoints: positiveInteger,
+  possessionChanceInfluenceBasisPoints: positiveInteger,
   routeQualityBiasBasisPoints: basisPoints,
   routeSelectionSharpness: positiveInteger,
 });

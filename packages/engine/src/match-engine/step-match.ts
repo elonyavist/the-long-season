@@ -15,7 +15,7 @@ import { deriveRng, type Rng } from "@game/shared";
 import { AggregateOccasionResolver } from "./aggregate-occasion-resolver.ts";
 import {
   deriveOpportunityRoutePlan,
-  expectedRouteSaturation,
+  opportunityRateBeforeClamp,
   opportunityRouteQualityEdge,
   selectOpportunityRoute,
   type OpportunityRoutePlan,
@@ -511,12 +511,12 @@ function deriveOpportunityRate(
   controlMultiplier: number,
 ): number {
   const rates = simulation.context.engineConfig.rates;
-  const routeAdvantage = expectedRouteSaturation(plan) - expectedRouteSaturation(opponentPlan);
-  const routeCapacitySeparation =
-    simulation.context.matchTacticsCalibration.tacticalSemantics
-      .routeCapacitySeparationBasisPoints / 10_000;
-  const routePressure = 1 + routeAdvantage * routeCapacitySeparation;
-  const rate = rates.baseOpportunityRatePerMinute * routePressure * plan.volumeMultiplier * controlMultiplier;
+  const rate = opportunityRateBeforeClamp(
+    rates.baseOpportunityRatePerMinute,
+    plan,
+    opponentPlan,
+    controlMultiplier,
+  );
 
   return clamp(rate, 0, rates.maxOpportunityRatePerMinute);
 }

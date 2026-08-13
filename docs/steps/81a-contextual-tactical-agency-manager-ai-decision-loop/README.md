@@ -75,10 +75,12 @@ now record **SHOOTER GO** at `18.45`; the corrected reader finds assists red in
 both current (`7.1614`) and cached pre-06B22B (`7.1914`) facts, so the creator
 question predates the shooter change.
 
-Checkpoint B2 Phase 2 remains `REFINE`. Steps 06C6-06C8 rejected quality,
-volume and combined endpoint candidates; only the bit-exact `1.6 -> 16000`
-ownership migration remains. Step 06C9 owns possession-to-opportunity
-compression; Step 07 stays closed.
+Checkpoint B2 Phase 2 remains `REFINE`. Steps 06C6-06C9 rejected every final
+translation candidate while retaining two bit-exact ownership migrations.
+Step 06C10 now shares the exact opportunity derivation between analysis and
+the minute loop: Phase 1 passes twice, but result materiality stays red. Step
+06C11 attributes chance/xG separation versus final-result dilution; Step 07
+stays closed.
 
 This phase is governed by
 [`PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md`](../../audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_DESIGN_CONTRACT.md).
@@ -328,7 +330,9 @@ contexts; it never owns the analytic diversity gate.
 | 06C6 | [contextual route-quality materiality](06c6-contextual-route-quality-materiality.md) | yes | Done: `STOP / RETHINK`, restored |
 | 06C7 | [contextual route-volume materiality](06c7-contextual-route-volume-materiality.md) | yes | Done: migration accepted, candidates rejected |
 | 06C8 | [route quality/volume interaction](06c8-route-quality-volume-interaction.md) | yes | Done: `STOP / RETHINK`, removed |
-| 06C9 | [possession-to-opportunity translation](06c9-possession-opportunity-translation.md) | yes | Active: fixed-point migration and sweep |
+| 06C9 | [possession-to-opportunity translation](06c9-possession-opportunity-translation.md) | yes | Done: migration accepted, candidates rejected |
+| 06C10 | [canonical threat derivation](06c10-canonical-threat-derivation.md) | no | Done: canonical Phase 1 passes, materiality `REFINE` |
+| 06C11 | [chance-to-result materiality attribution](06c11-chance-to-result-materiality-attribution.md) | no | Active: identify the downstream owner |
 | 07 | [player task execution](07-player-task-execution.md) | yes | Step 08 |
 | 08 | [squad identity and lateral execution](08-squad-identity-and-lateral-execution.md) | yes | Step 09 |
 | 09 | [Checkpoint C player context](09-checkpoint-c-player-context.md) | no | GO authorizes 10 |

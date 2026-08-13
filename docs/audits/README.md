@@ -16,6 +16,15 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CANONICAL_THREAT_DERIVATION.md` — ownership correction accepted,
+  gameplay unchanged. Canonical Phase 1 passes twice with `6/9` best-response
+  signatures and no incoherence; complete-row result materiality stays
+  `REFINE`, so chance/xG-to-result attribution is next.
+
+- `PHASE_81A_POSSESSION_OPPORTUNITY_TRANSLATION.md` — candidate **`STOP /
+  RETHINK`**, ownership migration accepted. `5600` is bit-exact; stronger
+  possession slopes lower the ceiling. Parallel threat formulas are next.
+
 - `PHASE_81A_ROUTE_QUALITY_VOLUME_INTERACTION.md` — **`STOP / RETHINK`.** The
   combined endpoint reaches at most `+0.0391/-0.0345`; both candidates are
   removed and structural minute-path attribution is required.

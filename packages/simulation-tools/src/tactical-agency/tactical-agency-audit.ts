@@ -25,11 +25,13 @@ import {
 import {
   selectCareerAiTeam,
   deriveOpportunityRoutePlan,
-  expectedRouteSaturation,
   opportunityRouteBudget,
   opportunityRouteQualityEdge,
+  opportunityRoutePressure,
   opportunityRouteStrategicSignature,
   opportunityRouteWeights,
+  opportunityChanceCreationMultiplier,
+  opportunityRateBeforeClamp,
   simulateMatch,
   type CareerAiTeamSelectionPolicy,
   type MatchContext,
@@ -1750,7 +1752,7 @@ function weightedReplayEstimate(
 export interface TacticalAgencyAnalyticThreatComponents {
   readonly volumeMultiplier: number;
   readonly effectiveControl: number;
-  readonly routeSaturation: number;
+  readonly routePressure: number;
   readonly expectedRouteQuality: number;
   readonly leftAllocation: number;
   readonly rightAllocation: number;
@@ -2264,26 +2266,28 @@ function analyticThreatComponents(
 ): TacticalAgencyAnalyticThreatComponents {
   const controlTotal = plan.controlMultiplier + opponentPlan.controlMultiplier;
   const possessionClaim = controlTotal === 0 ? 0.5 : plan.controlMultiplier / controlTotal;
-  const effectiveControl = possessionClaim
-    + (1 - possessionClaim) * plan.counterOpportunityRelief;
+  const effectiveControl = opportunityChanceCreationMultiplier(possessionClaim, plan);
   const weights = opportunityRouteWeights(plan);
   let expectedQuality = 0;
   for (const route of TACTICAL_ROUTES) {
     expectedQuality += weights[route] * clampShare(0.5 + opportunityRouteQualityEdge(plan, route));
   }
 
-  const routeSaturation = expectedRouteSaturation(plan);
+  const rateMultiplier = opportunityRateBeforeClamp(
+    1,
+    plan,
+    opponentPlan,
+    effectiveControl,
+  );
+  const routePressure = opportunityRoutePressure(plan, opponentPlan);
   const threat = Math.max(
     0,
-    plan.volumeMultiplier
-      * effectiveControl
-      * routeSaturation
-      * expectedQuality,
+    rateMultiplier * expectedQuality,
   );
   return {
     volumeMultiplier: plan.volumeMultiplier,
     effectiveControl,
-    routeSaturation,
+    routePressure,
     expectedRouteQuality: expectedQuality,
     leftAllocation: weights.left,
     rightAllocation: weights.right,
