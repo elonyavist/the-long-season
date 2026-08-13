@@ -23,14 +23,14 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **Step 12D attributed plan execution twice:** own fit raises net xG
-  `+0.6033/+0.5255`, while mismatch is unresolved at `+0.1478/-0.2001`.
-  Versioned plan demand has no match reader. Step 12E froze a bounded `750 bp`
-  own-squad execution link and fresh E/F validation; Step 12F is active.
-- **L6.31 stays green twice:** routine-youth runway improves ready replacements
-  `+0.1363/+0.1034`, leaders `+0.0810/+0.0905`, with exact immediate purity.
-- Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;
-  conversion `0.7260` and ordinary assisted share `0.7540` remain healthy.
+- Phase 81A **Step 12F is `REFINE`; its candidate is removed:** fresh E/F move
+  xG and goals correctly, but reach only `+0.3571/+0.5580` own-fit points and
+  `-0.8259/-0.2299` mismatch points. Step 13 is blocked on the product choice:
+  retain the point floor and redesign route/task execution (recommended), or accept a smaller MVP effect.
+- **L6.31 stays green twice:** runway improves ready replacements
+  `+0.1363/+0.1034` and leaders `+0.0810/+0.0905`.
+- Phase 81A **L6.3F `GO`:** `3500` yields `0.2624` penalties/match; conversion
+  `0.7260` and ordinary assisted share `0.7540` remain healthy.
 - Phase 81A **L6.3G `REFINE`:** `8000` yields `1.4692/1.4645` direct-free-kick
   candidates and `8250` `0.8688/0.8366` versus real `1.1529`; use rounded `7500`.
 - Phase 81A **L6.5 `REFINE`:** priority raises division replacement

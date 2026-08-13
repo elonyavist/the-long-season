@@ -16,6 +16,11 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_OWN_SQUAD_PLAN_EXECUTION.md` — **`REFINE`; candidate
+  rejected and removed.** Fresh E/F sets move xG and goals in the intended
+  directions but miss the frozen season-point magnitude. Step 13 stays closed
+  on the product choice; shipped match tactics remain v11/schema v9.
+
 - `PHASE_81A_CHECKPOINT_D2_SPECIALISED_OWN_SQUAD_AGENCY.md` — **`REFINE`.**
   Both untouched sets retain varied opponent-free policies and blind neutrality,
   but own fit and mismatch remain below the frozen season-point magnitude.
