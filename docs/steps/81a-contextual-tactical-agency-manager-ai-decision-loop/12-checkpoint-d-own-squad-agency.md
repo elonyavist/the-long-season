@@ -83,19 +83,13 @@ replacement and generated-leader gates under the completed tactical code.
 - this step document
 - `13-tactical-chapters-and-canonical-explanation.md`
 
-## Required Checks
+## Historical Verification
 
-```bash
-nvm use 24
-pnpm cli simulation-report --profile=phase81a-d-own-squad-agency \
-  --workers=7 --format=json \
-  --report-output=simulation-out/phase81a-checkpoint-d-own-squad-agency.json
-pnpm check
-git diff --check
-graphify update .
-```
-
-Run the simulation gate and `pnpm check` separately.
+The executable Checkpoint D profile was removed when D2 became the only live
+specialised-plan checkpoint. Its exact output remains frozen in
+`PHASE_81A_CHECKPOINT_D_OWN_SQUAD_AGENCY.md` and commit `d27f8d7`; retaining a
+live command after the production vocabulary changed would falsely claim to
+reproduce D. Current verification belongs only to Step 12C's modular report.
 
 ## Decision
 

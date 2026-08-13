@@ -29,10 +29,10 @@ import {
   squadIdentityKeyByClubId,
 } from "./tactical-agency-world.ts";
 
-/** Frozen independently decided Checkpoint D populations. */
+/** Frozen independently decided Checkpoint D2 populations. */
 export const OWN_SQUAD_AGENCY_SEED_SETS = [
-  { setName: "in-sample", seedPrefix: "phase81a-own-squad-agency-a" },
-  { setName: "out-of-sample", seedPrefix: "phase81a-own-squad-agency-b" },
+  { setName: "d2-c", seedPrefix: "phase81a-specialised-own-squad-c" },
+  { setName: "d2-d", seedPrefix: "phase81a-specialised-own-squad-d" },
 ] as const;
 
 const OWN_SQUAD_AGENCY_WORLD_COUNT = 7;
@@ -60,7 +60,7 @@ type OwnSquadAgencyWorkerMessage =
   | { readonly ok: true; readonly result: OwnSquadAgencyWorldResult }
   | { readonly ok: false; readonly message: string };
 
-/** Complete report facts for the locked Checkpoint D profile. */
+/** Complete report facts for the locked Checkpoint D2 profile. */
 export interface OwnSquadAgencySectionFacts {
   readonly sets: readonly OwnSquadAgencySetResult[];
   readonly openingGates: Readonly<Record<string, readonly LeagueDiversityOpeningGateVerdict[]>>;
@@ -82,7 +82,7 @@ export async function createOwnSquadAgencySectionFacts(input: {
   readonly workerCount: number;
 }): Promise<OwnSquadAgencySectionFacts> {
   if (input.workerCount !== 7) {
-    throw new Error(`Checkpoint D requires exactly 7 workers, received ${input.workerCount}`);
+    throw new Error(`Checkpoint D2 requires exactly 7 workers, received ${input.workerCount}`);
   }
   const startedAt = performance.now();
   const noDominantInvariants = createTacticalShapeSectionFacts().report.invariants.filter(
@@ -147,7 +147,7 @@ export async function createOwnSquadAgencySectionFacts(input: {
   }
 
   if (versions.size !== 1) {
-    throw new Error(`Checkpoint D worlds disagree about match-tactics calibration: ${[...versions].join(", ")}`);
+    throw new Error(`Checkpoint D2 worlds disagree about match-tactics calibration: ${[...versions].join(", ")}`);
   }
   const decision = sets.some(({ decision: setDecision }) => setDecision === "STOP_RETHINK")
     ? "STOP_RETHINK" as const
@@ -201,7 +201,7 @@ export function runOwnSquadAgencyWorld(input: OwnSquadAgencyWorldInput): OwnSqua
     const existing = observedByFixtureAndClub.get(key);
     if (existing !== undefined) return existing;
     const squadIdentityKey = identityByClubId.get(clubId);
-    if (squadIdentityKey === undefined) throw new Error(`Checkpoint D identity join omitted ${clubId}`);
+    if (squadIdentityKey === undefined) throw new Error(`Checkpoint D2 identity join omitted ${clubId}`);
     const produced = observeTacticalAgencyTeamSelection({
       careerState,
       policy: {
@@ -220,7 +220,7 @@ export function runOwnSquadAgencyWorld(input: OwnSquadAgencyWorldInput): OwnSqua
   for (const clubId of clubIds) {
     const firstFixture = calendar.fixtures.find((fixture) =>
       fixture.homeClubId === clubId || fixture.awayClubId === clubId);
-    if (firstFixture === undefined) throw new Error(`Checkpoint D club ${clubId} has no fixture`);
+    if (firstFixture === undefined) throw new Error(`Checkpoint D2 club ${clubId} has no fixture`);
     openingByClub.set(clubId, observe(firstFixture, clubId));
   }
   const openingRow = conditionedPopulationRow({
@@ -233,7 +233,7 @@ export function runOwnSquadAgencyWorld(input: OwnSquadAgencyWorldInput): OwnSqua
   });
   const schedules = selectedClubIds.map((clubId) => {
     const squadIdentityKey = identityByClubId.get(clubId);
-    if (squadIdentityKey === undefined) throw new Error(`Checkpoint D sampled club has no identity: ${clubId}`);
+    if (squadIdentityKey === undefined) throw new Error(`Checkpoint D2 sampled club has no identity: ${clubId}`);
     const fixtures = calendar.fixtures.filter((fixture) =>
       fixture.homeClubId === clubId || fixture.awayClubId === clubId);
     return runOwnSquadAgencySchedule({
@@ -279,7 +279,7 @@ export function firstClubByIdentity(
   const clubIds = [...identityByClubId.keys()].toSorted((left, right) => String(left).localeCompare(String(right)));
   return declaredIdentityKeys.map((identity) => {
     const clubId = clubIds.find((candidate) => identityByClubId.get(candidate) === identity);
-    if (clubId === undefined) throw new Error(`Checkpoint D did not observe squad identity ${identity}`);
+    if (clubId === undefined) throw new Error(`Checkpoint D2 did not observe squad identity ${identity}`);
     return clubId;
   });
 }

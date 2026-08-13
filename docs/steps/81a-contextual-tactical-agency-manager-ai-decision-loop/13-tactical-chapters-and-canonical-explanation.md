@@ -2,10 +2,11 @@
 
 ## Status
 
-Blocked. Product option B is frozen by Step 12A, but this step may not start
-until specialised-plan implementation and Checkpoint D2 both return GO. The
-previously planned implementation scope is retained below for review, not
-authorized execution.
+Blocked. Product option B is frozen by Step 12A, but D2 returned `REFINE`.
+Step 12D must first attribute the weak match-translation stage and its named
+owner must close without moving the frozen product premise. The previously
+planned implementation scope is retained below for review, not authorized
+execution.
 
 ## Goal
 

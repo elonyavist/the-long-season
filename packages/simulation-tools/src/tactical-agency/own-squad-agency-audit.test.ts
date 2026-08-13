@@ -106,6 +106,34 @@ test("keeps blind benefit as a STOP condition", () => {
   assert.equal(result.failed.includes("blind_is_beneficial"), true);
 });
 
+test("D2 requires six modal complete policies and caps one modal policy at 35 percent", () => {
+  const schedules = worldSeeds.flatMap((_worldSeed, worldIndex) =>
+    identities.map((identity, identityIndex) =>
+      schedule(worldIndex * identities.length + identityIndex, identity, {
+        own: 3,
+        mismatch: -3,
+        blind: identityIndex % 2 === 0 ? -0.25 : 0.25,
+      })));
+  const fiveModalSchedules = schedules.map((row) => ({
+    ...row,
+    ownPolicyIds: row.ownPolicyIds.map((policyId) =>
+      policyId.startsWith("compact_counter:") ? "balanced:balanced" : policyId),
+  }));
+  const result = evaluateOwnSquadAgencySet({
+    setName: "modal-gates",
+    worldSeeds,
+    schedules: fiveModalSchedules,
+    declaredIdentityKeys: identities,
+    constantQualityPolicyMoves: 6,
+    constantQualityClubCount: 6,
+    guardrails,
+  });
+
+  assert.equal(result.decision, "REFINE");
+  assert.equal(result.failed.includes("modal_policy_diversity"), true);
+  assert.equal(result.failed.includes("modal_policy_share"), true);
+});
+
 test("a missing identity or failed canonical guardrail cannot pass", () => {
   const schedules = worldSeeds.flatMap((_worldSeed, worldIndex) =>
     identities.map((identity, identityIndex) =>

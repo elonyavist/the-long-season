@@ -1719,11 +1719,11 @@ export async function createCareerSectionsFacts(input: {
 }
 
 /**
- * Runs Checkpoint D's auxiliary full-league monitor through existing readers.
+ * Runs Checkpoint D2's auxiliary full-league monitor through existing readers.
  *
  * The paired agency replay samples eight clubs and therefore cannot produce a
  * league table or pre-round rank gaps. This composition runs the same seven
- * opening worlds for one canonical season, then hands their recorded facts to
+ * opening worlds for five canonical seasons, then hands their recorded facts to
  * the standings and historical-upset evaluators already used by L6.2. It is a
  * regression lane only: none of its values enters the tactical effect estimate.
  */
@@ -1737,17 +1737,17 @@ export async function createOwnSquadAgencyHistoricalGuardrailFacts(input: {
   readonly upset: ReturnType<typeof evaluateHistoricalUpsetCheckpoint>;
 }> {
   if (input.worldSeeds.length !== 7 || input.workerCount !== 7) {
-    throw new Error("Checkpoint D historical guardrails require exactly 7 worlds and 7 workers");
+    throw new Error("Checkpoint D2 historical guardrails require exactly 7 worlds and 7 workers");
   }
   const worlds = await executeCareerWorldBatch({
     worldSeeds: input.worldSeeds,
-    seasonCount: 1,
+    seasonCount: 5,
     workerCount: input.workerCount,
     detail: "diagnostic",
     sectionIds: ["formations"],
     projectionInput: (seed) => ({
       seed,
-      seasonCount: 1,
+      seasonCount: 5,
       detail: "diagnostic",
       sectionIds: ["formations"],
       leagueDiversity: true,
@@ -1768,7 +1768,7 @@ export async function createOwnSquadAgencyHistoricalGuardrailFacts(input: {
     worlds.map(requiredStandingsHierarchyFacts),
     worlds.map(requiredLeagueDiversityFacts),
     worlds.map(requiredAvailabilityAgingFacts),
-    1,
+    5,
   );
   const upset = evaluateHistoricalUpsetCheckpoint(worlds.map(requiredOwnerAttributionFacts));
   const firstDivision = standings.divisions.find(({ divisionLevel }) => divisionLevel === 1);

@@ -105,7 +105,9 @@ makes mismatch costly but produces only `+0.4018/+0.4643` correct-choice season
 points against the frozen `+1.5` floor. Product option B is accepted: Steps
 12A-B froze and implemented six specialised own-squad plans through one
 standardised own-eleven reader; all six are reachable on the A/B development
-lane. Step 12C owns two untouched D2 populations before Step 13;
+lane. Step 12C records `REFINE`: structure is varied and opponent-free, but
+season-point translation is weak. Step 12D attributes the first weak canonical
+match stage before any owner correction and before Step 13;
 L6.31 is not promoted without its required integrated rerun.
 
 This phase is governed by
@@ -371,7 +373,8 @@ contexts; it never owns the analytic diversity gate.
 | 12 | [Checkpoint D own-squad agency](12-checkpoint-d-own-squad-agency.md) | no | **`STOP / RETHINK`; option B accepted** |
 | 12A | [specialised own-squad plan contract](12a-specialised-own-squad-plan-contract.md) | no | Done: A8 frozen before code |
 | 12B | [specialised own-squad plan implementation](12b-specialised-own-squad-plan-implementation.md) | yes | Done: six plans reachable; A9 |
-| 12C | [Checkpoint D2 specialised own-squad agency](12c-checkpoint-d2-specialised-own-squad-agency.md) | no | Ready; GO opens 13 |
+| 12C | [Checkpoint D2 specialised own-squad agency](12c-checkpoint-d2-specialised-own-squad-agency.md) | no | Done: `REFINE`; 12D |
+| 12D | [Checkpoint D2 translation attribution](12d-checkpoint-d2-translation-attribution.md) | no | Ready; observational owner attribution |
 | 13 | [tactical chapters and canonical explanation](13-tactical-chapters-and-canonical-explanation.md) | report/UI | Step 14 |
 | 14 | [preparation and single persistence integration](14-post-match-preparation-choice.md) | next-match state/save | Step 15 |
 | 15 | [Checkpoint E multi-match consequence](15-checkpoint-e-multi-match-consequence.md) | no | GO authorizes 16 |

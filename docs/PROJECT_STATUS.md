@@ -23,10 +23,10 @@ Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Current Active Step
 
-- Phase 81A **Step 12B Done:** six specialised own-squad plans share one
-  manager/AI owner and all are reachable (`1/67/3/60/200/47`) on the A/B lane.
-  A9 standardises unlike capacity scales; no D2 seed was inspected. Step 12C
-  is open on two fresh `7`-world sets; Steps 13-16 require D2 GO.
+- Phase 81A **Step 12C `REFINE`:** six specialised own-squad plans remain
+  varied and opponent-free, but D2-C/D2-D produce only `0.7946/0.6964` season-
+  point separation. Step 12D is active and observational: it must attribute the
+  first weak xG/goal/point translation stage before any owner correction.
 - **L6.31 stays green twice:** routine-youth runway improves ready replacements
   `+0.1363/+0.1034`, leaders `+0.0810/+0.0905`, with exact immediate purity.
 - Phase 81A **L6.3F `GO`:** versioned `3500` yields `0.2624` penalties/match;

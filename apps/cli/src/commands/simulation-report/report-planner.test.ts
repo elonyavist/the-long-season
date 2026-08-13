@@ -64,16 +64,16 @@ describe("simulation-report planner", () => {
     });
   });
 
-  it("locks Checkpoint D to two seven-world sets and the tactical module", () => {
+  it("locks Checkpoint D2 to two seven-world sets, five historical seasons, and the tactical module", () => {
     const plan = createSimulationReportPlan({
-      profileId: "phase81a-d-own-squad-agency",
+      profileId: "phase81a-d2-specialised-own-squad-agency",
       workerCount: 7,
     });
     expect(plan.measurementRequest).toMatchObject({
       worldCount: 14,
-      seasonCount: 1,
+      seasonCount: 5,
       workerCount: 7,
-      seedPrefix: "phase81a-own-squad-agency",
+      seedPrefix: "phase81a-specialised-own-squad",
       includedSectionIds: ["tactical_agency"],
     });
   });

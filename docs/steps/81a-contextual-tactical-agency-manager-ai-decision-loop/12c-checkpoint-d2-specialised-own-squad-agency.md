@@ -2,8 +2,9 @@
 
 ## Status
 
-**Ready.** Step 12B is green; both D2 populations remain ungenerated and
-uninspected.
+**Done — `REFINE`.** Both fresh D2 sets preserve structural policy variety and
+blind neutrality, but correct fit and mismatch remain below the frozen season-
+point magnitude. Step 12D owns translation attribution; Step 13 stays closed.
 
 ## Goal
 
@@ -42,7 +43,13 @@ opponent-source reads.
 - `docs/audits/README.md`
 - `docs/PROJECT_STATUS.md`
 - the phase `README.md`
+- `12-checkpoint-d-own-squad-agency.md`. Its obsolete runnable profile is
+  removed when D2 becomes the sole current owner; the frozen D audit and git
+  commit retain the historical evidence without a misleading live command.
 - this step document
+- `12d-checkpoint-d2-translation-attribution.md`. D2 cannot name a gameplay
+  owner from points alone, so the next observational step is documented before
+  any coefficient is authorized.
 - `13-tactical-chapters-and-canonical-explanation.md`
 
 ## Required Checks
@@ -73,3 +80,20 @@ Run the checkpoint and `pnpm check` separately.
 
 D2 records population, raw metrics, reconciliation and GO/REFINE/STOP twice;
 no output is interpreted as renewal evidence; only GO opens Step 13.
+
+## Outcome — 2026-08-13
+
+The locked report ran alone with seven workers for `1,650,669 ms`, exited `1`
+and wrote hash `0bd9ef5a0aec25d888a220418997eac3`. D2-C/D2-D measured own-fit
+`+0.4531/+0.2009`, mismatch `-0.3415/-0.4955`, blind
+`-0.2500/-0.2076`, and fit-minus-mismatch `0.7946/0.6964`. Both sets retain
+eight distinct modal policies at maximum share `0.125`, all three focuses,
+exact reorder invariance, `6/6` constant-quality policy movement and zero
+opponent reads.
+
+The focused eight-club sample did not observe `high_press`, and D2-D also did
+not observe `balanced`; an all-club read-only diagnostic found those plans
+reachable, so this remains a sampled coverage failure rather than dead content.
+Historical readers also remain red. No target moved and no gameplay correction
+was inferred. The adopted verdict is `REFINE`; Step 12D measures canonical xG,
+goal and point translation on the same paired replay.

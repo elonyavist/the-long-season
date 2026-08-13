@@ -4,10 +4,10 @@ import { test } from "vitest";
 import type { ClubId } from "../career/types.ts";
 import { firstClubByIdentity, OWN_SQUAD_AGENCY_SEED_SETS } from "./own-squad-agency-section.ts";
 
-test("locks two disjoint Checkpoint D seed sets", () => {
+test("locks two untouched disjoint Checkpoint D2 seed sets", () => {
   assert.deepEqual(OWN_SQUAD_AGENCY_SEED_SETS, [
-    { setName: "in-sample", seedPrefix: "phase81a-own-squad-agency-a" },
-    { setName: "out-of-sample", seedPrefix: "phase81a-own-squad-agency-b" },
+    { setName: "d2-c", seedPrefix: "phase81a-specialised-own-squad-c" },
+    { setName: "d2-d", seedPrefix: "phase81a-specialised-own-squad-d" },
   ]);
 });
 

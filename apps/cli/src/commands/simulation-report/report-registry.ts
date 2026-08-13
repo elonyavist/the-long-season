@@ -77,7 +77,7 @@ export const SIMULATION_REPORT_PROFILE_IDS = [
   "phase81a-b2-current-materiality",
   "phase81a-b2-downstream-replication",
   "phase81a-c",
-  "phase81a-d-own-squad-agency",
+  "phase81a-d2-specialised-own-squad-agency",
   "phase81a-b2-attribution",
   "phase81a-b2-identity-family",
   "phase81a-substitution-minute-l2-7x1",
@@ -530,18 +530,18 @@ export const SIMULATION_REPORT_PROFILES = {
       workerCount: 7,
     },
   },
-  "phase81a-d-own-squad-agency": {
-    id: "phase81a-d-own-squad-agency",
+  "phase81a-d2-specialised-own-squad-agency": {
+    id: "phase81a-d2-specialised-own-squad-agency",
     titleKey: "simulationReport.profile.phase81aD.title",
     descriptionKey: "simulationReport.profile.phase81aD.description",
     measurementRequest: {
       mode: "profile",
-      profileId: "phase81a-d-own-squad-agency",
+      profileId: "phase81a-d2-specialised-own-squad-agency",
       worldCount: 14,
-      seasonCount: 1,
+      seasonCount: 5,
       includedSectionIds: ["tactical_agency"],
       detail: "diagnostic",
-      seedPrefix: "phase81a-own-squad-agency",
+      seedPrefix: "phase81a-specialised-own-squad",
       workerCount: 7,
     },
   },
@@ -1878,7 +1878,7 @@ export async function executeSimulationReportModule(
         worldSeeds: facts.worldSeeds,
       };
     }
-    if (request.profileId === "phase81a-d-own-squad-agency") {
+    if (request.profileId === "phase81a-d2-specialised-own-squad-agency") {
       const facts = await createOwnSquadAgencySectionFacts({ workerCount: request.workerCount });
       return {
         data: toSimulationReportJsonValue(facts),

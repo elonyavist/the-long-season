@@ -13,8 +13,8 @@ import {
 } from "@game/engine";
 import { deriveRng } from "@game/shared";
 
-/** Frozen contract stamp for Phase 81A Checkpoint D. */
-export const OWN_SQUAD_AGENCY_AUDIT_VERSION = "phase81a-checkpoint-d-v1";
+/** Frozen contract stamp for Phase 81A Checkpoint D2. */
+export const OWN_SQUAD_AGENCY_AUDIT_VERSION = "phase81a-checkpoint-d2-v1";
 
 /** Product and control policies compared on each paired fixture seed. */
 export const OWN_SQUAD_AGENCY_ARMS = [
@@ -126,7 +126,7 @@ export function runOwnSquadAgencySchedule(
     throw new Error(`Own-squad agency schedule ${input.scheduleId} has ${input.fixtures.length} fixtures, expected 34`);
   }
   if (input.pairedSeedCount !== 8) {
-    throw new Error(`Checkpoint D requires exactly 8 paired seeds, received ${input.pairedSeedCount}`);
+    throw new Error(`Checkpoint D2 requires exactly 8 paired seeds, received ${input.pairedSeedCount}`);
   }
 
   const pointsByArm: Record<OwnSquadAgencyArm, number> = {
@@ -199,12 +199,12 @@ export function evaluateOwnSquadAgencySet(input: {
   readonly guardrails: OwnSquadAgencyGuardrails;
 }): OwnSquadAgencySetResult {
   if (input.worldSeeds.length !== 7) {
-    throw new Error(`Checkpoint D set ${input.setName} requires 7 worlds`);
+    throw new Error(`Checkpoint D2 set ${input.setName} requires 7 worlds`);
   }
   const expectedScheduleCount = input.worldSeeds.length * input.declaredIdentityKeys.length;
   if (input.schedules.length !== expectedScheduleCount) {
     throw new Error(
-      `Checkpoint D set ${input.setName} has ${input.schedules.length} schedules, expected ${expectedScheduleCount}`,
+      `Checkpoint D2 set ${input.setName} has ${input.schedules.length} schedules, expected ${expectedScheduleCount}`,
     );
   }
 
@@ -235,8 +235,8 @@ export function evaluateOwnSquadAgencySet(input: {
       ? ["profile_reachability"] : []),
     ...(Object.values(policy.selectedFocusCounts).some((count) => count === 0)
       ? ["focus_reachability"] : []),
-    ...(policy.distinctModalPolicyCount < 4 ? ["modal_policy_diversity"] : []),
-    ...(policy.maximumModalPolicyShare > 0.5 ? ["modal_policy_share"] : []),
+    ...(policy.distinctModalPolicyCount < 6 ? ["modal_policy_diversity"] : []),
+    ...(policy.maximumModalPolicyShare > 0.35 ? ["modal_policy_share"] : []),
     ...(policy.reorderInvariantShare !== 1 ? ["catalog_reorder_invariance"] : []),
     ...(input.constantQualityClubCount !== 6 || input.constantQualityPolicyMoves < 4
       ? ["constant_quality_counterfactual"] : []),
@@ -324,7 +324,7 @@ function summarizePolicy(
       const policyId = schedule.ownPolicyIds[index] as string;
       const formationKey = schedule.formationKeys[index];
       if (formationKey === undefined) {
-        throw new Error(`Checkpoint D schedule ${schedule.scheduleId} omitted a formation observation`);
+        throw new Error(`Checkpoint D2 schedule ${schedule.scheduleId} omitted a formation observation`);
       }
       const [profile, focus] = policyId.split(":");
       if (profile !== undefined) selectedProfileCounts[profile] = (selectedProfileCounts[profile] ?? 0) + 1;
@@ -365,7 +365,7 @@ function bootstrapScheduleMeanInterval(
   values: readonly number[],
   seed: string,
 ): OwnSquadAgencyConfidenceInterval {
-  if (values.length === 0) throw new Error("Checkpoint D bootstrap needs club schedules");
+  if (values.length === 0) throw new Error("Checkpoint D2 bootstrap needs club schedules");
   const resampleCount = 4096;
   const rng = deriveRng(seed, "own-squad-agency-bootstrap", values.length);
   const means: number[] = [];
@@ -391,7 +391,7 @@ function percentileTypeSeven(sorted: readonly number[], fraction: number): numbe
   const upperIndex = Math.ceil(rank);
   const lower = sorted[lowerIndex];
   const upper = sorted[upperIndex];
-  if (lower === undefined || upper === undefined) throw new Error("Checkpoint D percentile is outside its sample");
+  if (lower === undefined || upper === undefined) throw new Error("Checkpoint D2 percentile is outside its sample");
   return lower + (upper - lower) * (rank - lowerIndex);
 }
 
@@ -400,12 +400,12 @@ function requiredArm(
   arm: OwnSquadAgencyArm,
 ): OwnSquadAgencyArmSummary {
   const row = arms.find((candidate) => candidate.arm === arm);
-  if (row === undefined) throw new Error(`Checkpoint D omitted arm ${arm}`);
+  if (row === undefined) throw new Error(`Checkpoint D2 omitted arm ${arm}`);
   return row;
 }
 
 function mean(values: readonly number[]): number {
-  if (values.length === 0) throw new Error("Checkpoint D mean needs observations");
+  if (values.length === 0) throw new Error("Checkpoint D2 mean needs observations");
   return values.reduce((sum, value) => sum + value, 0) / values.length;
 }
 
