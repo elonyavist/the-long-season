@@ -2,16 +2,35 @@
 
 ## Status
 
-**Done.** Checkpoint F records `GO` for the smaller option-B product accepted by
-Amendments A11/A12. The canonical tactical-shape report is `PASS`; the fresh
-Checkpoint E `7 x 2` rebuild is byte-identical; L6.31 renewal remains green in
-both paired seed sets; and Step 14 is the phase's only coordinated persistence
-reset. The final reports are
+**Reopened after Step 16H.** Checkpoint F recorded `GO` for the smaller option-B
+product accepted by Amendments A11/A12, but manual inspection of the current
+L6.31 HTML found an absolute late-career performer-age failure that its relative
+renewal gates could not clear. The canonical tactical-shape report remains
+`PASS`, the fresh Checkpoint E `7 x 2` rebuild remains byte-identical, and Step
+14 remains the phase's only coordinated persistence reset. The pre-reopening
+reports are
 [`PHASE_81A_INTEGRATED_COHORT.md`](../../audits/PHASE_81A_INTEGRATED_COHORT.md)
 and
 [`PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_REPORT.md`](../../audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_REPORT.md).
 
-Phase 81B Step 01 is the only next action, but it is not started by this phase.
+Step 16A/L6.32 is Done with `SHARED_QUALITY_LIFECYCLE_OWNER`: the skew begins
+at available quality, with material young/successor gaps in all seven worlds.
+Step 16B/L6.33 is Done with `STOP / RETHINK`: both exact candidates were pure
+and regression-free but non-material. Step 16C/L6.34 then stopped before its
+long run. Step 16D/L6.35 rejected the rescaled retry. Step 16E/L6.36 exercised
+real U23 participation and lifecycle v3 over a fresh paired `7 x 10`; both were
+non-material and all candidate code was removed. Step 16F/L6.37 then identified
+the owner: content admits young family room `10/9`, while monthly engine aging
+compresses the same room to `5/6`, deleting serious ceilings before senior
+football. Step 16G/L6.38 then proved that sharing the constructive table removes
+that compression but worsens realised renewal. Step 16H/L6.39 then tested the
+remaining reachable-potential x canonical-U23 interaction in four fresh paired
+arms. Combined current-16 supply fell to `8` against control `16`, leadership
+did not improve and age-33-plus output shares remained near `0.40`; every
+candidate was removed. Generic growth, more U23 minutes and direct age/output
+penalties remain forbidden. Stationary elite stock versus annual successor
+flow is the next attribution question.
+Phase 81B remains unstarted and blocked until the absolute finding is resolved.
 
 ## Historical Execution Record
 
@@ -423,6 +442,14 @@ contexts; it never owns the analytic diversity gate.
 | 14B | [post-match preparation product decision](14b-post-match-preparation-product-decision.md) | no | Done: preparation deferred by A12 |
 | 15 | [Checkpoint E option-B multi-match continuity](15-checkpoint-e-multi-match-consequence.md) | no | Done: `GO`; 16 open |
 | 16 | [integrated cohort and phase closeout](16-integrated-cohort-and-phase-closeout.md) | no | Done: option-B Checkpoint F `GO` |
+| 16A | [late-career performer-age attribution](16a-checkpoint-l6-32-late-career-performer-age-attribution.md) | no | Done: shared quality/lifecycle owner |
+| 16B | [late-career quality/supply factorial](16b-late-career-quality-supply-lifecycle-factorial.md) | yes | Done: `STOP / RETHINK`; removed |
+| 16C | [development aptitude/lifecycle factorial](16c-development-aptitude-and-late-physical-lifecycle-factorial.md) | yes | Done: preflight stop |
+| 16D | [development/lifecycle retry](16d-development-aptitude-and-late-physical-lifecycle-retry.md) | yes | Done: `STOP / RETHINK`; removed |
+| 16E | [U23 development/lifecycle factorial](16e-u23-development-squad-and-late-lifecycle-factorial.md) | yes | Done: `STOP / RETHINK`; removed |
+| 16F | [Reachable-potential compression owner](16f-checkpoint-l6-37-reachable-potential-compression-owner.md) | no | Done: owner identified |
+| 16G | [Shared reachable-potential policy](16g-shared-reachable-potential-policy-and-paired-checkpoint.md) | yes | Done: `STOP / RETHINK`; removed |
+| 16H | [Reachable potential x U23 participation](16h-reachable-potential-u23-participation-interaction.md) | yes | Done: `STOP / RETHINK`; removed |
 
 No later step starts while its preceding checkpoint is unresolved.
 

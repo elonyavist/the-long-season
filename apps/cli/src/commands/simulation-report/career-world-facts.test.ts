@@ -321,11 +321,10 @@ test("Phase 80A canonical rollover wires full stock and non-vacuous replacement 
     assert.equal(gate?.status, "pass");
     assert.equal((gate?.observationCount ?? 0) > 0, true);
   }
-// Measured at 39.9s alone and 110.2s under the full seven-worker suite after
-// canonical development became materially active. The old 90s budget failed
-// only under contention; 180s preserves a finite hang detector with margin on
-// the measured contended path.
-}, 180_000);
+// Measured at 39.9s alone and 110.2s under the full suite after canonical
+// development became materially active. `vitest.config.ts` owns the finite
+// hang budget for this and every other simulation-heavy test.
+});
 
 test("multi-world gate partitions produce the same world summaries as the sequential runner", async () => {
   const text = createTranslator("en");
@@ -354,7 +353,7 @@ test("multi-world gate partitions produce the same world summaries as the sequen
   assert.deepEqual(partitioned.tableSpreadWarningWorlds, sequential.tableSpreadWarningWorlds);
   assert.deepEqual(partitioned.warningCheckCounts, sequential.warningCheckCounts);
   assert.deepEqual(partitioned.failingCheckCounts, sequential.failingCheckCounts);
-}, 180_000);
+});
 
 test("resumable gate reuses complete deterministic shards without changing aggregate results", async () => {
   const checkpointDirectoryPath = await mkdtemp(join(tmpdir(), "the-long-season-gate-checkpoints-"));
@@ -387,7 +386,7 @@ test("resumable gate reuses complete deterministic shards without changing aggre
   } finally {
     await rm(checkpointDirectoryPath, { recursive: true, force: true });
   }
-}, 180_000);
+});
 
 test("resumable multi-world shards preserve the canonical sequential hash", async () => {
   const checkpointDirectoryPath = await mkdtemp(join(tmpdir(), "the-long-season-gate-multi-world-"));
@@ -419,7 +418,7 @@ test("resumable multi-world shards preserve the canonical sequential hash", asyn
   } finally {
     await rm(checkpointDirectoryPath, { recursive: true, force: true });
   }
-}, 180_000);
+});
 
 test("resumable gates parallelize explicit shards without the small-sample threshold", async () => {
   const checkpointDirectoryPath = await mkdtemp(join(tmpdir(), "the-long-season-gate-parallel-"));
@@ -443,7 +442,7 @@ test("resumable gates parallelize explicit shards without the small-sample thres
   } finally {
     await rm(checkpointDirectoryPath, { recursive: true, force: true });
   }
-}, 60_000);
+});
 
 test("resumable gate rejects a corrupted shard instead of trusting partial evidence", async () => {
   const checkpointDirectoryPath = await mkdtemp(join(tmpdir(), "the-long-season-gate-corrupt-"));
@@ -514,7 +513,7 @@ test("resumable gate rejects a corrupted shard instead of trusting partial evide
   } finally {
     await rm(checkpointDirectoryPath, { recursive: true, force: true });
   }
-}, 60_000);
+});
 
 test("development cohort checkpoints are compact, deterministic, resumable, and strict", async () => {
   const checkpointDirectoryPath = await mkdtemp(
@@ -657,7 +656,7 @@ test("development cohort checkpoints are compact, deterministic, resumable, and 
   } finally {
     await rm(checkpointDirectoryPath, { recursive: true, force: true });
   }
-}, 180_000);
+});
 
 test("multi-world gates default to the repository seven-worker policy", () => {
   assert.equal(resolveLongRunGateWorkerCount({ worldCount: 50 }), 7);

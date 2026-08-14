@@ -148,7 +148,7 @@ test("every supported age, context, role, class, and half-star target has a non-
   }
 
   assert.equal(supportedConfigurations > 4_000, true);
-}, 60_000);
+});
 
 test("weak first-division rare-prodigy placements fail with complete typed context", () => {
   for (const clubTier of ["survival", "mid_table"] as const) {

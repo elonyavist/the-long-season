@@ -27,7 +27,7 @@ test("balance profiles preserve default PASS and reachable strict FAIL populatio
   assert.equal(strict.decision, "FAIL");
   assert.ok(normal.sections.economy !== undefined);
   assert.ok(strict.sections.economy !== undefined);
-}, 60_000);
+});
 
 test("live-match producer still completes and reproduces one generated season", () => {
   const report = createLiveMatchControlProfileFacts({
@@ -43,4 +43,4 @@ test("live-match producer still completes and reproduces one generated season", 
   assert.equal(report.distributions.possession_percent.count, 612);
   assert.equal(report.distributions.penalties_awarded_per_match.count, 306);
   assert.equal(report.distributions.penalty_goals_per_match.count, 306);
-}, 20_000);
+});

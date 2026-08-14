@@ -301,7 +301,7 @@ test("one real career execution feeds every reusable module and fields contextua
       }
     }
   }
-}, 60_000);
+});
 
 test("one real generated career reaches canonical low-detail academy participation", async () => {
   const checkpointDirectoryPath = await mkdtemp(join(tmpdir(), "phase81a-youth-minute-reachability-"));
@@ -330,7 +330,7 @@ test("one real generated career reaches canonical low-detail academy participati
   } finally {
     await rm(checkpointDirectoryPath, { recursive: true, force: true });
   }
-}, 120_000);
+});
 
 test("league-diversity resume rebuilds byte-identical facts from one complete-world checkpoint", async () => {
   const checkpointDirectoryPath = await mkdtemp(join(tmpdir(), "phase81a-l1-checkpoint-"));
@@ -354,7 +354,7 @@ test("league-diversity resume rebuilds byte-identical facts from one complete-wo
   } finally {
     await rm(checkpointDirectoryPath, { recursive: true, force: true });
   }
-}, 60_000);
+});
 
 test("a read-only hardening replay refuses a missing cached world instead of simulating it", async () => {
   const checkpointDirectoryPath = await mkdtemp(join(tmpdir(), "phase81a-l5-4h-read-only-"));
@@ -408,7 +408,7 @@ test("a real one-season L6.2 world reaches the exact-upset observation-floor fai
   } finally {
     await rm(checkpointDirectoryPath, { recursive: true, force: true });
   }
-}, 120_000);
+});
 
 test("league-diversity retention accepts exactly nineteen of twenty healthy rows", () => {
   const decision = evaluateLeagueDiversityCheckpoint([{

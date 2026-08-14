@@ -219,9 +219,8 @@ test("initial six-star budgets are exact and current champions are credible", ()
 
 /**
  * Exercises the complete deterministic opening-world allocation over the
- * canonical 100-seed cohort. The timeout is an execution budget only: the
- * assertions and accepted rarity bounds remain unchanged, while a full
- * parallel repository run may take longer than an isolated content run.
+ * canonical 100-seed cohort. `vitest.config.ts` owns its execution budget; the
+ * assertions and accepted rarity bounds remain local to this population.
  */
 test("one hundred initial worlds reconcile effective six-star stock with truthful assignments", () => {
   for (let seedIndex = 0; seedIndex < 100; seedIndex += 1) {
@@ -314,7 +313,7 @@ test("one hundred initial worlds reconcile effective six-star stock with truthfu
       }
     }
   }
-}, 300_000);
+});
 
 test("same seed complete-world output is byte-identical", () => {
   const first = createFakeDomesticWorld({ worldSeed: "three-tier-repeat" });

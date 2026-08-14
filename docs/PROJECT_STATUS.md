@@ -11,25 +11,34 @@ active step. Nothing else.
 
 ## Current State
 
-Phases 0 through 81A are complete; what they delivered is in the code and
+Phases 0 through 81 are complete; what they delivered is in the code and
 `docs/audits/`.
 
-**Phase 81A - Contextual Tactical Agency - is Done.** Checkpoint F accepted the
-smaller option-B product without relabelling the failed historical
-structural/materiality gates. Reports:
-`docs/audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_REPORT.md` and
-`docs/audits/PHASE_81A_INTEGRATED_COHORT.md`.
+**Phase 81A - Contextual Tactical Agency - is Reopened after Step 16H.** L6.39
+tested truthful reachable potential with canonical U23 participation in four
+fresh paired `7 x 10` arms. Combined current-16 supply fell `16 -> 8`, generated
+leadership did not improve and age-33-plus output shares remained near `0.40`.
+Every candidate was removed. Current report:
+`docs/audits/PHASE_81A_CHECKPOINT_L6_39_REACHABLE_POTENTIAL_U23_INTERACTION.md`.
 
-The former contract/free-agent/background-fixture plan is Phase 81B, Ready under
+The former contract/free-agent/background-fixture plan is Phase 81B, Ready but
+entry-blocked under
 `docs/steps/81b-season-anchored-contracts-free-agent-economy-and-background-fixtures/`;
 Step 01 is next and Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Next Action
 
-- Phase 81B Step 01 is the only next action. It must measure and replace the
-  draft contract/free-agent numeric assumptions before implementation.
+- L6.39: about `19.6m` U23 minutes plus truthful potential improve common
+  serious maximum current but not renewal. Current-product season ten contains
+  roughly `92` opening current-16 seniors against `16` generated current-16
+  players across seven First Divisions; generated elites already average about
+  `30.7` starts. Next: decompose stationary elite stock, annual successor flow
+  and exceptional-stock allocation before changing behaviour.
+- No generic growth, U23 retry, synthetic external pool or direct age/output
+  malus is authorized.
 - Phase 81A's final fresh `7 x 2` is byte-identical at closeout; L6.31 remains
-  green in both paired `7 x 10` sets; the tactical-shape report is `PASS`.
+  green only against its relative paired targets; the tactical-shape report is
+  `PASS`. Neither result clears the new absolute age finding.
 - **`pnpm cli simulation-report` is the only report entrypoint.** Use
   `--list-modules`, `--list-profiles`, `--help`, or `--from-report=<json>`;
   relative output resolves from the workspace root.

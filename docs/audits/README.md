@@ -16,6 +16,38 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_L6_39_REACHABLE_POTENTIAL_U23_INTERACTION.md` -
+  **`STOP / RETHINK`.** The combined arm improves common serious maximum
+  current but halves generated current-16 supply, does not improve leadership
+  and leaves age-33-plus output shares near `0.40`. All candidates are removed;
+  stationary elite stock versus annual successor flow is next.
+- `PHASE_81A_CHECKPOINT_L6_38_SHARED_REACHABLE_POTENTIAL.md` -
+  **`STOP / RETHINK`.** The shared reachability owner fixes premature ceiling
+  compression but reduces generated current-16 players `17 -> 7` and makes the
+  quality rungs `0.77` years older. The candidate is removed; the remaining
+  owner is potential-to-quality conversion during the academy/senior bridge.
+- `PHASE_81A_CHECKPOINT_L6_37_REACHABLE_POTENTIAL_COMPRESSION_OWNER.md` -
+  current-product OOS facts identify a duplicate generation/runtime
+  reachability policy: all 33 represented ceiling-16 serious prospects lose
+  more than 0.5 ceiling before their first senior observation.
+- `PHASE_81A_CHECKPOINT_L6_36_U23_DEVELOPMENT_LIFECYCLE_FACTORIAL.md` -
+  **`STOP / RETHINK`.** Real low-detail U23 participation is abundant but
+  non-material (`1/7` paired direction); lifecycle v3 is also non-material
+  (`4/7`). All candidates are removed; quality-to-first-team transition is the
+  next attribution question.
+
+- `PHASE_81A_CHECKPOINT_L6_34_DEVELOPMENT_LIFECYCLE_PREFLIGHT.md` - successor
+  aptitude is reachable; late physical v2 stops before long run at a `1.7744`
+  fragile `p90` role-quality loss.
+- `PHASE_81A_CHECKPOINT_L6_33_LATE_CAREER_FACTORIAL.md` - fresh four-arm
+  `7 x 10` rejects the first supply/lifecycle candidates and localizes the next
+  test to development realization and materially late physical decline.
+- `PHASE_81A_CHECKPOINT_L6_32_LATE_CAREER_PERFORMER_AGE.md` —
+  **`SHARED_QUALITY_LIFECYCLE_OWNER`.** The late-career scorer/creator skew is
+  already present at quality; successor supply is too thin and the opening
+  population retains too much high quality. Step 16B owns a paired factorial,
+  not an age malus in lineup or output.
+
 - `PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_REPORT.md` — final thesis verdict and
   option-B product boundary: own-squad pre-match selection, state-reactive live
   AI, durable explanation, explicit historical failures and Phase 81B handoff.
