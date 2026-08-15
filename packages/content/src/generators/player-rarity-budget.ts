@@ -2,6 +2,7 @@ import type {
   ClubCategory,
   ClubDevelopmentEnvironmentKey,
   PlayerRatingScaleConfig,
+  PlayerStarRating,
 } from "@game/domain";
 import { deriveRng } from "@game/shared";
 
@@ -149,24 +150,30 @@ export interface BuildInitialWorldExceptionalAllocationInput {
   readonly candidates: readonly InitialWorldExceptionalCandidate[];
 }
 
-/** Input for one deterministic annual national-stock reconciliation. */
-export interface BuildAnnualWorldIntakeExceptionalAllocationInput {
+/** Input for one deterministic annual national ceiling-stock reconciliation. */
+export interface BuildAnnualWorldIntakeCeilingAllocationInput {
   readonly seed: string;
   readonly seasonIndex: number;
   readonly ratingScale: PlayerRatingScaleConfig;
-  /** Full active age-15-to-20 six-ceiling stock after annual lifecycle exits. */
-  readonly activeYoungPotentialSixPlayers: readonly AnnualWorldYoungExceptionalPlayer[];
+  /** Number of clubs in the country's current First Division. */
+  readonly firstDivisionClubCount: number;
+  /** Full active age-15-to-20 stock after annual lifecycle exits. */
+  readonly activeYoungCeilingPlayers: readonly AnnualWorldYoungCeilingPlayer[];
   /** Real refill slots available before any per-club intake batch is generated. */
   readonly candidates: readonly AnnualWorldIntakeExceptionalCandidate[];
+  /** Analysis-only paired control; `false` preserves the former six-only path. */
+  readonly useSuccessorCeilingStockPolicy?: boolean;
 }
 
-/** One active young six-ceiling player used to reconcile national stock. */
-export interface AnnualWorldYoungExceptionalPlayer {
+/** One active young player used to derive both national ceiling stocks. */
+export interface AnnualWorldYoungCeilingPlayer {
   readonly playerKey: string;
   /** Undefined only for a free agent without a current owning club. */
   readonly clubKey?: string;
   /** Current owning-club category; undefined for a free agent. */
   readonly division?: ClubCategory;
+  /** Public stored-ceiling rating derived from the canonical primary role. */
+  readonly storedCeilingRating: PlayerStarRating;
 }
 
 /** One real annual academy-refill slot eligible for world-level allocation. */
@@ -175,20 +182,32 @@ export interface AnnualWorldIntakeExceptionalCandidate {
   readonly clubKey: string;
   readonly division: ClubCategory;
   readonly clubTier: "title_contender" | "playoff_contender" | "mid_table" | "survival";
+  /** Existing club environment reused as the successor-allocation weight. */
+  readonly developmentEnvironment: ClubDevelopmentEnvironmentKey;
 }
 
-/** Vacancy-based potential-six assignments for one complete annual intake. */
-export interface AnnualWorldIntakeExceptionalAllocation {
+/** Semantic ceiling assignment selected before one annual intake is generated. */
+export interface AnnualWorldIntakeCeilingAssignment {
+  readonly playerKey: string;
+  readonly minimumRating: 5 | 6;
+}
+
+/** One complete annual national ceiling-stock allocation. */
+export interface AnnualWorldIntakeCeilingAllocation {
   /** Stable national target derived from the world seed, always `4..5`. */
   readonly targetActiveYoungPotentialSixCount: number;
-  /** Full active count observed before this intake allocates a top-up. */
+  /** Active six-star-or-better count observed before allocation. */
   readonly activeYoungPotentialSixCount: number;
-  /** Vacancies between active stock and this season's deterministic target. */
-  readonly vacancyCount: number;
-  /** Vacancies that remain only when no eligible real intake slot exists. */
-  readonly unfilledVacancyCount: number;
-  /** New exceptional intake IDs selected from eligible real vacancies. */
-  readonly potentialSixPlayerKeys: readonly string[];
+  /** Seeded country target derived from the First-Division club count. */
+  readonly targetActiveYoungPotentialFiveOrBetterCount: number;
+  /** Active five-star-or-better count observed before allocation. */
+  readonly activeYoungPotentialFiveOrBetterCount: number;
+  /** Whether the broader successor policy was active for this allocation. */
+  readonly successorCeilingStockPolicyEnabled: boolean;
+  /** Eligible five-star vacancy rows skipped by an active or annual club cap. */
+  readonly fiveStarClubCapRefusalCount: number;
+  /** Total ordered assignments; six-star entries also satisfy five-star stock. */
+  readonly assignments: readonly AnnualWorldIntakeCeilingAssignment[];
 }
 
 /**
@@ -345,32 +364,41 @@ export function buildInitialWorldExceptionalAllocation(
  * country composition must invoke this policy once per country rather than
  * multiplying one country's stock inside a shared club loop.
  */
-export function buildAnnualWorldIntakeExceptionalAllocation(
-  input: BuildAnnualWorldIntakeExceptionalAllocationInput,
-): AnnualWorldIntakeExceptionalAllocation {
+export function buildAnnualWorldIntakeCeilingAllocation(
+  input: BuildAnnualWorldIntakeCeilingAllocationInput,
+): AnnualWorldIntakeCeilingAllocation {
   if (!Number.isSafeInteger(input.seasonIndex) || input.seasonIndex < 0) {
     throw new RangeError(`Invalid intake season index: ${input.seasonIndex}`);
   }
+  if (!Number.isSafeInteger(input.firstDivisionClubCount) || input.firstDivisionClubCount <= 0) {
+    throw new RangeError(`Invalid First-Division club count: ${input.firstDivisionClubCount}`);
+  }
   assertUniqueCandidateKeys(
-    input.activeYoungPotentialSixPlayers.map((player) => player.playerKey),
+    input.activeYoungCeilingPlayers.map((player) => player.playerKey),
   );
   assertUniqueCandidateKeys(input.candidates.map((candidate) => candidate.playerKey));
+  const activeYoungPotentialSixPlayers = input.activeYoungCeilingPlayers.filter(
+    ({ storedCeilingRating }) => storedCeilingRating >= 6,
+  );
+  const activeYoungPotentialFiveOrBetterPlayers = input.activeYoungCeilingPlayers.filter(
+    ({ storedCeilingRating }) => storedCeilingRating >= 5,
+  );
   const targetActiveYoungPotentialSixCount = countInRange(
     input.seed,
     "national-young-stored-ceiling-six-target",
     input.ratingScale.rarity.annualIntake.activeYoungStoredCeilingSixTargetMinimum,
     input.ratingScale.rarity.annualIntake.activeYoungStoredCeilingSixTargetMaximum,
   );
-  const activeYoungPotentialSixCount = input.activeYoungPotentialSixPlayers.length;
-  const vacancyCount = Math.max(
+  const activeYoungPotentialSixCount = activeYoungPotentialSixPlayers.length;
+  const sixVacancyCount = Math.max(
     0,
     targetActiveYoungPotentialSixCount - activeYoungPotentialSixCount,
   );
   const potentialSixPlayerKeys = selectAnnualYoungPotentialSixPlayers({
     seed: input.seed,
     seasonIndex: input.seasonIndex,
-    count: vacancyCount,
-    activePlayers: input.activeYoungPotentialSixPlayers,
+    count: sixVacancyCount,
+    activePlayers: activeYoungPotentialSixPlayers,
     candidates: input.candidates,
     lowerDivisionMaximum:
       input.ratingScale.rarity.initialWorld.lowerDivisionYoungStoredCeilingSixMaximum,
@@ -378,13 +406,106 @@ export function buildAnnualWorldIntakeExceptionalAllocation(
       input.ratingScale.rarity.initialWorld.youngStoredCeilingSixPerClubMaximum,
   });
 
+  // L6.43 rejected this candidate. It remains reachable only through the
+  // explicit L6.43A analysis arm until that checkpoint removes or replaces it.
+  const successorPolicyEnabled = input.useSuccessorCeilingStockPolicy === true;
+  const fiveTargetMinimum = Math.floor(
+    input.firstDivisionClubCount
+      * input.ratingScale.rarity.annualIntake
+        .activeYoungStoredCeilingFiveOrBetterTargetMinimumBasisPoints
+      / 10_000,
+  );
+  const fiveTargetMaximum = Math.floor(
+    input.firstDivisionClubCount
+      * input.ratingScale.rarity.annualIntake
+        .activeYoungStoredCeilingFiveOrBetterTargetMaximumBasisPoints
+      / 10_000,
+  );
+  if (fiveTargetMinimum < targetActiveYoungPotentialSixCount) {
+    throw new Error("Five-star-or-better stock target is smaller than six-star stock");
+  }
+  const targetActiveYoungPotentialFiveOrBetterCount = countInRange(
+    input.seed,
+    "national-young-stored-ceiling-five-or-better-target",
+    fiveTargetMinimum,
+    fiveTargetMaximum,
+  );
+  const activeYoungPotentialFiveOrBetterCount =
+    activeYoungPotentialFiveOrBetterPlayers.length;
+  const remainingFiveVacancyCount = successorPolicyEnabled
+    ? Math.max(
+        0,
+        targetActiveYoungPotentialFiveOrBetterCount
+          - activeYoungPotentialFiveOrBetterCount
+          - potentialSixPlayerKeys.length,
+      )
+    : 0;
+  const fiveSelection = selectAnnualYoungPotentialFivePlayers({
+    seed: input.seed,
+    seasonIndex: input.seasonIndex,
+    count: remainingFiveVacancyCount,
+    activePlayers: activeYoungPotentialFiveOrBetterPlayers,
+    candidates: input.candidates,
+    excludedPlayerKeys: new Set(potentialSixPlayerKeys),
+    perClubMaximum:
+      input.ratingScale.rarity.annualIntake
+        .activeYoungStoredCeilingFiveOrBetterPerClubMaximum,
+  });
+  const assignments = [
+    ...potentialSixPlayerKeys.map((playerKey) => ({
+      playerKey,
+      minimumRating: 6 as const,
+    })),
+    ...fiveSelection.playerKeys.map((playerKey) => ({
+      playerKey,
+      minimumRating: 5 as const,
+    })),
+  ].toSorted((left, right) => left.playerKey.localeCompare(right.playerKey));
+
   return {
     targetActiveYoungPotentialSixCount,
     activeYoungPotentialSixCount,
-    vacancyCount,
-    unfilledVacancyCount: vacancyCount - potentialSixPlayerKeys.length,
-    potentialSixPlayerKeys,
+    targetActiveYoungPotentialFiveOrBetterCount,
+    activeYoungPotentialFiveOrBetterCount,
+    successorCeilingStockPolicyEnabled: successorPolicyEnabled,
+    fiveStarClubCapRefusalCount: fiveSelection.clubCapRefusalCount,
+    assignments,
   };
+}
+
+/** Derives exact-rating assignment IDs without storing overlapping tier lists. */
+export function annualCeilingAssignmentPlayerKeys(
+  allocation: AnnualWorldIntakeCeilingAllocation,
+  minimumRating: 5 | 6,
+): readonly string[] {
+  return allocation.assignments
+    .filter((assignment) => assignment.minimumRating === minimumRating)
+    .map((assignment) => assignment.playerKey)
+    .toSorted((left, right) => left.localeCompare(right));
+}
+
+/** Derives the unfilled part of one stock target from its sole assignment map. */
+export function annualCeilingUnfilledVacancyCount(
+  allocation: AnnualWorldIntakeCeilingAllocation,
+  minimumRating: 5 | 6,
+): number {
+  const exactAssignments = annualCeilingAssignmentPlayerKeys(allocation, minimumRating).length;
+  if (minimumRating === 6) {
+    return Math.max(
+      0,
+      allocation.targetActiveYoungPotentialSixCount
+        - allocation.activeYoungPotentialSixCount
+        - exactAssignments,
+    );
+  }
+  const sixAssignments = annualCeilingAssignmentPlayerKeys(allocation, 6).length;
+  return Math.max(
+    0,
+    allocation.targetActiveYoungPotentialFiveOrBetterCount
+      - allocation.activeYoungPotentialFiveOrBetterCount
+      - sixAssignments
+      - exactAssignments,
+  );
 }
 
 function isEligibleEstablishedCurrentSix(
@@ -473,7 +594,7 @@ function selectAnnualYoungPotentialSixPlayers(input: {
   readonly seed: string;
   readonly seasonIndex: number;
   readonly count: number;
-  readonly activePlayers: readonly AnnualWorldYoungExceptionalPlayer[];
+  readonly activePlayers: readonly AnnualWorldYoungCeilingPlayer[];
   readonly candidates: readonly AnnualWorldIntakeExceptionalCandidate[];
   readonly lowerDivisionMaximum: number;
   readonly perClubMaximum: number;
@@ -526,6 +647,89 @@ function selectAnnualYoungPotentialSixPlayers(input: {
   }
 
   return selected;
+}
+
+function selectAnnualYoungPotentialFivePlayers(input: {
+  readonly seed: string;
+  readonly seasonIndex: number;
+  readonly count: number;
+  readonly activePlayers: readonly AnnualWorldYoungCeilingPlayer[];
+  readonly candidates: readonly AnnualWorldIntakeExceptionalCandidate[];
+  readonly excludedPlayerKeys: ReadonlySet<string>;
+  readonly perClubMaximum: number;
+}): Readonly<{
+  playerKeys: readonly string[];
+  clubCapRefusalCount: number;
+}> {
+  const countByClubKey = new Map<string, number>();
+  for (const active of input.activePlayers) {
+    if (active.clubKey !== undefined) {
+      countByClubKey.set(
+        active.clubKey,
+        (countByClubKey.get(active.clubKey) ?? 0) + 1,
+      );
+    }
+  }
+
+  const selected: string[] = [];
+  const selectedClubKeys = new Set<string>();
+  let clubCapRefusalCount = 0;
+  const ordered = input.candidates
+    .filter((candidate) =>
+      candidate.division === "first_division"
+      && !input.excludedPlayerKeys.has(candidate.playerKey)
+    )
+    .toSorted((left, right) => {
+      const leftScore = annualSuccessorCandidateScore(
+        input.seed,
+        input.seasonIndex,
+        left,
+      );
+      const rightScore = annualSuccessorCandidateScore(
+        input.seed,
+        input.seasonIndex,
+        right,
+      );
+      return leftScore - rightScore || left.playerKey.localeCompare(right.playerKey);
+    });
+
+  for (const candidate of ordered) {
+    if (selected.length >= input.count) break;
+    if (
+      selectedClubKeys.has(candidate.clubKey)
+      || (countByClubKey.get(candidate.clubKey) ?? 0) >= input.perClubMaximum
+    ) {
+      clubCapRefusalCount += 1;
+      continue;
+    }
+    selected.push(candidate.playerKey);
+    selectedClubKeys.add(candidate.clubKey);
+    countByClubKey.set(
+      candidate.clubKey,
+      (countByClubKey.get(candidate.clubKey) ?? 0) + 1,
+    );
+  }
+
+  return {
+    playerKeys: selected,
+    clubCapRefusalCount,
+  };
+}
+
+function annualSuccessorCandidateScore(
+  seed: string,
+  seasonIndex: number,
+  candidate: AnnualWorldIntakeExceptionalCandidate,
+): number {
+  const draw = deriveRng(
+    seed,
+    "annual-successor-ceiling-candidate",
+    seasonIndex,
+    candidate.playerKey,
+  ).nextFloat();
+  return draw / youthDevelopmentSeriousProspectChance(
+    candidate.developmentEnvironment,
+  );
 }
 
 /**

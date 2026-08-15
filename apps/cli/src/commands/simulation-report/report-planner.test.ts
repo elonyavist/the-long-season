@@ -98,6 +98,60 @@ describe("simulation-report planner", () => {
     })).toThrow(/refuses measurement overrides/);
   });
 
+  it("locks L6.43 canary and full paired successor populations", () => {
+    const canary = createSimulationReportPlan({
+      profileId: "phase81a-successor-ceiling-l6-43-paired-canary-7x1",
+      workerCount: 7,
+    });
+    const full = createSimulationReportPlan({
+      profileId: "phase81a-successor-ceiling-l6-43-paired-7x10",
+      workerCount: 7,
+    });
+    expect(canary.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 1,
+      workerCount: 7,
+      seedPrefix: "phase81a-successor-ceiling-l6-43-canary-v1",
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+    });
+    expect(full.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-successor-ceiling-l6-43-v1",
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+    });
+  });
+
+  it("locks L6.43A canary and full selected-successor pathways", () => {
+    const canary = createSimulationReportPlan({
+      profileId: "phase81a-successor-pathway-l6-43a-paired-canary-7x1",
+      workerCount: 7,
+    });
+    const full = createSimulationReportPlan({
+      profileId: "phase81a-successor-pathway-l6-43a-paired-7x10",
+      workerCount: 7,
+    });
+    expect(canary.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 1,
+      workerCount: 7,
+      seedPrefix: "phase81a-successor-pathway-l6-43a-canary-v1",
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+    });
+    expect(full.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-successor-pathway-l6-43a-v1",
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+    });
+  });
+
   it("locks Checkpoint D2 to two seven-world sets, five historical seasons, and the tactical module", () => {
     const plan = createSimulationReportPlan({
       profileId: "phase81a-d2-specialised-own-squad-agency",

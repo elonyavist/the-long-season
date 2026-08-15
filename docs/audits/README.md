@@ -16,6 +16,22 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_DEVELOPMENT_REALIZATION_RECOVERY_CONTRACT.md` - **active after
+  L6.43A.** Observation-only monthly L6.43B separates expected ceiling,
+  ceiling loss, late opportunity and conversion rate; L6.43C may change only
+  its demonstrated owner and preserves a majority of failed prospects.
+- `PHASE_81A_CHECKPOINT_L6_43A_SUCCESSOR_PATHWAY.md` -
+  **`OWNER_IDENTIFIED: development_realization`.** Of `424` closed selected-
+  prospect windows, `173` reach senior use and `900` minutes but not current
+  ability `16`; the owner is largest in `6/7` worlds with zero reconciliation
+  failures.
+- `PHASE_81A_CHECKPOINT_L6_43_SUCCESSOR_RENEWAL.md` - **`STOP_RETHINK`.** The
+  five-star stock made `728` assignments but reached replacement parity in
+  `0/7` worlds and is not adopted.
+- `PHASE_81A_STRUCTURAL_SUCCESSOR_CEILING_SUPPLY.md` - **historical rejected
+  candidate contract.** Step 16L's one-country stock is analysis-only after
+  L6.43; L6.43A localizes the next allowed correction to development
+  realization. The recovery contract above supersedes its future ladder.
 - `PHASE_81A_CHECKPOINT_L6_42_CURRENT16_LIFECYCLE.md` -
   **`OWNER_IDENTIFIED: observed_ceiling_supply`.** The progressive funnel is
   `1885 -> 1041 -> 22 -> 13 -> 13`: observed ceiling supply owns `1019/1872`

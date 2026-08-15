@@ -29,6 +29,7 @@ const safeInteger = v.pipe(v.number(), v.safeInteger());
 const nonNegativeInteger = v.pipe(safeInteger, v.minValue(0));
 const positiveInteger = v.pipe(safeInteger, v.minValue(1));
 const basisPoints = v.pipe(safeInteger, v.minValue(0), v.maxValue(100_000));
+const shareBasisPoints = v.pipe(safeInteger, v.minValue(0), v.maxValue(10_000));
 const money = nonNegativeInteger;
 const abilityNumber = v.pipe(v.number(), v.finite(), v.minValue(0), v.maxValue(20));
 
@@ -98,6 +99,9 @@ const playerRatingScaleSchema = v.strictObject({
     annualIntake: v.strictObject({
       activeYoungStoredCeilingSixTargetMinimum: nonNegativeInteger,
       activeYoungStoredCeilingSixTargetMaximum: nonNegativeInteger,
+      activeYoungStoredCeilingFiveOrBetterTargetMinimumBasisPoints: shareBasisPoints,
+      activeYoungStoredCeilingFiveOrBetterTargetMaximumBasisPoints: shareBasisPoints,
+      activeYoungStoredCeilingFiveOrBetterPerClubMaximum: positiveInteger,
     }),
   }),
   potentialProjectionPolicy: playerPotentialProjectionPolicySchema,
@@ -634,6 +638,11 @@ function validateRatingScale(config: PlayerRatingScaleConfig): void {
   assertMinimumMaximum(config.rarity.initialWorld.establishedCurrentSixMinimum, config.rarity.initialWorld.establishedCurrentSixMaximum, "initial established current-six");
   assertMinimumMaximum(config.rarity.initialWorld.youngStoredCeilingSixMinimum, config.rarity.initialWorld.youngStoredCeilingSixMaximum, "initial young stored-ceiling-six");
   assertMinimumMaximum(config.rarity.annualIntake.activeYoungStoredCeilingSixTargetMinimum, config.rarity.annualIntake.activeYoungStoredCeilingSixTargetMaximum, "active young stored-ceiling-six target");
+  assertMinimumMaximum(
+    config.rarity.annualIntake.activeYoungStoredCeilingFiveOrBetterTargetMinimumBasisPoints,
+    config.rarity.annualIntake.activeYoungStoredCeilingFiveOrBetterTargetMaximumBasisPoints,
+    "active young stored-ceiling-five-or-better target share",
+  );
   if (
     config.rarity.initialWorld.lowerDivisionYoungStoredCeilingSixMaximum
       > config.rarity.initialWorld.youngStoredCeilingSixMaximum
@@ -649,6 +658,13 @@ function validateRatingScale(config: PlayerRatingScaleConfig): void {
         !== config.rarity.initialWorld.youngStoredCeilingSixMaximum
   ) {
     fail("annual young stored-ceiling-six target must match initial national stock");
+  }
+  if (
+    config.rarity.annualIntake.activeYoungStoredCeilingFiveOrBetterTargetMinimumBasisPoints <= 0
+    || config.rarity.annualIntake.activeYoungStoredCeilingFiveOrBetterPerClubMaximum
+      < config.rarity.initialWorld.youngStoredCeilingSixPerClubMaximum
+  ) {
+    fail("active young stored-ceiling-five-or-better target is structurally invalid");
   }
 }
 

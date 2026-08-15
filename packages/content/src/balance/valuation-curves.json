@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "version": "valuation-curves-v8",
+  "version": "valuation-curves-v9",
   "classification": "explicit_game_design_target",
-  "playerRatingScaleVersion": "player-rating-scale-v10",
+  "playerRatingScaleVersion": "player-rating-scale-v11",
   "playerMarketCalibrationVersion": "player-market-calibration-transfermarkt-it-2026-07-28-v2",
   "qualityInterpolationExponentMilli": 2000,
   "ratingValueAnchors": [

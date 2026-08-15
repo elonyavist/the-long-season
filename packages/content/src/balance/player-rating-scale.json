@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "version": "player-rating-scale-v10",
+  "version": "player-rating-scale-v11",
   "classification": "explicit_game_design_target",
   "supportedRatings": [1, 1.5, 2, 2.5, 3, 3.5, 4, 4.5, 5, 5.5, 6],
   "abilityThresholds": [
@@ -47,7 +47,10 @@
     },
     "annualIntake": {
       "activeYoungStoredCeilingSixTargetMinimum": 4,
-      "activeYoungStoredCeilingSixTargetMaximum": 5
+      "activeYoungStoredCeilingSixTargetMaximum": 5,
+      "activeYoungStoredCeilingFiveOrBetterTargetMinimumBasisPoints": 9000,
+      "activeYoungStoredCeilingFiveOrBetterTargetMaximumBasisPoints": 10000,
+      "activeYoungStoredCeilingFiveOrBetterPerClubMaximum": 2
     }
   },
   "potentialProjectionPolicy": {

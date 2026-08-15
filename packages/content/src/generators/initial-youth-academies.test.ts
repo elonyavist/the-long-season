@@ -461,7 +461,10 @@ test("seasonal youth intake applies a potential-six floor only to its world allo
   assert.ok(candidate !== undefined);
   const result = generateSeasonalYouthIntakePlayers({
     ...inputValue,
-    potentialSixPlayerIds: [candidate.player.id],
+    ceilingAssignments: [{
+      playerKey: String(candidate.player.id),
+      minimumRating: 6,
+    }],
   });
   const exceptional = result.generatedPlayers.filter(({ player }) =>
     Number(rolePotentialAbility(player.potential, getPlayerRoleProfile(player.primaryRole))) >= 17
@@ -526,7 +529,10 @@ test("academy roots propagate unsupported rare-prodigy placement as typed failur
       reputation: 1,
       competitiveTier: "mid_table",
     },
-    potentialSixPlayerIds: [seasonalForcedId],
+    ceilingAssignments: [{
+      playerKey: String(seasonalForcedId),
+      minimumRating: 6,
+    }],
   }));
 });
 

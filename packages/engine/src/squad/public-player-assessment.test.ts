@@ -49,6 +49,9 @@ const scale: PlayerRatingScaleConfig = {
     annualIntake: {
       activeYoungStoredCeilingSixTargetMinimum: 4,
       activeYoungStoredCeilingSixTargetMaximum: 5,
+      activeYoungStoredCeilingFiveOrBetterTargetMinimumBasisPoints: 9_000,
+      activeYoungStoredCeilingFiveOrBetterTargetMaximumBasisPoints: 10_000,
+      activeYoungStoredCeilingFiveOrBetterPerClubMaximum: 2,
     },
   },
 };

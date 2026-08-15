@@ -5,7 +5,9 @@ import { FAKE_CLUB_COUNT, FAKE_LINEUP_SIZE, FAKE_PLAYERS_PER_CLUB } from "./fake
 import { playerRatingScale } from "../balance/player-economy-calibration.ts";
 import { resolveGeneratedExceptionalProfile } from "./player-archetypes.ts";
 import {
-  buildAnnualWorldIntakeExceptionalAllocation,
+  annualCeilingAssignmentPlayerKeys,
+  annualCeilingUnfilledVacancyCount,
+  buildAnnualWorldIntakeCeilingAllocation,
   buildInitialWorldExceptionalAllocation,
   buildPlayerRarityAllocation,
   buildYouthPlayerRarityAllocation,
@@ -299,60 +301,100 @@ test("initial world reconstructs only the deterministic surplus when natural you
   );
 });
 
-test("annual world intake fills every eligible vacancy up to the active-stock target", () => {
+test("annual world intake preserves six-star stock while filling the broader successor stock", () => {
   const candidates = annualCandidates();
-  const empty = buildAnnualWorldIntakeExceptionalAllocation({
+  const empty = buildAnnualWorldIntakeCeilingAllocation({
     seed: "annual-world-rarity",
     seasonIndex: 3,
     ratingScale: playerRatingScale,
-    activeYoungPotentialSixPlayers: [],
+    firstDivisionClubCount: 18,
+    activeYoungCeilingPlayers: [],
     candidates,
+    useSuccessorCeilingStockPolicy: true,
   });
   assert.equal(
-    empty.potentialSixPlayerKeys.length,
+    annualCeilingAssignmentPlayerKeys(empty, 6).length,
     empty.targetActiveYoungPotentialSixCount,
   );
-  assert.equal(empty.potentialSixPlayerKeys.length > 1, true);
-  assert.equal(empty.unfilledVacancyCount, 0);
+  assert.equal(annualCeilingAssignmentPlayerKeys(empty, 6).length > 1, true);
+  assert.equal(annualCeilingUnfilledVacancyCount(empty, 6), 0);
+  assert.equal(annualCeilingUnfilledVacancyCount(empty, 5), 0);
+  assert.equal(
+    empty.assignments.length,
+    empty.targetActiveYoungPotentialFiveOrBetterCount,
+  );
   const activeYoungPotentialSixPlayers = Array.from(
     { length: empty.targetActiveYoungPotentialSixCount - 1 },
     (_, index) => ({
       playerKey: `active-${index + 1}`,
       clubKey: `active-club-${index + 1}`,
       division: "first_division" as const,
+      storedCeilingRating: 6 as const,
     }),
   );
-  const allocation = buildAnnualWorldIntakeExceptionalAllocation({
+  const allocation = buildAnnualWorldIntakeCeilingAllocation({
     seed: "annual-world-rarity",
     seasonIndex: 3,
     ratingScale: playerRatingScale,
-    activeYoungPotentialSixPlayers,
+    firstDivisionClubCount: 18,
+    activeYoungCeilingPlayers: activeYoungPotentialSixPlayers,
     candidates,
+    useSuccessorCeilingStockPolicy: true,
   });
 
   assert.equal(allocation.activeYoungPotentialSixCount, activeYoungPotentialSixPlayers.length);
-  assert.equal(allocation.vacancyCount, 1);
-  assert.equal(allocation.potentialSixPlayerKeys.length, 1);
-  assert.equal(allocation.unfilledVacancyCount, 0);
+  assert.equal(annualCeilingAssignmentPlayerKeys(allocation, 6).length, 1);
+  assert.equal(annualCeilingUnfilledVacancyCount(allocation, 6), 0);
+  assert.equal(annualCeilingUnfilledVacancyCount(allocation, 5), 0);
   assert.deepEqual(
     allocation,
-    buildAnnualWorldIntakeExceptionalAllocation({
+    buildAnnualWorldIntakeCeilingAllocation({
       seed: "annual-world-rarity",
       seasonIndex: 3,
       ratingScale: playerRatingScale,
-      activeYoungPotentialSixPlayers: [...activeYoungPotentialSixPlayers].reverse(),
+      firstDivisionClubCount: 18,
+      activeYoungCeilingPlayers: [...activeYoungPotentialSixPlayers].reverse(),
       candidates: [...candidates].reverse(),
+      useSuccessorCeilingStockPolicy: true,
+    }),
+  );
+});
+
+test("annual world intake keeps the rejected successor policy analysis-only by default", () => {
+  const input = {
+    seed: "annual-world-product-default",
+    seasonIndex: 3,
+    ratingScale: playerRatingScale,
+    firstDivisionClubCount: 18,
+    activeYoungCeilingPlayers: [],
+    candidates: annualCandidates(),
+  } as const;
+
+  assert.deepEqual(
+    buildAnnualWorldIntakeCeilingAllocation(input),
+    buildAnnualWorldIntakeCeilingAllocation({
+      ...input,
+      useSuccessorCeilingStockPolicy: false,
+    }),
+  );
+  assert.notDeepEqual(
+    buildAnnualWorldIntakeCeilingAllocation(input),
+    buildAnnualWorldIntakeCeilingAllocation({
+      ...input,
+      useSuccessorCeilingStockPolicy: true,
     }),
   );
 });
 
 test("annual world intake never tops up a full stock or bypasses the outside-Serie-A allowance", () => {
-  const baseline = buildAnnualWorldIntakeExceptionalAllocation({
+  const baseline = buildAnnualWorldIntakeCeilingAllocation({
     seed: "annual-world-free-agent",
     seasonIndex: 4,
     ratingScale: playerRatingScale,
-    activeYoungPotentialSixPlayers: [],
+    firstDivisionClubCount: 18,
+    activeYoungCeilingPlayers: [],
     candidates: annualCandidates(),
+    useSuccessorCeilingStockPolicy: false,
   });
   const fullStock = Array.from(
     { length: baseline.targetActiveYoungPotentialSixCount },
@@ -360,24 +402,28 @@ test("annual world intake never tops up a full stock or bypasses the outside-Ser
       playerKey: `full-${index + 1}`,
       clubKey: `full-club-${index + 1}`,
       division: "first_division" as const,
+      storedCeilingRating: 6 as const,
     }),
   );
-  const full = buildAnnualWorldIntakeExceptionalAllocation({
+  const full = buildAnnualWorldIntakeCeilingAllocation({
     seed: "annual-world-free-agent",
     seasonIndex: 4,
     ratingScale: playerRatingScale,
-    activeYoungPotentialSixPlayers: fullStock,
+    firstDivisionClubCount: 18,
+    activeYoungCeilingPlayers: fullStock,
     candidates: annualCandidates(),
+    useSuccessorCeilingStockPolicy: false,
   });
-  assert.equal(full.vacancyCount, 0);
-  assert.deepEqual(full.potentialSixPlayerKeys, []);
+  assert.equal(annualCeilingUnfilledVacancyCount(full, 6), 0);
+  assert.deepEqual(annualCeilingAssignmentPlayerKeys(full, 6), []);
 
-  const oneVacancyWithFreeAgent = buildAnnualWorldIntakeExceptionalAllocation({
+  const oneVacancyWithFreeAgent = buildAnnualWorldIntakeCeilingAllocation({
     seed: "annual-world-free-agent",
     seasonIndex: 4,
     ratingScale: playerRatingScale,
-    activeYoungPotentialSixPlayers: [
-      { playerKey: "free-agent" },
+    firstDivisionClubCount: 18,
+    activeYoungCeilingPlayers: [
+      { playerKey: "free-agent", storedCeilingRating: 6 },
       ...fullStock.slice(0, baseline.targetActiveYoungPotentialSixCount - 2),
     ],
     candidates: [{
@@ -385,11 +431,12 @@ test("annual world intake never tops up a full stock or bypasses the outside-Ser
       clubKey: "lower-club",
       division: "second_division",
       clubTier: "title_contender",
+      developmentEnvironment: "good",
     }],
+    useSuccessorCeilingStockPolicy: false,
   });
-  assert.equal(oneVacancyWithFreeAgent.vacancyCount, 1);
-  assert.deepEqual(oneVacancyWithFreeAgent.potentialSixPlayerKeys, []);
-  assert.equal(oneVacancyWithFreeAgent.unfilledVacancyCount, 1);
+  assert.deepEqual(annualCeilingAssignmentPlayerKeys(oneVacancyWithFreeAgent, 6), []);
+  assert.equal(annualCeilingUnfilledVacancyCount(oneVacancyWithFreeAgent, 6), 1);
 });
 
 function initialWorldCandidates() {
@@ -420,12 +467,21 @@ function initialWorldCandidates() {
 }
 
 function annualCandidates() {
-  return Array.from({ length: 8 }, (_, clubIndex) => ({
+  return Array.from({ length: 18 }, (_, clubIndex) => ({
     playerKey: `intake-player-${clubIndex + 1}`,
     clubKey: `first-club-${clubIndex + 1}`,
     division: "first_division" as const,
     clubTier: clubIndex < 4
       ? "title_contender" as const
-      : "playoff_contender" as const,
+      : clubIndex < 8
+        ? "playoff_contender" as const
+        : clubIndex < 14
+          ? "mid_table" as const
+          : "survival" as const,
+    developmentEnvironment: clubIndex < 4
+      ? "excellent" as const
+      : clubIndex < 8
+        ? "very_good" as const
+        : "good" as const,
   }));
 }

@@ -2,10 +2,17 @@ import assert from "node:assert/strict";
 import { test } from "vitest";
 
 import type { PlayerGenerationExceptionalStockSummary } from "@game/simulation-tools";
+import type { PlayerPotentialProjection } from "@game/engine";
 
 import {
   evaluateProgressiveCurrent16FunnelCheckpoint,
+  evaluateSuccessorCeilingPairedCanary,
+  evaluateSuccessorCeilingPairedCheckpoint,
+  evaluateSuccessorPathwayCanary,
+  evaluateSuccessorPathwayCheckpoint,
   evaluateStationaryAgeSuccessionCheckpoint,
+  type SuccessorCeilingArmWorldInput,
+  type SuccessorPathwayWorldFacts,
   type StationaryAgeSuccessionWorldInput,
 } from "./stationary-age-succession-attribution.ts";
 
@@ -109,6 +116,281 @@ test("L6.42 separates every current-16 lifecycle loss before naming its owner", 
     "STOP_INSTRUMENT",
   );
 });
+
+test("L6.43 pairs structural successor renewal and fails closed on six-star drift", () => {
+  const control = Array.from({ length: 7 }, (_, index) =>
+    successorWorldInput(`successor-world-${index + 1}`, false));
+  const candidate = Array.from({ length: 7 }, (_, index) =>
+    successorWorldInput(`successor-world-${index + 1}`, true));
+  const canary = evaluateSuccessorCeilingPairedCanary({
+    control: control.map((world) => ({
+      ...world,
+      successorCeilingSeasons: world.successorCeilingSeasons.slice(0, 1),
+    })),
+    candidate: candidate.map((world) => ({
+      ...world,
+      successorCeilingSeasons: world.successorCeilingSeasons.slice(0, 1),
+    })),
+  });
+  assert.equal(canary.decision, "CANARY_GO");
+  assert.equal(canary.seasonFactCount, 7);
+
+  const decision = evaluateSuccessorCeilingPairedCheckpoint({
+    control,
+    candidate,
+    seasonCount: 10,
+    controlIntegratedFailedGateKeys: ["carried_known_red"],
+    candidateIntegratedFailedGateKeys: ["carried_known_red"],
+  });
+  assert.equal(decision.decision, "GO");
+  assert.equal(decision.generatedAtLeastOpeningWorldCount, 7);
+  assert.equal(decision.candidateImprovementWorldCount, 7);
+  assert.equal(decision.pooledCareerGeneratedLeaderShare, 0.9);
+  assert.equal(decision.age33PlusLeaderCount > 0, true);
+  assert.deepEqual(decision.newIntegratedFailureKeys, []);
+
+  const drifted = candidate.map((world, index) => index !== 0 ? world : ({
+    ...world,
+    successorCeilingSeasons: world.successorCeilingSeasons.map((season) =>
+      season.seasonNumber !== 1 ? season : {
+        ...season,
+        sixAssignmentPlayerIds: ["different-six"],
+      }
+    ),
+  }));
+  const driftDecision = evaluateSuccessorCeilingPairedCheckpoint({
+    control,
+    candidate: drifted,
+    seasonCount: 10,
+    controlIntegratedFailedGateKeys: [],
+    candidateIntegratedFailedGateKeys: [],
+  });
+  assert.equal(driftDecision.decision, "STOP_RETHINK");
+  assert.equal(driftDecision.failedGateKeys.includes("six_star_lane_identity"), true);
+});
+
+test("L6.43A attributes closed selected-player windows and rejects a broken boundary", () => {
+  const control = Array.from({ length: 7 }, (_, index) =>
+    successorWorldInput(`pathway-world-${index + 1}`, false));
+  const candidate = Array.from({ length: 7 }, (_, index) =>
+    successorPathwayWorldInput(`pathway-world-${index + 1}`));
+  const canary = evaluateSuccessorPathwayCanary({
+    control: control.map((world) => ({
+      ...world,
+      successorCeilingSeasons: world.successorCeilingSeasons.slice(0, 1),
+    })),
+    candidate: candidate.map((world) => ({
+      ...world,
+      successorCeilingSeasons: world.successorCeilingSeasons.slice(0, 1),
+      pathway: {
+        ...world.pathway,
+        assignments: world.pathway.assignments.slice(0, 1),
+        boundaries: world.pathway.boundaries.filter(({ seasonNumber }) => seasonNumber === 1),
+      },
+    })),
+  });
+  assert.equal(canary.decision, "CANARY_GO");
+  assert.equal(canary.acceptedAssignmentCount, 7);
+
+  const decision = evaluateSuccessorPathwayCheckpoint({
+    control,
+    candidate,
+    seasonCount: 10,
+  });
+  assert.equal(decision.decision, "OWNER_IDENTIFIED");
+  assert.equal(decision.owner, "senior_registration");
+  assert.equal(decision.ownerCoherenceWorldCount, 7);
+  assert.equal(decision.pooledClosedWindowCount, 49);
+  assert.equal(decision.sixStarFirstDivergences.length, 7);
+  assert.equal(decision.sixStarFirstDivergences[0]?.cause, "allocation_constraints");
+
+  const broken = candidate.map((world, index) => index !== 0 ? world : ({
+    ...world,
+    pathway: {
+      ...world.pathway,
+      boundaries: world.pathway.boundaries.slice(1),
+    },
+  }));
+  assert.equal(evaluateSuccessorPathwayCheckpoint({
+    control,
+    candidate: broken,
+    seasonCount: 10,
+  }).decision, "STOP_INSTRUMENT");
+});
+
+function successorWorldInput(
+  worldSeed: string,
+  candidate: boolean,
+): SuccessorCeilingArmWorldInput {
+  const base = current16WorldInput(worldSeed);
+  const openingBuffer = Array.from({ length: 12 }, (_, index) => ({
+    player: openingPlayerInCompetition({
+      playerId: `opening:buffer:${index + 1}`,
+      clubId: "club:1:opening-state",
+      competitionId: "competition:ita-1",
+      age: 24,
+      currentAbility: 16,
+    }),
+    origin: {
+      playerId: `opening:buffer:${index + 1}`,
+      origin: "opening_senior" as const,
+      generatedSeasonNumber: 0,
+      entryClubId: "club:1:opening-state",
+    },
+  }));
+  const generated = candidate
+    ? Array.from({ length: 9 }, (_, index) => ({
+        id: `generated:successor:${index + 1}`,
+        row: playerSeason({
+          playerId: `generated:successor:${index + 1}`,
+          clubId: "club:1:generated",
+          seasonNumber: 10,
+          age: 25,
+          currentAbility: 16,
+          goals: 90 - index,
+          assists: 90 - index,
+        }),
+        origin: {
+          playerId: `generated:successor:${index + 1}`,
+          origin: "annual_academy_intake" as const,
+          generatedSeasonNumber: 4,
+          entryClubId: "club:1:generated",
+        },
+      }))
+    : [];
+  const playerSeasons = base.owner.playerSeasons.map((row) =>
+    row.playerId === "player:reference:1:1" && row.seasonNumber === 10
+      ? { ...row, goals: 89.5, assists: 89.5 }
+      : row
+  );
+  return {
+    ...base,
+    owner: {
+      ...base.owner,
+      openingPlayers: [
+        ...(base.owner.openingPlayers ?? []),
+        ...openingBuffer.map(({ player }) => player),
+      ],
+      playerSeasons: [...playerSeasons, ...generated.map(({ row }) => row)],
+    },
+    architecture: {
+      ...base.architecture,
+      playerOrigins: [
+        ...base.architecture.playerOrigins,
+        ...openingBuffer.map(({ origin }) => origin),
+        ...generated.map(({ origin }) => origin),
+      ],
+    },
+    successorCeilingSeasons: Array.from({ length: 10 }, (_, index) => ({
+      seasonNumber: index + 1,
+      activeFiveOrBetterCount: 14,
+      targetFiveOrBetterCount: 16,
+      fiveAssignmentCount: candidate ? 1 : 0,
+      unfilledFiveVacancyCount: candidate ? 0 : 1,
+      activeSixCount: 4,
+      targetSixCount: 4,
+      sixAssignmentCount: 1,
+      unfilledSixVacancyCount: 0,
+      clubCapRefusalCount: candidate ? 1 : 0,
+      reconciliationFailureCount: 0,
+      activeSixPlayerIds: ["active-six"],
+      sixCandidateFacts: [{
+        playerId: `six:${index + 1}`,
+        clubId: "club:1:generated",
+        division: "first_division",
+      }],
+      sixAssignmentPlayerIds: [`six:${index + 1}`],
+      selectedPlayers: [
+        {
+          playerId: `six:${index + 1}`,
+          clubId: "club:1:generated",
+          role: "striker",
+          developmentEnvironment: "excellent",
+          minimumRating: 6 as const,
+          projection: potentialProjection(`six:${index + 1}`, 17, 6),
+        },
+        ...(candidate ? [{
+          playerId: `five:${index + 1}`,
+          clubId: "club:1:generated",
+          role: "striker",
+          developmentEnvironment: "good",
+          minimumRating: 5 as const,
+          projection: potentialProjection(`five:${index + 1}`, 16, 5),
+        }] : []),
+      ],
+    })),
+  };
+}
+
+function successorPathwayWorldInput(worldSeed: string): SuccessorCeilingArmWorldInput & {
+  readonly pathway: SuccessorPathwayWorldFacts;
+} {
+  const base = successorWorldInput(worldSeed, true);
+  const successorCeilingSeasons = base.successorCeilingSeasons.map((season) =>
+    season.seasonNumber !== 5
+      ? season
+      : { ...season, sixAssignmentPlayerIds: ["six:drifted"] }
+  );
+  const assignments = successorCeilingSeasons.flatMap((season) =>
+    season.selectedPlayers
+      .filter(({ minimumRating }) => minimumRating === 5)
+      .map((selected) => ({
+        seasonNumber: season.seasonNumber,
+        playerId: selected.playerId,
+        clubId: selected.clubId,
+        role: selected.role,
+        developmentEnvironment: selected.developmentEnvironment,
+        projection: selected.projection,
+      }))
+  );
+  const boundaries = assignments.flatMap((assignment) =>
+    Array.from({ length: 11 - assignment.seasonNumber }, (_, index) => {
+      const seasonNumber = assignment.seasonNumber + index;
+      const exitSeason = assignment.seasonNumber + 3;
+      return {
+        seasonNumber,
+        playerId: assignment.playerId,
+        academyActive: seasonNumber < exitSeason,
+        academyExitOutcomes: seasonNumber === exitSeason && exitSeason <= 10
+          ? ["released" as const]
+          : [],
+        seniorAssociations: [],
+        playerExitReasons: [],
+        projection: "not_observed" as const,
+      };
+    })
+  );
+  return {
+    ...base,
+    successorCeilingSeasons,
+    pathway: {
+      worldSeed,
+      assignments,
+      boundaries,
+      reconciliationFailureCount: 0,
+    },
+  };
+}
+
+function potentialProjection(
+  playerId: string,
+  storedCeilingAbility: number,
+  storedCeilingRating: 5 | 6,
+): PlayerPotentialProjection {
+  return {
+    playerId: playerId as PlayerPotentialProjection["playerId"],
+    age: 17,
+    roleFamily: "outfield" as const,
+    currentAbility: 12,
+    p50Ability: 15,
+    upperAbility: storedCeilingAbility,
+    storedCeilingAbility,
+    currentRating: 3.5 as const,
+    p50Rating: 4.5 as const,
+    upperRating: storedCeilingRating,
+    storedCeilingRating,
+  };
+}
 
 function current16WorldInput(worldSeed: string): StationaryAgeSuccessionWorldInput {
   const competitions = ["competition:ita-1", "competition:ita-2", "competition:ita-3"];

@@ -14,12 +14,18 @@ active step. Nothing else.
 Phases 0 through 81 are complete; what they delivered is in the code and
 `docs/audits/`.
 
-**Phase 81A - Contextual Tactical Agency - remains Reopened after Step 16K1.**
+**Phase 81A - Contextual Tactical Agency - remains Reopened; Step 16M-B is
+Ready after L6.43A identified `development_realization`.**
 L6.41 rejected and removed role-aware aging. L6.42A now identifies the precise
 current-product owner: observed ceiling supply. Its funnel is
 `1885 generated -> 1041 senior-observed -> 22 ceiling-16 -> 13 current-16 ->
-13 retained`; opening elite retention is not an owner (`71/447`). Current
-report: `docs/audits/PHASE_81A_CHECKPOINT_L6_42_CURRENT16_LIFECYCLE.md`.
+13 retained`; opening elite retention is not an owner (`71/447`). Step 16L's
+stock was reachable but L6.43 rejected it: `728` assignments produced
+replacement parity in `0/7` worlds and leader share `0.2071`. L6.43A traces
+`716` selected players; among `424` closed windows, `173` reach senior use and
+`900` minutes but not current ability `16`. The owner is largest in `6/7`
+worlds with zero reconciliation failures. Active recovery contract:
+`docs/audits/PHASE_81A_DEVELOPMENT_REALIZATION_RECOVERY_CONTRACT.md`.
 
 The former contract/free-agent/background-fixture plan is Phase 81B, Ready but
 entry-blocked under
@@ -28,9 +34,10 @@ Step 01 is next and Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Next Action
 
-- Open only the observed-ceiling-supply owner. The next gameplay proposal must
-  increase structurally reachable current-16 ceilings without origin bonuses,
-  generic growth, protected minutes or the rejected aging policy.
+- Execute observation-only Step 16M-B on the exact L6.43A seeds and `173` IDs;
+  monthly facts distinguish ceiling, timing and conversion without guessing.
+- Step 16M-C remains blocked until one mechanism is identified; Step 16N then
+  requires its fresh paired GO before seam-free JSON/HTML.
 - Keep `844/1885` players with no senior observation as a separate secondary
   loss. It is not allowed to displace the majority ceiling owner (`1019/1872`,
   coherent in `6/7` worlds).

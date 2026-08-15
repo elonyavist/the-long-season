@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
-  "version": "asking-price-curves-v7",
+  "version": "asking-price-curves-v8",
   "classification": "explicit_game_design_target",
-  "valuationCurvesVersion": "valuation-curves-v8",
+  "valuationCurvesVersion": "valuation-curves-v9",
   "contractDaysRemaining": [
     { "maximumValueInclusive": 0, "multiplierBasisPoints": 6500 },
     { "maximumValueInclusive": 183, "multiplierBasisPoints": 7500 },

@@ -208,6 +208,12 @@ export interface PlayerRatingRarityContract {
     readonly activeYoungStoredCeilingSixTargetMinimum: number;
     /** Maximum active young exceptional stock after an intake top-up. */
     readonly activeYoungStoredCeilingSixTargetMaximum: number;
+    /** Minimum five-star-or-better stock per First-Division club, in basis points. */
+    readonly activeYoungStoredCeilingFiveOrBetterTargetMinimumBasisPoints: number;
+    /** Maximum five-star-or-better stock per First-Division club, in basis points. */
+    readonly activeYoungStoredCeilingFiveOrBetterTargetMaximumBasisPoints: number;
+    /** Maximum active five-star-or-better youth associated with one club. */
+    readonly activeYoungStoredCeilingFiveOrBetterPerClubMaximum: number;
   };
 }
 

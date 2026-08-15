@@ -38,6 +38,10 @@ import {
 } from "./player-potential-rarity.ts";
 import { ContextualProspectJointProfileError } from "./player-prospect-joint-profile.ts";
 import { primaryRoleForPosition } from "./player-role-identity.ts";
+import {
+  annualCeilingAssignmentPlayerKeys,
+  annualCeilingUnfilledVacancyCount,
+} from "./player-rarity-budget.ts";
 
 const CAREER_START_EPOCH_DAY = fromISO("2026-08-01");
 
@@ -326,20 +330,27 @@ test("shared annual providers allocate once and do not inflate a full active sto
     const diagnostics = providers.diagnostics();
 
     assert.equal(diagnostics.allocationCallCount, 1);
-    assert.equal(diagnostics.allocation.potentialSixPlayerKeys.length <= 1, true);
+    const potentialSixPlayerKeys = annualCeilingAssignmentPlayerKeys(
+      diagnostics.allocation,
+      6,
+    );
+    assert.equal(potentialSixPlayerKeys.length <= 1, true);
     assert.equal(
       diagnostics.allocation.activeYoungPotentialSixCount
         >= diagnostics.allocation.targetActiveYoungPotentialSixCount,
       true,
     );
-    assert.equal(diagnostics.allocation.vacancyCount, 0);
+    assert.equal(annualCeilingUnfilledVacancyCount(diagnostics.allocation, 6), 0);
     assert.deepEqual(
-      diagnostics.generatedStoredCeilingSixPlayerIds.map(String),
-      diagnostics.allocation.potentialSixPlayerKeys,
+      diagnostics.generatedCeilingAssignments
+        .filter(({ minimumRating }) => minimumRating === 6)
+        .map(({ playerId }) => String(playerId))
+        .toSorted(),
+      potentialSixPlayerKeys,
     );
     assert.equal(
-      diagnostics.generatedStoredCeilingSixPlayerIds.every((id) =>
-        candidates.some((candidate) => candidate.player.id === id)
+      diagnostics.generatedCeilingAssignments.every(({ playerId }) =>
+        candidates.some((candidate) => candidate.player.id === playerId)
       ),
       true,
     );
@@ -363,7 +374,7 @@ test("shared annual providers allocate once and do not inflate a full active sto
       /already composed/,
     );
     allocatedExceptionalCount +=
-      diagnostics.allocation.potentialSixPlayerKeys.length;
+      potentialSixPlayerKeys.length;
 
     if (seasonIndex === 0) {
       assert.equal(
@@ -449,8 +460,12 @@ test("the annual runway seam changes only selected academy potential", () => {
 
   assert.deepEqual(candidate.senior, control.senior);
   assert.deepEqual(
-    candidate.diagnostics.generatedStoredCeilingSixPlayerIds,
-    control.diagnostics.generatedStoredCeilingSixPlayerIds,
+    candidate.diagnostics.generatedCeilingAssignments.filter(
+      ({ minimumRating }) => minimumRating === 6,
+    ),
+    control.diagnostics.generatedCeilingAssignments.filter(
+      ({ minimumRating }) => minimumRating === 6,
+    ),
   );
   assert.equal(candidate.academy.length, control.academy.length);
   for (let index = 0; index < control.academy.length; index += 1) {
@@ -503,10 +518,14 @@ test("shared annual providers count a reserved ceiling-six promotion before inta
     diagnostics.allocation.activeYoungPotentialSixCount,
     diagnostics.allocation.targetActiveYoungPotentialSixCount,
   );
-  assert.equal(diagnostics.allocation.vacancyCount, 0);
-  assert.equal(diagnostics.allocation.unfilledVacancyCount, 0);
-  assert.deepEqual(diagnostics.allocation.potentialSixPlayerKeys, []);
-  assert.deepEqual(diagnostics.generatedStoredCeilingSixPlayerIds, []);
+  assert.equal(annualCeilingUnfilledVacancyCount(diagnostics.allocation, 6), 0);
+  assert.deepEqual(annualCeilingAssignmentPlayerKeys(diagnostics.allocation, 6), []);
+  assert.deepEqual(
+    diagnostics.generatedCeilingAssignments.filter(
+      ({ minimumRating }) => minimumRating === 6,
+    ),
+    [],
+  );
 });
 
 test("real annual senior candidate populations sustain all roles in every competition", () => {
@@ -581,34 +600,162 @@ test("shared annual providers evaluate age and refill stock at the incoming seas
   });
   const diagnostics = providers.diagnostics();
 
-  assert.equal(diagnostics.allocation.vacancyCount, 1);
-  assert.equal(diagnostics.allocation.potentialSixPlayerKeys.length, 1);
-  assert.equal(diagnostics.allocation.unfilledVacancyCount, 0);
+  const potentialSixPlayerKeys = annualCeilingAssignmentPlayerKeys(
+    diagnostics.allocation,
+    6,
+  );
+  assert.equal(potentialSixPlayerKeys.length, 1);
+  assert.equal(annualCeilingUnfilledVacancyCount(diagnostics.allocation, 6), 0);
   assert.deepEqual(
-    diagnostics.generatedStoredCeilingSixPlayerIds.map(String),
-    diagnostics.allocation.potentialSixPlayerKeys,
+    diagnostics.generatedCeilingAssignments
+      .filter(({ minimumRating }) => minimumRating === 6)
+      .map(({ playerId }) => String(playerId))
+      .toSorted(),
+    potentialSixPlayerKeys,
   );
   assert.deepEqual(
-    diagnostics.allocatedStoredCeilingSixPlacements.map(({ playerKey }) =>
-      playerKey
-    ),
-    diagnostics.allocation.potentialSixPlayerKeys,
+    diagnostics.allocatedCeilingPlacements
+      .filter(({ minimumRating }) => minimumRating === 6)
+      .map(({ candidate }) => candidate.playerKey)
+      .toSorted(),
+    potentialSixPlayerKeys,
   );
   assert.equal(
-    diagnostics.allocatedStoredCeilingSixPlacements.every(
-      ({ division, clubTier }) =>
-        division !== "first_division"
-        || clubTier === "title_contender"
-        || clubTier === "playoff_contender",
+    diagnostics.allocatedCeilingPlacements
+      .filter(({ minimumRating }) => minimumRating === 6)
+      .every(({ candidate }) =>
+        candidate.division !== "first_division"
+        || candidate.clubTier === "title_contender"
+        || candidate.clubTier === "playoff_contender",
     ),
     true,
   );
   assert.equal(
     candidates.some((candidate) =>
-      diagnostics.generatedStoredCeilingSixPlayerIds.includes(candidate.player.id)
+      diagnostics.generatedCeilingAssignments.some(
+        ({ playerId: generatedId, minimumRating }) =>
+          minimumRating === 6 && candidate.player.id === generatedId,
+      )
     ),
     true,
   );
+});
+
+test("real annual worlds reach both successor-stock branches without changing the six-star lane", () => {
+  // Frozen before the first execution: no seed may be appended after reading
+  // the result merely to make a branch reachable.
+  const corpus = Array.from(
+    { length: 7 },
+    (_, index) => `phase81a-successor-ceiling-reachability-${index + 1}`,
+  );
+  const selectedClubIds = new Set<string>();
+  const selectedRoles = new Set<string>();
+  let positiveFiveVacancyObserved = false;
+  let zeroFiveVacancyObserved = false;
+  let fiveAssignmentObserved = false;
+  let sixAssignmentObserved = false;
+  let clubCapRefusalObserved = false;
+
+  for (const worldSeed of corpus) {
+    const careerState = annualProviderCareerState(false, worldSeed);
+    const run = (
+      useSuccessorCeilingStockPolicy: boolean,
+      intakeDate: ReturnType<typeof gameDate>,
+    ) => {
+      const providers = createAnnualWorldIntakeCandidateProviders({
+        worldSeed,
+        seasonIndex: 6,
+        seniorCandidatesPerClub: 1,
+        useSuccessorCeilingStockPolicy,
+      });
+      const academy = providers.createYouthIntakeCandidates({
+        careerState,
+        seasonId: seasonId(`season:${worldSeed}`),
+        intakeDate,
+        activePlayerStock: activePlayerStockFixture(careerState),
+      });
+      return {
+        academy,
+        diagnostics: providers.diagnostics(),
+        roleDiagnostics: providers.roleContinuityDiagnostics(),
+      };
+    };
+
+    const opening = run(true, careerState.gameState.calendar.currentDate);
+    if (annualCeilingUnfilledVacancyCount(opening.diagnostics.allocation, 5) === 0) {
+      zeroFiveVacancyObserved = true;
+    }
+    // Frozen with the seven world seeds before the first cap-diagnostic run.
+    // Intermediate real intake dates preserve part of the opening young stock,
+    // allowing the active two-per-club cap to be exercised before everyone
+    // ages out in the replacement arm below.
+    for (const year of [2027, 2028, 2029, 2030, 2031] as const) {
+      const intermediate = run(true, gameDate(fromISO(`${year}-08-01`)));
+      clubCapRefusalObserved ||=
+        intermediate.diagnostics.allocation.fiveStarClubCapRefusalCount > 0;
+    }
+
+    // The same real opening population observed six years later has aged out of
+    // the active 15..20 stock. This reaches the annual replacement branch
+    // without constructing players or allocation inputs in the test.
+    const replacementDate = gameDate(fromISO("2032-08-01"));
+    const control = run(false, replacementDate);
+    const candidate = run(true, replacementDate);
+    const fiveKeys = annualCeilingAssignmentPlayerKeys(
+      candidate.diagnostics.allocation,
+      5,
+    );
+    const sixKeys = annualCeilingAssignmentPlayerKeys(
+      candidate.diagnostics.allocation,
+      6,
+    );
+    positiveFiveVacancyObserved ||= fiveKeys.length > 0;
+    fiveAssignmentObserved ||= fiveKeys.length > 0;
+    sixAssignmentObserved ||= sixKeys.length > 0;
+
+    assert.deepEqual(
+      annualCeilingAssignmentPlayerKeys(candidate.diagnostics.allocation, 6),
+      annualCeilingAssignmentPlayerKeys(control.diagnostics.allocation, 6),
+    );
+    assert.equal(candidate.roleDiagnostics.academyRefill.reconciliationFailureCount, 0);
+    assert.equal(control.roleDiagnostics.academyRefill.reconciliationFailureCount, 0);
+
+    const fiveKeySet = new Set(fiveKeys);
+    const controlById = new Map(
+      control.academy.map(({ player }) => [player.id, player]),
+    );
+    for (const generated of candidate.academy) {
+      const before = controlById.get(generated.player.id);
+      assert.ok(before !== undefined);
+      if (!fiveKeySet.has(String(generated.player.id))) {
+        assert.deepEqual(generated.player, before);
+        continue;
+      }
+      const currentRating = ratingForRoleAbility(Number(roleCurrentAbility(
+        generated.player.abilities,
+        getPlayerRoleProfile(generated.player.primaryRole),
+      )));
+      const potentialRating = ratingForRoleAbility(Number(rolePotentialAbility(
+        generated.player.potential,
+        getPlayerRoleProfile(generated.player.primaryRole),
+      )));
+      assert.equal(currentRating < 5, true);
+      assert.equal(potentialRating, 5);
+      selectedRoles.add(generated.player.primaryRole);
+    }
+    for (const placement of candidate.diagnostics.allocatedCeilingPlacements) {
+      if (placement.minimumRating !== 5) continue;
+      selectedClubIds.add(placement.candidate.clubKey);
+    }
+  }
+
+  assert.equal(positiveFiveVacancyObserved, true);
+  assert.equal(zeroFiveVacancyObserved, true);
+  assert.equal(fiveAssignmentObserved, true);
+  assert.equal(sixAssignmentObserved, true);
+  assert.equal(clubCapRefusalObserved, true);
+  assert.equal(selectedClubIds.size >= 2, true);
+  assert.equal(selectedRoles.size >= 2, true);
 });
 
 /** Returns the role-relative stored rating room for one generated intake player. */
@@ -655,9 +802,12 @@ function intakeInput(worldSeed: string): Parameters<typeof generateCareerIntakeP
   };
 }
 
-function annualProviderCareerState(vacateOneYoungExceptional = false) {
+function annualProviderCareerState(
+  vacateOneYoungExceptional = false,
+  worldSeed = "annual-provider-career",
+) {
   const world = createFakeDomesticWorld({
-    worldSeed: "annual-provider-career",
+    worldSeed,
   });
   const allPlayers = {
     ...world.players,
@@ -713,7 +863,7 @@ function annualProviderCareerState(vacateOneYoungExceptional = false) {
     selectedClubId: world.defaultSelectedClubId,
     gameState: {
       meta: {
-        seed: "annual-provider-career",
+        seed: worldSeed,
         rngAlgorithmVersion: "sfc32-cyrb128-v1",
         saveSchemaVersion: 1,
         calibrationVersions: world.calibrationVersions,

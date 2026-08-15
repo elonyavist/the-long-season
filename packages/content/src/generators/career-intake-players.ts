@@ -34,6 +34,7 @@ import {
   buildContextualProspectJointProfile,
   type ContextualProspectCeilingConstraint,
 } from "./player-prospect-joint-profile.ts";
+import { starRatingForRoleAbility } from "./player-potential-allocation.ts";
 import { primaryRoleForPosition } from "./player-role-identity.ts";
 import { playerRatingScale as defaultPlayerRatingScale } from "../balance/player-economy-calibration.ts";
 import {
@@ -47,10 +48,10 @@ import {
 } from "./annual-intake-role-plan.ts";
 import { assignGeneratedSquadIdentityRoles } from "./squad-identity.ts";
 import {
-  buildAnnualWorldIntakeExceptionalAllocation,
-  type AnnualWorldIntakeExceptionalAllocation,
+  buildAnnualWorldIntakeCeilingAllocation,
+  type AnnualWorldIntakeCeilingAllocation,
   type AnnualWorldIntakeExceptionalCandidate,
-  type AnnualWorldYoungExceptionalPlayer,
+  type AnnualWorldYoungCeilingPlayer,
 } from "./player-rarity-budget.ts";
 import {
   developmentEnvironmentForClubContext,
@@ -202,11 +203,21 @@ export interface AnnualWorldSeniorIntakeCandidate {
 export interface AnnualWorldIntakeProviderDiagnostics {
   readonly seasonIndex: number;
   readonly allocationCallCount: number;
-  readonly allocation: AnnualWorldIntakeExceptionalAllocation;
+  readonly allocation: AnnualWorldIntakeCeilingAllocation;
+  /** Allocation-time active six-star stock; later careers cannot reconstruct it. */
+  readonly activeSixPlayers: readonly AnnualWorldYoungCeilingPlayer[];
+  /** Allocation-time vacancy candidates used by the unchanged six-star lane. */
+  readonly exceptionalCandidates: readonly AnnualWorldIntakeExceptionalCandidate[];
   /** Allocation-time placements; later tier freezes cannot reconstruct them. */
-  readonly allocatedStoredCeilingSixPlacements:
-    readonly AnnualWorldIntakeExceptionalCandidate[];
-  readonly generatedStoredCeilingSixPlayerIds: readonly PlayerId[];
+  readonly allocatedCeilingPlacements: readonly {
+    readonly candidate: AnnualWorldIntakeExceptionalCandidate;
+    readonly minimumRating: 5 | 6;
+  }[];
+  /** Generation-time proof that each semantic assignment reached its player. */
+  readonly generatedCeilingAssignments: readonly {
+    readonly playerId: PlayerId;
+    readonly minimumRating: 5 | 6;
+  }[];
   /** Generation-time provenance that cannot be reconstructed from Player. */
   readonly generatedYouthProspectClasses: readonly {
     readonly playerId: PlayerId;
@@ -268,6 +279,8 @@ export interface CreateAnnualWorldIntakeCandidateProvidersInput {
   readonly useSquadIdentityRoleBlueprint?: boolean;
   /** Analysis-only paired-control seam; Phase 81A closeout owns removal. */
   readonly useRoutineYouthStationaryRunway?: boolean;
+  /** Rejected L6.43 candidate; only an explicit L6.43A analysis arm enables it. */
+  readonly useSuccessorCeilingStockPolicy?: boolean;
 }
 
 /**
@@ -312,17 +325,24 @@ export function createAnnualWorldIntakeCandidateProviders(
       context.seasonId,
       targetPositionsByClubId,
     );
-    const allocation = buildAnnualWorldIntakeExceptionalAllocation({
+    const activeYoungPlayers = activeYoungCeilingPlayers(
+      context.careerState,
+      context.activePlayerStock,
+      ratingScale,
+      context.intakeDate,
+    );
+    const allocation = buildAnnualWorldIntakeCeilingAllocation({
       seed: input.worldSeed,
       seasonIndex: input.seasonIndex,
       ratingScale,
-      activeYoungPotentialSixPlayers: activeYoungExceptionalPlayers(
-        context.careerState,
-        context.activePlayerStock,
-        ratingScale,
-        context.intakeDate,
-      ),
+      firstDivisionClubCount: context.careerState.gameState.clubIds.filter(
+        (clubId) => context.careerState.gameState.clubs[clubId]?.category
+          === "first_division",
+      ).length,
+      activeYoungCeilingPlayers: activeYoungPlayers,
       candidates,
+      useSuccessorCeilingStockPolicy:
+        input.useSuccessorCeilingStockPolicy === true,
     });
     const generated: AnnualWorldYouthIntakeCandidate[] = [];
     const generatedSourceByPlayerId = new Map<PlayerId, CareerIntakeGeneratedPlayer>();
@@ -346,7 +366,7 @@ export function createAnnualWorldIntakeCandidateProviders(
         },
         referenceDate: context.intakeDate,
         targetPositions: targetPositionsByClubId[clubId]!,
-        potentialSixPlayerIds: allocation.potentialSixPlayerKeys.map(playerId),
+        ceilingAssignments: allocation.assignments,
         useRoutineYouthStationaryRunway:
           input.useRoutineYouthStationaryRunway !== false,
         ratingScale,
@@ -372,14 +392,23 @@ export function createAnnualWorldIntakeCandidateProviders(
       seasonIndex: input.seasonIndex,
       allocationCallCount: 1,
       allocation,
-      allocatedStoredCeilingSixPlacements: candidates.filter(({ playerKey }) =>
-        allocation.potentialSixPlayerKeys.includes(playerKey)
-      ),
-      generatedStoredCeilingSixPlayerIds: generated
-        .filter((candidate) =>
-          allocation.potentialSixPlayerKeys.includes(String(candidate.player.id))
-        )
-        .map((candidate) => candidate.player.id),
+      activeSixPlayers: activeYoungPlayers
+        .filter(({ storedCeilingRating }) => storedCeilingRating >= 6)
+        .toSorted((left, right) => left.playerKey.localeCompare(right.playerKey)),
+      exceptionalCandidates: candidates,
+      allocatedCeilingPlacements: allocation.assignments.map((assignment) => {
+        const candidate = candidates.find(
+          ({ playerKey }) => playerKey === assignment.playerKey,
+        );
+        if (candidate === undefined) {
+          throw new Error(`Annual ceiling assignment lost vacancy ${assignment.playerKey}`);
+        }
+        return { candidate, minimumRating: assignment.minimumRating };
+      }),
+      generatedCeilingAssignments: allocation.assignments.map((assignment) => ({
+        playerId: playerId(assignment.playerKey),
+        minimumRating: assignment.minimumRating,
+      })),
       generatedYouthProspectClasses: context.careerState.gameState.clubIds.flatMap(
         (clubId) => {
           const batch = generated.filter(({ targetClubId }) => targetClubId === clubId);
@@ -546,25 +575,28 @@ function annualExceptionalCandidates(
       clubKey: String(clubId),
       division: club.category,
       clubTier,
+      developmentEnvironment: developmentEnvironmentForClubContext({
+        category: club.category,
+        competitiveTier: clubTier,
+      }),
     }));
   });
 }
 
 /**
- * Counts the full active national `15..20` stored-ceiling-six population.
+ * Captures the full active national `15..20` population once for both stocks.
  *
  * Engine supplies the active universe after resolving senior ownership,
  * academy membership, canonical free agency, and reserved promotions. Content
  * consumes those facts without rebuilding a second population rule.
  */
-function activeYoungExceptionalPlayers(
+function activeYoungCeilingPlayers(
   careerState: CareerState,
   activePlayerStock: readonly AnnualWorldActivePlayerStockEntry[],
   ratingScale: PlayerRatingScaleConfig,
   referenceDate: GameDate,
-): readonly AnnualWorldYoungExceptionalPlayer[] {
-  const sixStarMinimum = minimumSixAbility(ratingScale);
-  const active: AnnualWorldYoungExceptionalPlayer[] = [];
+): readonly AnnualWorldYoungCeilingPlayer[] {
+  const active: AnnualWorldYoungCeilingPlayer[] = [];
 
   for (const entry of activePlayerStock) {
     const id = entry.playerId;
@@ -585,7 +617,6 @@ function activeYoungExceptionalPlayers(
         getPlayerRoleProfile(role),
       ),
     );
-    if (storedCeiling < sixStarMinimum) continue;
     const clubIdValue = activeStockClubId(entry);
     const club = clubIdValue === undefined
       ? undefined
@@ -595,6 +626,7 @@ function activeYoungExceptionalPlayers(
     }
     active.push({
       playerKey: String(id),
+      storedCeilingRating: starRatingForRoleAbility(storedCeiling, ratingScale),
       ...(clubIdValue === undefined ? {} : { clubKey: String(clubIdValue) }),
       ...(club === undefined ? {} : { division: club.category }),
     });
@@ -721,14 +753,6 @@ function annualIntakeCeilingConstraint(
   return forcePotentialSix
     ? { kind: "at_least_rating", rating: 6 }
     : { kind: "policy" };
-}
-
-function minimumSixAbility(scale: PlayerRatingScaleConfig): number {
-  const threshold = scale.abilityThresholds.find((candidate) => candidate.rating === 6);
-  if (threshold === undefined) {
-    throw new Error("Validated rating scale is missing rating 6");
-  }
-  return threshold.minimumAbilityInclusive;
 }
 
 function intakeIdentity(input: GenerateOneIntakePlayerInput, id: PlayerId): PersonIdentity {

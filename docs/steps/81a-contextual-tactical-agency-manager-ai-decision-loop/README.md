@@ -32,7 +32,15 @@ penalties remain forbidden. Step 16I then identified an aggregate stock/flow
 problem; Step 16J's role-aware aging candidate moved both sides in the wrong
 direction and was removed. Steps 16K/16K1 now locate the precise owner at
 observed ceiling supply; opening elite retention is not an owner under the
-player-level test.
+player-level test. Step 16L's structural stock was reachable but Step 16M
+rejected it: replacement parity `0/7`, generated leader share `0.2071`. Step
+16M-A is Done with `OWNER_IDENTIFIED: development_realization`: among `424`
+closed selected-prospect windows, `173` reach senior use and `900` minutes but
+never current ability `16`; this owner is largest in `6/7` worlds. The failed
+stock remains analysis-only, the next correction may touch only development
+realization. Step 16M-B is Ready to separate the four mechanisms through an
+observation-only monthly replay of the exact `173`-player cohort; Step 16M-C
+and Step 16N remain blocked.
 Phase 81B remains unstarted and blocked until the absolute finding is resolved.
 
 Amendment A13 is accepted and Step 16I is **Done** with
@@ -42,8 +50,10 @@ reduced generated current-16 stock `15 -> 10`, missed its role/resilience gates
 and added an upset failure. No candidate code remains. Step 16K stopped an
 invalid terminal-reachability premise; Step 16K1 is **Done** with
 `OWNER_IDENTIFIED: observed_ceiling_supply`. Only `22/1041` senior-observed
-generated players carry an observed current-16 ceiling. The next gameplay step
-may open only that owner.
+generated players carry an observed current-16 ceiling. Step 16L's attempted
+stock correction is now rejected historical evidence. The active mechanism and
+conditional-correction contract is
+[`PHASE_81A_DEVELOPMENT_REALIZATION_RECOVERY_CONTRACT.md`](../../audits/PHASE_81A_DEVELOPMENT_REALIZATION_RECOVERY_CONTRACT.md).
 
 ## Historical Execution Record
 
@@ -467,6 +477,12 @@ contexts; it never owns the analytic diversity gate.
 | 16J | [Role-aware late-career aging](16j-role-aware-late-career-aging-and-paired-checkpoint.md) | yes | Done: `STOP_RETHINK`; removed |
 | 16K | [Current-16 lifecycle owner](16k-checkpoint-l6-42-current16-lifecycle-owner.md) | no | Done: `STOP_INSTRUMENT` |
 | 16K1 | [Progressive current-16 funnel](16k1-checkpoint-l6-42a-progressive-current16-funnel.md) | no | Done: `OWNER_IDENTIFIED` |
+| 16L | [Structural successor-ceiling stock](16l-structural-successor-ceiling-stock.md) | yes | Done; focused `77/77` green |
+| 16M | [Paired successor renewal](16m-checkpoint-l6-43-paired-successor-renewal.md) | no | Done: `STOP_RETHINK`; candidate analysis-only |
+| 16M-A | [Selected-player pathway attribution](16ma-checkpoint-l6-43a-successor-pathway-attribution.md) | no | Done: `OWNER_IDENTIFIED: development_realization` |
+| 16M-B | [Development-realization mechanism](16mb-checkpoint-l6-43b-development-realization-mechanism.md) | no | Ready: observation-only monthly attribution |
+| 16M-C | [Owner correction and paired checkpoint](16mc-development-realization-owner-correction.md) | conditional | Blocked by 16M-B owner |
+| 16N | [Integrated successor HTML](16n-checkpoint-l6-44-integrated-successor-html.md) | no | Blocked by 16M-C GO |
 
 No later step starts while its preceding checkpoint is unresolved.
 

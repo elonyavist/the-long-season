@@ -137,6 +137,10 @@ export const SIMULATION_REPORT_PROFILE_IDS = [
   "phase81a-routine-youth-runway-l6-31-oos-candidate-7x10",
   "phase81a-stationary-age-succession-l6-40-7x10",
   "phase81a-progressive-current16-l6-42a-cached",
+  "phase81a-successor-ceiling-l6-43-paired-canary-7x1",
+  "phase81a-successor-ceiling-l6-43-paired-7x10",
+  "phase81a-successor-pathway-l6-43a-paired-canary-7x1",
+  "phase81a-successor-pathway-l6-43a-paired-7x10",
   "phase81a-renewal-ablation-l6-1-control-7x10",
   "phase81a-renewal-ablation-l6-1-market-7x10",
   "phase81a-renewal-ablation-l6-1-blueprint-7x10",
@@ -214,6 +218,10 @@ const CAREER_PROFILE_CHECKPOINT_KIND = {
   "phase81a-routine-youth-runway-l6-31-oos-candidate-7x10": "routine_youth_runway_l6_31",
   "phase81a-stationary-age-succession-l6-40-7x10": "stationary_age_succession_l6_40",
   "phase81a-progressive-current16-l6-42a-cached": "progressive_current16_l6_42a",
+  "phase81a-successor-ceiling-l6-43-paired-canary-7x1": "successor_ceiling_l6_43",
+  "phase81a-successor-ceiling-l6-43-paired-7x10": "successor_ceiling_l6_43",
+  "phase81a-successor-pathway-l6-43a-paired-canary-7x1": "successor_pathway_l6_43a",
+  "phase81a-successor-pathway-l6-43a-paired-7x10": "successor_pathway_l6_43a",
   "phase81a-renewal-ablation-l6-1-control-7x10": "renewal_ablation_l6_1",
   "phase81a-renewal-ablation-l6-1-market-7x10": "renewal_ablation_l6_1",
   "phase81a-renewal-ablation-l6-1-blueprint-7x10": "renewal_ablation_l6_1",
@@ -286,6 +294,10 @@ const CAREER_PROFILE_CACHE_SUFFIX = {
   "phase81a-routine-youth-runway-l6-31-oos-candidate-7x10": "-facts-v3",
   "phase81a-stationary-age-succession-l6-40-7x10": "-facts-v1",
   "phase81a-progressive-current16-l6-42a-cached": "-facts-v1",
+  "phase81a-successor-ceiling-l6-43-paired-canary-7x1": "-facts-v1",
+  "phase81a-successor-ceiling-l6-43-paired-7x10": "-facts-v1",
+  "phase81a-successor-pathway-l6-43a-paired-canary-7x1": "-facts-v1",
+  "phase81a-successor-pathway-l6-43a-paired-7x10": "-facts-v1",
   "phase81a-renewal-ablation-l6-1-control-7x10": "-facts-v2",
   "phase81a-renewal-ablation-l6-1-market-7x10": "-facts-v2",
   "phase81a-renewal-ablation-l6-1-blueprint-7x10": "-facts-v2",
@@ -1126,6 +1138,66 @@ export const SIMULATION_REPORT_PROFILES = {
       includedSectionIds: CAREER_SECTION_IDS,
       detail: "diagnostic",
       seedPrefix: "phase81a-stationary-age-succession-l6-40-oos-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-successor-ceiling-l6-43-paired-canary-7x1": {
+    id: "phase81a-successor-ceiling-l6-43-paired-canary-7x1",
+    titleKey: "simulationReport.profile.phase81aSuccessorCeilingL6_43.title",
+    descriptionKey: "simulationReport.profile.phase81aSuccessorCeilingL6_43.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-successor-ceiling-l6-43-paired-canary-7x1",
+      worldCount: 7,
+      seasonCount: 1,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-successor-ceiling-l6-43-canary-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-successor-ceiling-l6-43-paired-7x10": {
+    id: "phase81a-successor-ceiling-l6-43-paired-7x10",
+    titleKey: "simulationReport.profile.phase81aSuccessorCeilingL6_43.title",
+    descriptionKey: "simulationReport.profile.phase81aSuccessorCeilingL6_43.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-successor-ceiling-l6-43-paired-7x10",
+      worldCount: 7,
+      seasonCount: 10,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-successor-ceiling-l6-43-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-successor-pathway-l6-43a-paired-canary-7x1": {
+    id: "phase81a-successor-pathway-l6-43a-paired-canary-7x1",
+    titleKey: "simulationReport.profile.phase81aSuccessorPathwayL6_43A.title",
+    descriptionKey: "simulationReport.profile.phase81aSuccessorPathwayL6_43A.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-successor-pathway-l6-43a-paired-canary-7x1",
+      worldCount: 7,
+      seasonCount: 1,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-successor-pathway-l6-43a-canary-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-successor-pathway-l6-43a-paired-7x10": {
+    id: "phase81a-successor-pathway-l6-43a-paired-7x10",
+    titleKey: "simulationReport.profile.phase81aSuccessorPathwayL6_43A.title",
+    descriptionKey: "simulationReport.profile.phase81aSuccessorPathwayL6_43A.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-successor-pathway-l6-43a-paired-7x10",
+      worldCount: 7,
+      seasonCount: 10,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-successor-pathway-l6-43a-v1",
       workerCount: 7,
     },
   },
@@ -2155,6 +2227,8 @@ async function leagueDiversityExecution(
       readonly profileId: string;
       readonly checkpointDirectoryPath: string;
     };
+    readonly successorCeilingMode?: "canary" | "full";
+    readonly successorPathwayMode?: "canary" | "full";
   };
 }> {
   if (profileId === null || !Object.hasOwn(CAREER_PROFILE_CHECKPOINT_KIND, profileId)) return {};
@@ -2224,6 +2298,18 @@ async function leagueDiversityExecution(
         ),
       }
     : undefined;
+  const successorCeilingMode =
+    careerProfileId === "phase81a-successor-ceiling-l6-43-paired-canary-7x1"
+      ? "canary" as const
+      : careerProfileId === "phase81a-successor-ceiling-l6-43-paired-7x10"
+        ? "full" as const
+        : undefined;
+  const successorPathwayMode =
+    careerProfileId === "phase81a-successor-pathway-l6-43a-paired-canary-7x1"
+      ? "canary" as const
+      : careerProfileId === "phase81a-successor-pathway-l6-43a-paired-7x10"
+        ? "full" as const
+        : undefined;
   return {
     leagueDiversityProfile: {
       profileId: cacheIdentityProfileId,
@@ -2246,6 +2332,8 @@ async function leagueDiversityExecution(
       ...(routineYouthRunwayComparison === undefined
         ? {}
         : { routineYouthRunwayComparison }),
+      ...(successorCeilingMode === undefined ? {} : { successorCeilingMode }),
+      ...(successorPathwayMode === undefined ? {} : { successorPathwayMode }),
     },
   };
 }

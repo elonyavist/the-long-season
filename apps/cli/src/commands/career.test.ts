@@ -63,7 +63,7 @@ test("CLI builds the canonical three-division topology and shared identity hash"
   // always going to move. The same value is asserted in
   // `apps/web/src/runtime/web-career-runtime.test.ts`; the pair only means
   // something while both say the same thing, so they move together or not at all.
-  assert.equal(canonicalCareerIdentityHash(state), "6deee9f3");
+  assert.equal(canonicalCareerIdentityHash(state), "d1e5fa5a");
 });
 
 test("CLI rejects a career with a mismatched immutable calibration version", () => {

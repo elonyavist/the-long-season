@@ -17,7 +17,7 @@ import {
 test("accepts the seven reviewed assets through one boundary", () => {
   const result = parsePlayerEconomyCalibrationAssets(validAssets());
 
-  assert.equal(result.valuationCurves.version, "valuation-curves-v8");
+  assert.equal(result.valuationCurves.version, "valuation-curves-v9");
   assert.equal(
     result.askingPriceCurves.valuationCurvesVersion,
     result.valuationCurves.version,
@@ -173,6 +173,48 @@ test("rejects exceptional-stock targets that drift between opening world and ann
   );
 });
 
+test("rejects malformed successor-stock target shares and concentration caps", () => {
+  const cases: ReadonlyArray<{
+    readonly mutate: (annual: MutableRatingScale["rarity"]["annualIntake"]) => void;
+    readonly message: string;
+  }> = [
+    {
+      mutate: (annual) => {
+        annual.activeYoungStoredCeilingFiveOrBetterTargetMinimumBasisPoints = 9_501;
+        annual.activeYoungStoredCeilingFiveOrBetterTargetMaximumBasisPoints = 9_500;
+      },
+      message: "active young stored-ceiling-five-or-better target share",
+    },
+    {
+      mutate: (annual) => {
+        annual.activeYoungStoredCeilingFiveOrBetterTargetMaximumBasisPoints = 10_001;
+      },
+      message: "schema validation failed",
+    },
+    {
+      mutate: (annual) => {
+        annual.activeYoungStoredCeilingFiveOrBetterTargetMinimumBasisPoints = 9_000.5;
+      },
+      message: "schema validation failed",
+    },
+    {
+      mutate: (annual) => {
+        annual.activeYoungStoredCeilingFiveOrBetterPerClubMaximum = 0;
+      },
+      message: "schema validation failed",
+    },
+  ];
+
+  for (const entry of cases) {
+    const assets = validAssets();
+    entry.mutate((assets.playerRatingScale as MutableRatingScale).rarity.annualIntake);
+    assertValidationFailure(
+      () => parsePlayerEconomyCalibrationAssets(assets),
+      entry.message,
+    );
+  }
+});
+
 test("rejects duplicate and non-monotonic thresholds", () => {
   const duplicateAssets = validAssets();
   const duplicateRating = duplicateAssets.playerRatingScale as MutableRatingScale;
@@ -326,6 +368,9 @@ interface MutableRatingScale {
   rarity: {
     annualIntake: {
       activeYoungStoredCeilingSixTargetMinimum: number;
+      activeYoungStoredCeilingFiveOrBetterTargetMinimumBasisPoints: number;
+      activeYoungStoredCeilingFiveOrBetterTargetMaximumBasisPoints: number;
+      activeYoungStoredCeilingFiveOrBetterPerClubMaximum: number;
     };
   };
   potentialProjectionPolicy: {

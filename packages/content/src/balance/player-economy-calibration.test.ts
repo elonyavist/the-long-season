@@ -54,7 +54,7 @@ test("loads one cross-versioned immutable economy bundle from the seven JSON ass
     valuationCurves.prospectExpectation.potentialProjectionPolicyVersion,
     playerPotentialProjectionPolicy.version,
   );
-  assert.equal(valuationCurves.version, "valuation-curves-v8");
+  assert.equal(valuationCurves.version, "valuation-curves-v9");
   assert.deepEqual(valuationCurves.prospectExpectation, {
     version: "prospect-expectation-v3",
     potentialProjectionPolicyVersion: playerPotentialProjectionPolicy.version,
@@ -62,11 +62,11 @@ test("loads one cross-versioned immutable economy bundle from the seven JSON ass
     upperOptionParticipationBasisPoints: 1_000,
   });
   assert.equal(askingPriceCurves.valuationCurvesVersion, valuationCurves.version);
-  assert.equal(askingPriceCurves.version, "asking-price-curves-v7");
+  assert.equal(askingPriceCurves.version, "asking-price-curves-v8");
   assert.equal("marketContext" in valuationCurves, false);
   assert.equal("uncertaintyDiscountBasisPointsPerHalfStar" in valuationCurves.prospectExpectation, false);
   assert.equal("minimumUncertaintyMultiplierBasisPoints" in valuationCurves.prospectExpectation, false);
-  assert.equal(marketBehaviorCalibration.version, "market-behavior-calibration-v9");
+  assert.equal(marketBehaviorCalibration.version, "market-behavior-calibration-v10");
   assert.equal(
     marketBehaviorCalibration.askingPriceCurvesVersion,
     askingPriceCurves.version,
@@ -117,7 +117,7 @@ test("selects the derived potential policy only for the current beta bundle", ()
     selectPlayerPotentialProjectionPolicy(playerEconomyCalibration.versions),
     playerPotentialProjectionPolicy,
   );
-  assert.equal(playerRatingScale.version, "player-rating-scale-v10");
+  assert.equal(playerRatingScale.version, "player-rating-scale-v11");
   assert.deepEqual(playerRatingScale.rarity.initialWorld, {
     establishedCurrentSixMinimum: 2,
     establishedCurrentSixMaximum: 3,
@@ -125,6 +125,13 @@ test("selects the derived potential policy only for the current beta bundle", ()
     youngStoredCeilingSixMaximum: 5,
     lowerDivisionYoungStoredCeilingSixMaximum: 1,
     youngStoredCeilingSixPerClubMaximum: 1,
+  });
+  assert.deepEqual(playerRatingScale.rarity.annualIntake, {
+    activeYoungStoredCeilingSixTargetMinimum: 4,
+    activeYoungStoredCeilingSixTargetMaximum: 5,
+    activeYoungStoredCeilingFiveOrBetterTargetMinimumBasisPoints: 9_000,
+    activeYoungStoredCeilingFiveOrBetterTargetMaximumBasisPoints: 10_000,
+    activeYoungStoredCeilingFiveOrBetterPerClubMaximum: 2,
   });
   assert.equal(playerPotentialProjectionPolicy.version, "player-potential-projection-v7");
   assert.deepEqual(

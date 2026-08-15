@@ -54,6 +54,7 @@ import {
 } from "./annual-intake-role-plan.ts";
 import { assignGeneratedSquadIdentityRoles } from "./squad-identity.ts";
 import { routineYouthStationaryRunwayTarget } from "./routine-youth-stationary-runway.ts";
+import type { AnnualWorldIntakeCeilingAssignment } from "./player-rarity-budget.ts";
 
 /** Exact academy size chosen by Phase 33. */
 export const INITIAL_YOUTH_PLAYERS_PER_CLUB = 11;
@@ -151,8 +152,8 @@ export interface GenerateSeasonalYouthIntakePlayersInput {
   readonly targetPositions: readonly PlayerPosition[];
   /** Analysis-only paired-control seam; Phase 81A closeout owns removal. */
   readonly useRoutineYouthStationaryRunway?: boolean;
-  /** World-level assignments selected before per-club intake generation. */
-  readonly potentialSixPlayerIds?: readonly PlayerId[];
+  /** Total world-level ceiling assignments selected before club generation. */
+  readonly ceilingAssignments?: readonly AnnualWorldIntakeCeilingAssignment[];
   /** Validated scale used only for assigned potential-six floors. */
   readonly ratingScale?: PlayerRatingScaleConfig;
 }
@@ -326,12 +327,20 @@ export function generateSeasonalYouthIntakePlayers(input: GenerateSeasonalYouthI
     clubReputation: input.clubContext.reputation,
   });
   const developmentEnvironment = developmentEnvironmentForClubContext(input.clubContext);
+  const ceilingRatingByPlayerKey = new Map(
+    (input.ceilingAssignments ?? []).map((assignment) => [
+      assignment.playerKey,
+      assignment.minimumRating,
+    ]),
+  );
 
   for (let index = 0; index < targetPositions.length; index += 1) {
     const id = seasonalYouthPlayerId(input.clubId, input.seasonId, index + 1);
-    const forcePotentialSix = input.potentialSixPlayerIds?.includes(id) === true;
-    const archetypeKey = forcePotentialSix
+    const assignedMinimumRating = ceilingRatingByPlayerKey.get(String(id));
+    const archetypeKey = assignedMinimumRating === 6
       ? "rare_prodigy"
+      : assignedMinimumRating === 5
+        ? "serious_prospect"
       : selectSeasonalYouthArchetype(
           input.worldSeed,
           input.seasonId,
@@ -365,7 +374,12 @@ export function generateSeasonalYouthIntakePlayers(input: GenerateSeasonalYouthI
       division: input.clubContext.category,
       clubTier: input.clubContext.competitiveTier,
       ratingScale: input.ratingScale ?? defaultPlayerRatingScale,
-      ceilingConstraint: youthCeilingConstraint({ forcePotentialSix }),
+      ceilingConstraint: youthCeilingConstraint({
+        forcePotentialSix: false,
+        ...(assignedMinimumRating === undefined
+          ? {}
+          : { assignedMinimumRating }),
+      }),
       useRoutineYouthStationaryRunway:
         input.useRoutineYouthStationaryRunway !== false,
     });
@@ -408,8 +422,12 @@ interface YouthPlayerGenerationFacts {
  */
 function youthCeilingConstraint(input: {
   readonly forcePotentialSix: boolean;
+  readonly assignedMinimumRating?: 5 | 6;
   readonly reconstructPotentialBelowSix?: boolean;
 }): ContextualProspectCeilingConstraint {
+  if (input.assignedMinimumRating !== undefined) {
+    return { kind: "at_least_rating", rating: input.assignedMinimumRating };
+  }
   if (input.forcePotentialSix) {
     return { kind: "at_least_rating", rating: 6 };
   }

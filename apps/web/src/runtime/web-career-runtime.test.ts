@@ -71,7 +71,7 @@ describe("WebCareerRuntime", () => {
     // The other half of this record lives in `apps/cli/src/commands/career.test.ts`
     // and carries the account. Both were changed in the same edit: a pair that
     // proves CLI and web agree proves nothing if one side is updated alone.
-    expect(canonicalCareerIdentityHash(state)).toBe("6deee9f3");
+    expect(canonicalCareerIdentityHash(state)).toBe("d1e5fa5a");
   });
 
   it("publishes one completed three-division boundary atomically and deterministically", () => {

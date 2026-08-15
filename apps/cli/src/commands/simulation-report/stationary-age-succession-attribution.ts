@@ -1,4 +1,14 @@
+import { selectPlayerValuationConfig } from "@game/content";
+import {
+  derivePlayerPotentialProjection,
+  type CareerSeasonAdvancementFacts,
+  type PlayerExitReason,
+  type PlayerPotentialProjection,
+  type YouthLifecycleOutcome,
+} from "@game/engine";
 import type { PlayerGenerationExceptionalStockSummary } from "@game/simulation-tools";
+import type { CliCareerState } from "../career/types.ts";
+import type { SuccessorCeilingIntakeSeasonFact } from "./career-world-facts.ts";
 
 import {
   isCareerGeneratedOrigin,
@@ -211,6 +221,637 @@ export interface ProgressiveCurrent16CheckpointDecision {
   readonly stationarity: ReturnType<typeof evaluatePopulationStationarity>;
   readonly reconciliationFailureCount: number;
   readonly worlds: readonly ProgressiveCurrent16WorldFacts[];
+}
+
+export interface SuccessorCeilingArmWorldInput extends StationaryAgeSuccessionWorldInput {
+  readonly successorCeilingSeasons: readonly SuccessorCeilingIntakeSeasonFact[];
+}
+
+export interface SuccessorCeilingPairedCheckpointDecision {
+  readonly decision: "GO" | "REFINE" | "STOP_RETHINK" | "STOP_INSTRUMENT";
+  readonly failedGateKeys: readonly string[];
+  readonly control: ProgressiveCurrent16CheckpointDecision;
+  readonly candidate: ProgressiveCurrent16CheckpointDecision;
+  readonly generatedAtLeastOpeningWorldCount: number;
+  readonly candidateImprovementWorldCount: number;
+  readonly pooledCareerGeneratedLeaderShare: number | "not_observed";
+  readonly candidateSeasonTenCurrent16ByWorld: readonly {
+    readonly worldSeed: string;
+    readonly openingStock: number;
+    readonly openingSenior: number;
+    readonly careerGenerated: number;
+    readonly total: number;
+  }[];
+  readonly age33PlusLeaderCount: number;
+  readonly successorSeasonCount: number;
+  readonly successorAssignmentCount: number;
+  readonly successorClubCapRefusalCount: number;
+  readonly newIntegratedFailureKeys: readonly string[];
+}
+
+const SUCCESSOR_PATHWAY_OWNERS = [
+  "senior_registration",
+  "appearance_allocation",
+  "development_minutes",
+  "development_realization",
+  "first_division_entry",
+  "first_division_retention",
+  "leader_selection",
+] as const;
+export type SuccessorPathwayOwner = typeof SUCCESSOR_PATHWAY_OWNERS[number];
+
+const YOUTH_EXIT_OUTCOME_ORDER = {
+  promotion_candidate: 0,
+  external_move_candidate: 1,
+  released: 2,
+} as const satisfies Readonly<Record<YouthLifecycleOutcome, number>>;
+
+const PLAYER_EXIT_REASON_ORDER = {
+  retirement: 0,
+  released: 1,
+  career_step_down: 2,
+} as const satisfies Readonly<Record<PlayerExitReason, number>>;
+
+/** One accepted exact-five assignment at the canonical annual intake boundary. */
+export interface SuccessorPathwayAssignmentFact {
+  readonly seasonNumber: number;
+  readonly playerId: string;
+  readonly clubId: string;
+  readonly role: string;
+  readonly developmentEnvironment: string;
+  readonly projection: PlayerPotentialProjection;
+}
+
+/** One season-boundary observation for a previously accepted assignment. */
+export interface SuccessorPathwayBoundaryFact {
+  readonly seasonNumber: number;
+  readonly playerId: string;
+  readonly academyActive: boolean;
+  readonly academyExitOutcomes: readonly YouthLifecycleOutcome[];
+  readonly seniorAssociations: readonly {
+    readonly clubId: string;
+    readonly division: string;
+  }[];
+  readonly playerExitReasons: readonly PlayerExitReason[];
+  readonly projection: PlayerPotentialProjection | "not_observed";
+}
+
+/** Canonical selected-cohort facts from one candidate world. */
+export interface SuccessorPathwayWorldFacts {
+  readonly worldSeed: string;
+  readonly assignments: readonly SuccessorPathwayAssignmentFact[];
+  readonly boundaries: readonly SuccessorPathwayBoundaryFact[];
+  readonly reconciliationFailureCount: number;
+}
+
+/**
+ * Follows only IDs selected by the canonical allocator.
+ *
+ * The observer reads durable academy state and advancement facts at the season
+ * boundary. It never guesses a promotion or release from season-ten ownership.
+ */
+export class SuccessorPathwayObserver {
+  readonly #worldSeed: string;
+  readonly #assignments = new Map<string, SuccessorPathwayAssignmentFact>();
+  readonly #boundaries: SuccessorPathwayBoundaryFact[] = [];
+  #reconciliationFailureCount = 0;
+
+  public constructor(worldSeed: string) {
+    this.#worldSeed = worldSeed;
+  }
+
+  /** Registers exact-five accepted assignments once, at their intake boundary. */
+  public observeIntake(fact: SuccessorCeilingIntakeSeasonFact): void {
+    for (const selected of fact.selectedPlayers) {
+      if (selected.minimumRating !== 5) continue;
+      if (this.#assignments.has(selected.playerId)) {
+        this.#reconciliationFailureCount += 1;
+        continue;
+      }
+      this.#assignments.set(selected.playerId, {
+        seasonNumber: fact.seasonNumber,
+        playerId: selected.playerId,
+        clubId: selected.clubId,
+        role: selected.role,
+        developmentEnvironment: selected.developmentEnvironment,
+        projection: selected.projection,
+      });
+    }
+  }
+
+  /** Captures lifecycle truth for every selected ID after one canonical rollover. */
+  public observeAdvancement(input: {
+    readonly seasonNumber: number;
+    readonly careerState: CliCareerState;
+    readonly facts: CareerSeasonAdvancementFacts;
+  }): void {
+    const valuation = selectPlayerValuationConfig(
+      input.careerState.gameState.meta.calibrationVersions,
+    );
+    for (const assignment of this.#assignments.values()) {
+      if (assignment.seasonNumber > input.seasonNumber) continue;
+      const playerId = input.careerState.gameState.playerIds.find(
+        (candidateId) => String(candidateId) === assignment.playerId,
+      );
+      const player = playerId === undefined
+        ? undefined
+        : input.careerState.gameState.players[playerId];
+      const lifecycleId = input.careerState.youthAcademyState?.playerLifecycleIds.find(
+        (candidateId) => String(candidateId) === assignment.playerId,
+      );
+      const lifecycle = lifecycleId === undefined
+        ? undefined
+        : input.careerState.youthAcademyState?.playerLifecycle[lifecycleId];
+      const seniorAssociations = input.careerState.gameState.clubIds.flatMap((clubId) => {
+        const club = input.careerState.gameState.clubs[clubId];
+        return club?.playerIds.some((candidateId) => String(candidateId) === assignment.playerId)
+          ? [{ clubId: String(clubId), division: club.category }]
+          : [];
+      });
+      const academyExitOutcomes = orderedMatchingKeys(
+        YOUTH_EXIT_OUTCOME_ORDER,
+        input.facts.youthLifecycle.playerIdsByOutcome,
+        assignment.playerId,
+      );
+      const playerExitReasons = orderedMatchingKeys(
+        PLAYER_EXIT_REASON_ORDER,
+        input.facts.playerExits.playerIdsByReason,
+        assignment.playerId,
+      );
+      this.#reconciliationFailureCount += Number(seniorAssociations.length > 1)
+        + Number(academyExitOutcomes.length > 1)
+        + Number(playerExitReasons.length > 1);
+      this.#boundaries.push({
+        seasonNumber: input.seasonNumber,
+        playerId: assignment.playerId,
+        academyActive: lifecycle?.status === "academy",
+        academyExitOutcomes,
+        seniorAssociations,
+        playerExitReasons,
+        projection: player === undefined
+          ? "not_observed"
+          : derivePlayerPotentialProjection({
+              player,
+              currentDate: input.careerState.gameState.calendar.currentDate,
+              policy: valuation.potentialProjectionPolicy,
+              ratingScale: valuation.ratingScale,
+            }),
+      });
+    }
+  }
+
+  /** Returns stable facts after all seasons have been observed. */
+  public facts(): SuccessorPathwayWorldFacts {
+    return {
+      worldSeed: this.#worldSeed,
+      assignments: [...this.#assignments.values()].toSorted((left, right) =>
+        left.seasonNumber - right.seasonNumber
+          || left.playerId.localeCompare(right.playerId)
+      ),
+      boundaries: this.#boundaries.toSorted((left, right) =>
+        left.seasonNumber - right.seasonNumber
+          || left.playerId.localeCompare(right.playerId)
+      ),
+      reconciliationFailureCount: this.#reconciliationFailureCount,
+    };
+  }
+}
+
+export type SuccessorPathwayTerminal =
+  | SuccessorPathwayOwner
+  | "open_window"
+  | "season_ten_leader";
+
+export interface SuccessorPathwayPlayerEvaluation {
+  readonly playerId: string;
+  readonly assignmentSeason: number;
+  readonly assignmentClubId: string;
+  readonly role: string;
+  readonly assignmentAge: number;
+  readonly terminal: SuccessorPathwayTerminal;
+  readonly academyExitOutcome: YouthLifecycleOutcome | "not_observed";
+  readonly firstSeniorSeason: number | "not_observed";
+  readonly cumulativeSeniorAppearances: number;
+  readonly cumulativeSeniorMinutes: number;
+  readonly reachedCurrent16: boolean;
+  readonly reachedFirstDivisionCurrent16: boolean;
+  readonly retainedFirstDivisionCurrent16AtSeasonTen: boolean;
+  readonly seasonTenLeader: boolean;
+}
+
+export interface SuccessorPathwayWorldEvaluation {
+  readonly worldSeed: string;
+  readonly assignmentCount: number;
+  readonly closedWindowCount: number;
+  readonly openWindowCount: number;
+  readonly terminalCounts: Readonly<Record<SuccessorPathwayTerminal, number>>;
+  readonly dominantLossOwner: SuccessorPathwayOwner | "not_observed";
+  readonly dominantLossShare: number | "not_observed";
+  readonly players: readonly SuccessorPathwayPlayerEvaluation[];
+  readonly reconciliationFailureCount: number;
+}
+
+export type SixStarFirstDivergenceCause =
+  | "active_stock"
+  | "target_or_vacancy"
+  | "candidate_population"
+  | "allocation_constraints";
+
+export interface SuccessorPathwayCheckpointDecision {
+  readonly decision: "OWNER_IDENTIFIED" | "MIXED" | "STOP_INSTRUMENT";
+  readonly owner: SuccessorPathwayOwner | "mixed" | "instrument";
+  readonly ownerCoherenceWorldCount: number;
+  readonly pooledClosedWindowCount: number;
+  readonly pooledOwnerCounts: Readonly<Record<SuccessorPathwayOwner, number>>;
+  readonly pooledOwnerShare: number | "not_observed";
+  readonly pooledOwnerMargin: number | "not_observed";
+  readonly sixStarFirstDivergences: readonly {
+    readonly worldSeed: string;
+    readonly seasonNumber: number;
+    readonly cause: SixStarFirstDivergenceCause;
+  }[];
+  readonly reconciliationFailureCount: number;
+  readonly worlds: readonly SuccessorPathwayWorldEvaluation[];
+}
+
+/** One-season instrument gate; it deliberately makes no lifecycle claim. */
+export function evaluateSuccessorPathwayCanary(input: {
+  readonly control: readonly SuccessorCeilingArmWorldInput[];
+  readonly candidate: readonly (SuccessorCeilingArmWorldInput & {
+    readonly pathway: SuccessorPathwayWorldFacts;
+  })[];
+}): Readonly<{
+  decision: "CANARY_GO" | "STOP_INSTRUMENT";
+  worldCount: number;
+  acceptedAssignmentCount: number;
+  reconciliationFailureCount: number;
+}> {
+  const controlBySeed = new Map(input.control.map((world) => [world.owner.worldSeed, world]));
+  let reconciliationFailureCount = Number(input.control.length !== 7)
+    + Number(input.candidate.length !== 7)
+    + Number(controlBySeed.size !== 7);
+  let acceptedAssignmentCount = 0;
+  for (const candidate of input.candidate) {
+    const control = controlBySeed.get(candidate.owner.worldSeed);
+    const candidateSeason = candidate.successorCeilingSeasons[0];
+    const controlSeason = control?.successorCeilingSeasons[0];
+    const assignmentCount = candidate.pathway.assignments.length;
+    acceptedAssignmentCount += assignmentCount;
+    reconciliationFailureCount += candidate.pathway.reconciliationFailureCount
+      + Number(candidate.successorCeilingSeasons.length !== 1)
+      + Number(control?.successorCeilingSeasons.length !== 1)
+      + Number(candidateSeason === undefined || controlSeason === undefined)
+      + Number(candidate.pathway.worldSeed !== candidate.owner.worldSeed)
+      + Number(candidate.pathway.boundaries.length !== assignmentCount)
+      + Number(candidateSeason?.fiveAssignmentCount !== assignmentCount)
+      + Number(controlSeason?.fiveAssignmentCount !== 0);
+  }
+  reconciliationFailureCount += Number(acceptedAssignmentCount === 0);
+  return {
+    decision: reconciliationFailureCount === 0 ? "CANARY_GO" : "STOP_INSTRUMENT",
+    worldCount: input.candidate.length,
+    acceptedAssignmentCount,
+    reconciliationFailureCount,
+  };
+}
+
+/**
+ * Attributes the rejected successor cohort without changing its football.
+ *
+ * Only closed academy windows enter owner ranking. A 17-year-old still in the
+ * academy at season ten is a future observation, not a failed replacement.
+ */
+export function evaluateSuccessorPathwayCheckpoint(input: {
+  readonly control: readonly SuccessorCeilingArmWorldInput[];
+  readonly candidate: readonly (SuccessorCeilingArmWorldInput & {
+    readonly pathway: SuccessorPathwayWorldFacts;
+  })[];
+  readonly seasonCount: number;
+}): SuccessorPathwayCheckpointDecision {
+  const controlBySeed = new Map(input.control.map((world) => [world.owner.worldSeed, world]));
+  let reconciliationFailureCount = Number(input.seasonCount !== 10)
+    + Number(input.control.length !== 7)
+    + Number(input.candidate.length !== 7)
+    + Number(controlBySeed.size !== 7);
+  const worlds: SuccessorPathwayWorldEvaluation[] = [];
+  const sixStarFirstDivergences: SuccessorPathwayCheckpointDecision[
+    "sixStarFirstDivergences"
+  ][number][] = [];
+
+  for (const candidate of input.candidate) {
+    const worldSeed = candidate.owner.worldSeed;
+    const control = controlBySeed.get(worldSeed);
+    if (control === undefined || candidate.pathway.worldSeed !== worldSeed) {
+      reconciliationFailureCount += 1;
+      continue;
+    }
+    const evaluation = evaluateSuccessorPathwayWorld(candidate);
+    worlds.push(evaluation);
+    reconciliationFailureCount += evaluation.reconciliationFailureCount;
+    const divergence = firstSixStarDivergence(
+      worldSeed,
+      control.successorCeilingSeasons,
+      candidate.successorCeilingSeasons,
+    );
+    if (divergence !== undefined) sixStarFirstDivergences.push(divergence);
+  }
+
+  const pooledOwnerCounts = emptyCounts(SUCCESSOR_PATHWAY_OWNERS);
+  let pooledClosedWindowCount = 0;
+  for (const world of worlds) {
+    pooledClosedWindowCount += world.closedWindowCount;
+    for (const owner of SUCCESSOR_PATHWAY_OWNERS) {
+      pooledOwnerCounts[owner] += world.terminalCounts[owner];
+    }
+  }
+  const rankedOwners = [...SUCCESSOR_PATHWAY_OWNERS].toSorted((left, right) =>
+    pooledOwnerCounts[right] - pooledOwnerCounts[left]
+      || left.localeCompare(right)
+  );
+  const owner = rankedOwners[0]!;
+  const second = rankedOwners[1]!;
+  const ownerCoherenceWorldCount = worlds.filter(
+    ({ dominantLossOwner }) => dominantLossOwner === owner,
+  ).length;
+  const pooledOwnerShare = observedRatio(
+    pooledOwnerCounts[owner],
+    pooledClosedWindowCount,
+  );
+  const pooledOwnerMargin = pooledClosedWindowCount === 0
+    ? "not_observed"
+    : (pooledOwnerCounts[owner] - pooledOwnerCounts[second])
+      / pooledClosedWindowCount;
+  reconciliationFailureCount += Number(worlds.length !== 7)
+    + Number(pooledClosedWindowCount === 0)
+    + Number(sixStarFirstDivergences.length === 0);
+  const ownerHeld = pooledOwnerShare !== "not_observed"
+    && pooledOwnerMargin !== "not_observed"
+    && ownerCoherenceWorldCount >= 5
+    && pooledOwnerShare >= 0.20
+    && pooledOwnerMargin >= 0.05;
+
+  return {
+    decision: reconciliationFailureCount > 0
+      ? "STOP_INSTRUMENT"
+      : ownerHeld
+        ? "OWNER_IDENTIFIED"
+        : "MIXED",
+    owner: reconciliationFailureCount > 0
+      ? "instrument"
+      : ownerHeld
+        ? owner
+        : "mixed",
+    ownerCoherenceWorldCount,
+    pooledClosedWindowCount,
+    pooledOwnerCounts,
+    pooledOwnerShare,
+    pooledOwnerMargin,
+    sixStarFirstDivergences: sixStarFirstDivergences.toSorted((left, right) =>
+      left.worldSeed.localeCompare(right.worldSeed)
+        || left.seasonNumber - right.seasonNumber
+    ),
+    reconciliationFailureCount,
+    worlds: worlds.toSorted((left, right) => left.worldSeed.localeCompare(right.worldSeed)),
+  };
+}
+
+/** One-season execution/reconciliation gate; it makes no renewal claim. */
+export function evaluateSuccessorCeilingPairedCanary(input: {
+  readonly control: readonly SuccessorCeilingArmWorldInput[];
+  readonly candidate: readonly SuccessorCeilingArmWorldInput[];
+}): Readonly<{
+  decision: "CANARY_GO" | "STOP_INSTRUMENT";
+  worldCount: number;
+  seasonFactCount: number;
+  assignmentCount: number;
+  reconciliationFailureCount: number;
+}> {
+  const controlBySeed = new Map(
+    input.control.map((world) => [world.owner.worldSeed, world]),
+  );
+  let reconciliationFailureCount = Number(input.control.length !== 7)
+    + Number(input.candidate.length !== 7)
+    + Number(controlBySeed.size !== 7);
+  let seasonFactCount = 0;
+  let assignmentCount = 0;
+  for (const candidate of input.candidate) {
+    const control = controlBySeed.get(candidate.owner.worldSeed);
+    if (control === undefined) {
+      reconciliationFailureCount += 1;
+      continue;
+    }
+    reconciliationFailureCount += Number(candidate.successorCeilingSeasons.length !== 1)
+      + Number(control.successorCeilingSeasons.length !== 1);
+    const candidateSeason = candidate.successorCeilingSeasons[0];
+    const controlSeason = control.successorCeilingSeasons[0];
+    if (candidateSeason === undefined || controlSeason === undefined) continue;
+    seasonFactCount += 1;
+    assignmentCount += candidateSeason.fiveAssignmentCount;
+    reconciliationFailureCount += Number(!successorSeasonReconciles(candidateSeason, true))
+      + Number(!successorSeasonReconciles(controlSeason, false))
+      + Number(!sameStrings(
+        candidateSeason.sixAssignmentPlayerIds,
+        controlSeason.sixAssignmentPlayerIds,
+      ))
+      + candidateSeason.selectedPlayers.filter(({ minimumRating }) => minimumRating === 5)
+        .filter(({ projection }) =>
+          projection.currentRating >= 5 || projection.storedCeilingRating !== 5
+        ).length;
+  }
+  return {
+    decision: reconciliationFailureCount === 0 && seasonFactCount === 7
+      ? "CANARY_GO"
+      : "STOP_INSTRUMENT",
+    worldCount: input.candidate.length,
+    seasonFactCount,
+    assignmentCount,
+    reconciliationFailureCount,
+  };
+}
+
+/**
+ * Evaluates the fresh paired structural-successor experiment without owning
+ * any generation, development, leader or integrated-gameplay formula.
+ */
+export function evaluateSuccessorCeilingPairedCheckpoint(input: {
+  readonly control: readonly SuccessorCeilingArmWorldInput[];
+  readonly candidate: readonly SuccessorCeilingArmWorldInput[];
+  readonly seasonCount: number;
+  readonly controlIntegratedFailedGateKeys: readonly string[];
+  readonly candidateIntegratedFailedGateKeys: readonly string[];
+}): SuccessorCeilingPairedCheckpointDecision {
+  const control = evaluateProgressiveCurrent16FunnelCheckpoint(input.control);
+  const candidate = evaluateProgressiveCurrent16FunnelCheckpoint(input.candidate);
+  const controlStationaryBySeed = new Map(
+    input.control.map((world) => {
+      const evaluation = evaluateWorld(world);
+      return [evaluation.worldSeed, evaluation] as const;
+    }),
+  );
+  const candidateStationaryBySeed = new Map(
+    input.candidate.map((world) => {
+      const evaluation = evaluateWorld(world);
+      return [evaluation.worldSeed, evaluation] as const;
+    }),
+  );
+  const controlBySeed = new Map(
+    control.worlds.map((world) => [world.worldSeed, world]),
+  );
+  const candidateInputsBySeed = new Map(
+    input.candidate.map((world) => [world.owner.worldSeed, world]),
+  );
+  let structuralFailureCount = Number(input.seasonCount !== 10)
+    + Number(input.control.length !== 7)
+    + Number(input.candidate.length !== 7)
+    + Number(controlBySeed.size !== 7)
+    + Number(candidateInputsBySeed.size !== 7);
+  let candidateImprovementWorldCount = 0;
+  let generatedAtLeastOpeningWorldCount = 0;
+  let successorAssignmentCount = 0;
+  let successorClubCapRefusalCount = 0;
+  let successorSeasonCount = 0;
+  let selectedSemanticsHeld = true;
+  let stockReconciliationHeld = true;
+  let sixStarLaneHeld = true;
+  let stockInflationObserved = false;
+  let generatedLeaderCount = 0;
+  let leaderCount = 0;
+  let age33PlusLeaderCount = 0;
+  const candidateSeasonTenCurrent16ByWorld: Array<{
+    worldSeed: string;
+    openingStock: number;
+    openingSenior: number;
+    careerGenerated: number;
+    total: number;
+  }> = [];
+
+  for (const candidateWorld of candidate.worlds) {
+    const controlWorld = controlBySeed.get(candidateWorld.worldSeed);
+    const candidateInput = candidateInputsBySeed.get(candidateWorld.worldSeed);
+    const controlInput = input.control.find(
+      ({ owner }) => owner.worldSeed === candidateWorld.worldSeed,
+    );
+    const candidateStationary = candidateStationaryBySeed.get(candidateWorld.worldSeed);
+    const controlStationary = controlStationaryBySeed.get(candidateWorld.worldSeed);
+    if (
+      controlWorld === undefined
+      || candidateInput === undefined
+      || controlInput === undefined
+      || candidateStationary === undefined
+      || controlStationary === undefined
+    ) {
+      structuralFailureCount += 1;
+      continue;
+    }
+    generatedAtLeastOpeningWorldCount += Number(
+      candidateStationary.seasonTenCurrent16.careerGeneratedCount
+        >= candidateStationary.seasonTenCurrent16.openingSeniorCount,
+    );
+    candidateImprovementWorldCount += Number(
+      candidateStationary.seasonTenCurrent16.careerGeneratedCount
+        > controlStationary.seasonTenCurrent16.careerGeneratedCount,
+    );
+    const totalCurrent16 = candidateStationary.seasonTenCurrent16.careerGeneratedCount
+      + candidateStationary.seasonTenCurrent16.openingSeniorCount;
+    stockInflationObserved ||= totalCurrent16 > candidateWorld.openingEliteCount;
+    candidateSeasonTenCurrent16ByWorld.push({
+      worldSeed: candidateWorld.worldSeed,
+      openingStock: candidateWorld.openingEliteCount,
+      openingSenior: candidateStationary.seasonTenCurrent16.openingSeniorCount,
+      careerGenerated: candidateStationary.seasonTenCurrent16.careerGeneratedCount,
+      total: totalCurrent16,
+    });
+    const leaders = seasonTenLeaderFacts(candidateInput);
+    generatedLeaderCount += leaders.generatedCount;
+    leaderCount += leaders.totalCount;
+    age33PlusLeaderCount += leaders.age33PlusCount;
+
+    const candidateSeasons = candidateInput.successorCeilingSeasons;
+    const controlSeasons = controlInput.successorCeilingSeasons;
+    successorSeasonCount += candidateSeasons.length;
+    structuralFailureCount += Number(candidateSeasons.length !== input.seasonCount)
+      + Number(controlSeasons.length !== input.seasonCount);
+    const controlSeasonByNumber = new Map(
+      controlSeasons.map((season) => [season.seasonNumber, season]),
+    );
+    for (const season of candidateSeasons) {
+      const controlSeason = controlSeasonByNumber.get(season.seasonNumber);
+      if (controlSeason === undefined) {
+        structuralFailureCount += 1;
+        continue;
+      }
+      successorAssignmentCount += season.fiveAssignmentCount;
+      successorClubCapRefusalCount += season.clubCapRefusalCount;
+      stockReconciliationHeld &&= successorSeasonReconciles(season, true);
+      selectedSemanticsHeld &&= season.selectedPlayers
+        .filter(({ minimumRating }) => minimumRating === 5)
+        .every(({ projection }) =>
+          projection.currentRating < 5 && projection.storedCeilingRating === 5
+        );
+      sixStarLaneHeld &&= sameStrings(
+        season.sixAssignmentPlayerIds,
+        controlSeason.sixAssignmentPlayerIds,
+      ) && season.sixAssignmentCount === controlSeason.sixAssignmentCount;
+    }
+  }
+
+  const pooledCareerGeneratedLeaderShare = observedRatio(
+    generatedLeaderCount,
+    leaderCount,
+  );
+  const newIntegratedFailureKeys = input.candidateIntegratedFailedGateKeys
+    .filter((key) => !input.controlIntegratedFailedGateKeys.includes(key))
+    .toSorted();
+  const controlReproduced = control.decision === "OWNER_IDENTIFIED"
+    && control.owner === "observed_ceiling_supply";
+  const failedGateKeys = [
+    ...(generatedAtLeastOpeningWorldCount >= 5 ? [] : ["generated_at_least_opening"]),
+    ...(pooledCareerGeneratedLeaderShare !== "not_observed"
+        && pooledCareerGeneratedLeaderShare >= 0.5
+      ? []
+      : ["career_generated_leader_share"]),
+    ...(candidateImprovementWorldCount >= 5 ? [] : ["paired_current16_improvement"]),
+    ...(stockReconciliationHeld ? [] : ["successor_stock_reconciliation"]),
+    ...(selectedSemanticsHeld ? [] : ["selected_successor_semantics"]),
+    ...(sixStarLaneHeld ? [] : ["six_star_lane_identity"]),
+    ...(stockInflationObserved ? ["current16_stock_inflation"] : []),
+    ...(newIntegratedFailureKeys.map((key) => `integrated:${key}`)),
+    ...(age33PlusLeaderCount > 0 ? [] : ["age33_plus_leader_reachability"]),
+  ];
+  const structuralFailure = structuralFailureCount > 0
+    || control.reconciliationFailureCount > 0
+    || candidate.reconciliationFailureCount > 0
+    || successorSeasonCount !== 70
+    || leaderCount !== 140;
+  const hardProductFailure = !stockReconciliationHeld
+    || !selectedSemanticsHeld
+    || !sixStarLaneHeld
+    || stockInflationObserved
+    || newIntegratedFailureKeys.length > 0;
+  return {
+    decision: structuralFailure || !controlReproduced
+      ? "STOP_INSTRUMENT"
+      : hardProductFailure || candidateImprovementWorldCount < 5
+        ? "STOP_RETHINK"
+        : failedGateKeys.length === 0
+          ? "GO"
+          : "REFINE",
+    failedGateKeys,
+    control,
+    candidate,
+    generatedAtLeastOpeningWorldCount,
+    candidateImprovementWorldCount,
+    pooledCareerGeneratedLeaderShare,
+    candidateSeasonTenCurrent16ByWorld:
+      candidateSeasonTenCurrent16ByWorld.toSorted((left, right) =>
+        left.worldSeed.localeCompare(right.worldSeed)
+      ),
+    age33PlusLeaderCount,
+    successorSeasonCount,
+    successorAssignmentCount,
+    successorClubCapRefusalCount,
+    newIntegratedFailureKeys,
+  };
 }
 
 /**
@@ -462,6 +1103,259 @@ function progressiveCurrent16WorldFacts(
     ).length,
     reconciliationFailureCount,
   };
+}
+
+function seasonTenLeaderFacts(
+  input: StationaryAgeSuccessionWorldInput,
+): Readonly<{ totalCount: number; generatedCount: number; age33PlusCount: number }> {
+  const origins = new Map(
+    input.architecture.playerOrigins.map((row) => [row.playerId, row.origin]),
+  );
+  const seasonTen = input.owner.playerSeasons.filter((row) =>
+    row.seasonNumber === 10 && row.competitionId === FIRST_DIVISION_COMPETITION_ID
+  );
+  const leaders = [
+    ...topTenPlayerSeasonFacts(seasonTen, "goals"),
+    ...topTenPlayerSeasonFacts(seasonTen, "assists"),
+  ];
+  return {
+    totalCount: leaders.length,
+    generatedCount: leaders.filter((row) => {
+      const origin = origins.get(row.playerId);
+      return origin !== undefined && isCareerGeneratedOrigin(origin);
+    }).length,
+    age33PlusCount: leaders.filter(({ age }) => age >= 33).length,
+  };
+}
+
+function sameStrings(left: readonly string[], right: readonly string[]): boolean {
+  return left.length === right.length
+    && left.every((value, index) => value === right[index]);
+}
+
+function successorSeasonReconciles(
+  season: SuccessorCeilingIntakeSeasonFact,
+  policyEnabled: boolean,
+): boolean {
+  const fiveAssignments = season.selectedPlayers.filter(
+    ({ minimumRating }) => minimumRating === 5,
+  ).length;
+  const sixAssignments = season.selectedPlayers.filter(
+    ({ minimumRating }) => minimumRating === 6,
+  ).length;
+  return season.reconciliationFailureCount === 0
+    && season.unfilledFiveVacancyCount === Math.max(
+      0,
+      season.targetFiveOrBetterCount
+        - season.activeFiveOrBetterCount
+        - season.sixAssignmentCount
+        - season.fiveAssignmentCount,
+    )
+    && season.unfilledSixVacancyCount === Math.max(
+      0,
+      season.targetSixCount - season.activeSixCount - season.sixAssignmentCount,
+    )
+    && fiveAssignments === season.fiveAssignmentCount
+    && sixAssignments === season.sixAssignmentCount
+    && (policyEnabled || season.fiveAssignmentCount === 0);
+}
+
+function evaluateSuccessorPathwayWorld(
+  input: SuccessorCeilingArmWorldInput & { readonly pathway: SuccessorPathwayWorldFacts },
+): SuccessorPathwayWorldEvaluation {
+  let reconciliationFailureCount = input.pathway.reconciliationFailureCount;
+  const assignments = input.pathway.assignments;
+  const assignmentIds = new Set(assignments.map(({ playerId }) => playerId));
+  reconciliationFailureCount += Number(assignmentIds.size !== assignments.length)
+    + Number(assignments.length !== input.successorCeilingSeasons.reduce(
+      (total, season) => total + season.fiveAssignmentCount,
+      0,
+    ));
+  const boundariesByPlayerId = groupBy(
+    input.pathway.boundaries,
+    ({ playerId }) => playerId,
+  );
+  const ownerRowsByPlayerId = groupBy(
+    input.owner.playerSeasons,
+    ({ playerId }) => playerId,
+  );
+  const seasonTenFirstDivision = input.owner.playerSeasons.filter((row) =>
+    row.seasonNumber === 10 && row.competitionId === FIRST_DIVISION_COMPETITION_ID
+  );
+  const leaderIds = new Set([
+    ...topTenPlayerSeasonFacts(seasonTenFirstDivision, "goals"),
+    ...topTenPlayerSeasonFacts(seasonTenFirstDivision, "assists"),
+  ].map(({ playerId }) => playerId));
+  const terminals = [
+    ...SUCCESSOR_PATHWAY_OWNERS,
+    "open_window",
+    "season_ten_leader",
+  ] as const satisfies readonly SuccessorPathwayTerminal[];
+  const terminalCounts = emptyCounts(terminals);
+  const players: SuccessorPathwayPlayerEvaluation[] = [];
+
+  for (const assignment of assignments) {
+    reconciliationFailureCount += Number(
+      assignment.projection.currentRating >= 5
+        || assignment.projection.storedCeilingRating !== 5,
+    );
+    const boundaries = (boundariesByPlayerId.get(assignment.playerId) ?? [])
+      .toSorted((left, right) => left.seasonNumber - right.seasonNumber);
+    const expectedBoundaryCount = 11 - assignment.seasonNumber;
+    reconciliationFailureCount += Number(boundaries.length !== expectedBoundaryCount);
+    for (let offset = 0; offset < boundaries.length; offset += 1) {
+      reconciliationFailureCount += Number(
+        boundaries[offset]?.seasonNumber !== assignment.seasonNumber + offset,
+      );
+    }
+    const exitOutcomes = boundaries.flatMap(({ academyExitOutcomes }) => academyExitOutcomes);
+    const seniorAssociations = boundaries.flatMap(({ seniorAssociations, seasonNumber }) =>
+      seniorAssociations.map((association) => ({ ...association, seasonNumber }))
+    );
+    reconciliationFailureCount += Number(exitOutcomes.length > 1)
+      + Number(exitOutcomes.length === 0 && seniorAssociations.length > 0);
+    const ownerRows = ownerRowsByPlayerId.get(assignment.playerId) ?? [];
+    const cumulativeSeniorAppearances = ownerRows.reduce(
+      (total, row) => total + row.appearances,
+      0,
+    );
+    const cumulativeSeniorMinutes = ownerRows.reduce(
+      (total, row) => total + row.minutes,
+      0,
+    );
+    const reachedCurrent16 = ownerRows.some(({ currentAbility }) => currentAbility >= 16);
+    const reachedFirstDivisionCurrent16 = ownerRows.some((row) =>
+      row.competitionId === FIRST_DIVISION_COMPETITION_ID && row.currentAbility >= 16
+    );
+    const retainedFirstDivisionCurrent16AtSeasonTen = ownerRows.some((row) =>
+      row.seasonNumber === 10
+        && row.competitionId === FIRST_DIVISION_COMPETITION_ID
+        && row.currentAbility >= 16
+    );
+    const seasonTenLeader = leaderIds.has(assignment.playerId);
+    const terminal: SuccessorPathwayTerminal = exitOutcomes.length === 0
+      ? "open_window"
+      : seniorAssociations.length === 0
+        ? "senior_registration"
+        : cumulativeSeniorAppearances === 0
+          ? "appearance_allocation"
+          : cumulativeSeniorMinutes < 900
+            ? "development_minutes"
+            : !reachedCurrent16
+              ? "development_realization"
+              : !reachedFirstDivisionCurrent16
+                ? "first_division_entry"
+                : !retainedFirstDivisionCurrent16AtSeasonTen
+                  ? "first_division_retention"
+                  : !seasonTenLeader
+                    ? "leader_selection"
+                    : "season_ten_leader";
+    terminalCounts[terminal] += 1;
+    players.push({
+      playerId: assignment.playerId,
+      assignmentSeason: assignment.seasonNumber,
+      assignmentClubId: assignment.clubId,
+      role: assignment.role,
+      assignmentAge: assignment.projection.age,
+      terminal,
+      academyExitOutcome: exitOutcomes[0] ?? "not_observed",
+      firstSeniorSeason: seniorAssociations[0]?.seasonNumber ?? "not_observed",
+      cumulativeSeniorAppearances,
+      cumulativeSeniorMinutes,
+      reachedCurrent16,
+      reachedFirstDivisionCurrent16,
+      retainedFirstDivisionCurrent16AtSeasonTen,
+      seasonTenLeader,
+    });
+  }
+  reconciliationFailureCount += input.pathway.boundaries.reduce(
+    (total, boundary) => total + Number(!assignmentIds.has(boundary.playerId)),
+    0,
+  );
+  const closedWindowCount = assignments.length - terminalCounts.open_window;
+  const rankedOwners = [...SUCCESSOR_PATHWAY_OWNERS].toSorted((left, right) =>
+    terminalCounts[right] - terminalCounts[left] || left.localeCompare(right)
+  );
+  const lossCount = SUCCESSOR_PATHWAY_OWNERS.reduce(
+    (total, owner) => total + terminalCounts[owner],
+    0,
+  );
+  const dominantLossOwner = lossCount === 0 ? "not_observed" : rankedOwners[0]!;
+
+  return {
+    worldSeed: input.owner.worldSeed,
+    assignmentCount: assignments.length,
+    closedWindowCount,
+    openWindowCount: terminalCounts.open_window,
+    terminalCounts,
+    dominantLossOwner,
+    dominantLossShare: dominantLossOwner === "not_observed"
+      ? "not_observed"
+      : observedRatio(terminalCounts[dominantLossOwner], closedWindowCount),
+    players: players.toSorted((left, right) =>
+      left.assignmentSeason - right.assignmentSeason
+        || left.playerId.localeCompare(right.playerId)
+    ),
+    reconciliationFailureCount,
+  };
+}
+
+function firstSixStarDivergence(
+  worldSeed: string,
+  control: readonly SuccessorCeilingIntakeSeasonFact[],
+  candidate: readonly SuccessorCeilingIntakeSeasonFact[],
+): SuccessorPathwayCheckpointDecision["sixStarFirstDivergences"][number] | undefined {
+  const controlBySeason = new Map(control.map((season) => [season.seasonNumber, season]));
+  for (const candidateSeason of [...candidate].toSorted(
+    (left, right) => left.seasonNumber - right.seasonNumber,
+  )) {
+    const controlSeason = controlBySeason.get(candidateSeason.seasonNumber);
+    if (
+      controlSeason === undefined
+      || sameStrings(controlSeason.sixAssignmentPlayerIds, candidateSeason.sixAssignmentPlayerIds)
+    ) continue;
+    const cause: SixStarFirstDivergenceCause = !sameStrings(
+        controlSeason.activeSixPlayerIds,
+        candidateSeason.activeSixPlayerIds,
+      )
+      ? "active_stock"
+      : controlSeason.targetSixCount !== candidateSeason.targetSixCount
+          || controlSeason.sixAssignmentCount !== candidateSeason.sixAssignmentCount
+        ? "target_or_vacancy"
+        : !sameSixCandidateFacts(
+            controlSeason.sixCandidateFacts,
+            candidateSeason.sixCandidateFacts,
+          )
+          ? "candidate_population"
+          : "allocation_constraints";
+    return { worldSeed, seasonNumber: candidateSeason.seasonNumber, cause };
+  }
+  return undefined;
+}
+
+function sameSixCandidateFacts(
+  left: SuccessorCeilingIntakeSeasonFact["sixCandidateFacts"],
+  right: SuccessorCeilingIntakeSeasonFact["sixCandidateFacts"],
+): boolean {
+  return left.length === right.length && left.every((row, index) => {
+    const other = right[index];
+    return other !== undefined
+      && row.playerId === other.playerId
+      && row.clubId === other.clubId
+      && row.division === other.division;
+  });
+}
+
+function orderedMatchingKeys<Key extends string, Value>(
+  order: Readonly<Record<Key, number>>,
+  values: Readonly<Record<Key, readonly Value[]>>,
+  playerId: string,
+): Key[] {
+  return Object.entries(order)
+    .map(([key, rank]) => ({ key: key as Key, rank: Number(rank) }))
+    .toSorted((left, right) => left.rank - right.rank || left.key.localeCompare(right.key))
+    .filter(({ key }) => values[key].some((value) => String(value) === playerId))
+    .map(({ key }) => key);
 }
 
 function current16FunnelTransitions(input: Pick<

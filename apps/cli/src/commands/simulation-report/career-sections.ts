@@ -46,6 +46,7 @@ import {
   createCareerWorldFacts,
   type CareerWorldInspection,
   type CareerWorldFacts,
+  type SuccessorCeilingIntakeSeasonFact,
 } from "./career-world-facts.ts";
 import {
   readCareerSectionWorldCheckpointOutcome,
@@ -142,8 +143,14 @@ import {
 } from "./succession-priority-attribution.ts";
 import {
   evaluateProgressiveCurrent16FunnelCheckpoint,
+  evaluateSuccessorCeilingPairedCanary,
+  evaluateSuccessorCeilingPairedCheckpoint,
+  evaluateSuccessorPathwayCanary,
+  evaluateSuccessorPathwayCheckpoint,
   evaluateStationaryAgeSuccessionCheckpoint,
+  SuccessorPathwayObserver,
   type StationaryAgeSuccessionWorldInput,
+  type SuccessorPathwayWorldFacts,
 } from "./stationary-age-succession-attribution.ts";
 
 /** Career modules sharing one world execution. */
@@ -206,7 +213,9 @@ export type CareerCheckpointKind =
   | "generation_time_stationary_l6_29a"
   | "routine_youth_runway_l6_31"
   | "stationary_age_succession_l6_40"
-  | "progressive_current16_l6_42a";
+  | "progressive_current16_l6_42a"
+  | "successor_ceiling_l6_43"
+  | "successor_pathway_l6_43a";
 
 /** Versioned readers sharing the one product-versus-legacy contest producer. */
 export type StrengthContestMode = "canary" | "full" | "retry_canary" | "retry_full";
@@ -264,6 +273,8 @@ const CHECKPOINT_OBSERVES_GENERATIONAL_SUCCESSION = {
   routine_youth_runway_l6_31: true,
   stationary_age_succession_l6_40: true,
   progressive_current16_l6_42a: true,
+  successor_ceiling_l6_43: true,
+  successor_pathway_l6_43a: true,
 } as const satisfies Readonly<Record<CareerCheckpointKind, boolean>>;
 
 /** Keeps observer and checkpoint-section routing on one exhaustive policy. */
@@ -299,6 +310,8 @@ interface CareerWorldProjection {
   readonly renewalNeedEpisodes?: readonly RenewalNeedEpisodeFact[];
   readonly renewalPopulationSignatures?: readonly RenewalPopulationSeasonSignature[];
   readonly exceptionalStock?: PlayerGenerationExceptionalStockSummary;
+  readonly successorCeilingSeasons?: readonly SuccessorCeilingIntakeSeasonFact[];
+  readonly successorPathway?: SuccessorPathwayWorldFacts;
 }
 
 interface AcademyProspectClassProvenanceFact {
@@ -1188,6 +1201,51 @@ function successionCheckpointProfile(
   } as const;
 }
 
+function successorCeilingCheckpointProfile(
+  profile: {
+    readonly profileId: string;
+    readonly checkpointDirectoryPath: string;
+    readonly checkpointKind: CareerCheckpointKind;
+  },
+  arm: "control" | "candidate",
+) {
+  return {
+    profileId: `${profile.profileId}:${arm}`,
+    checkpointKind: profile.checkpointKind,
+    checkpointDirectoryPath: `${profile.checkpointDirectoryPath}/${arm}`,
+  } as const;
+}
+
+function successorCeilingProjectionInput(input: {
+  readonly seed: string;
+  readonly seasonCount: number;
+  readonly detail: SimulationReportDetail;
+  readonly sectionIds: readonly CareerSectionId[];
+  readonly enabled: boolean;
+  readonly collectPathway?: boolean;
+}) {
+  return {
+    seed: input.seed,
+    seasonCount: input.seasonCount,
+    detail: input.detail,
+    sectionIds: input.sectionIds,
+    leagueDiversity: true,
+    generationalSuccession: true,
+    ownerAttribution: true,
+    assistSupply: false,
+    renewalArchitecture: true,
+    standingsHierarchy: true,
+    marketTargeting: true,
+    analysisStrengthGapScale: 1.5,
+    collectSquadUse: false,
+    collectRenewalAnalysis: true,
+    collectStationaryAgeSuccession: true,
+    collectSuccessorCeiling: true,
+    collectSuccessorPathway: input.collectPathway === true,
+    useSuccessorCeilingStockPolicy: input.enabled,
+  } as const;
+}
+
 type SimulatedMatchEvent = NonNullable<
   NonNullable<SimulateSeasonResult["fixtures"][number]["result"]>["report"]
 >["events"][number];
@@ -1225,6 +1283,8 @@ export async function createCareerSectionsFacts(input: {
       readonly profileId: string;
       readonly checkpointDirectoryPath: string;
     };
+    readonly successorCeilingMode?: "canary" | "full";
+    readonly successorPathwayMode?: "canary" | "full";
   };
 }): Promise<CareerSectionsExecutionFacts> {
   const worlds = await executeCareerWorldBatch({
@@ -1240,6 +1300,9 @@ export async function createCareerSectionsFacts(input: {
             ? renewalCommonSupportCheckpointProfile(input.leagueDiversityProfile, "current")
             : input.leagueDiversityProfile.successionPriorityMode !== undefined
               ? successionCheckpointProfile(input.leagueDiversityProfile, "legacy_order")
+            : input.leagueDiversityProfile.successorCeilingMode !== undefined
+                || input.leagueDiversityProfile.successorPathwayMode !== undefined
+              ? successorCeilingCheckpointProfile(input.leagueDiversityProfile, "candidate")
             : input.leagueDiversityProfile.renewalRefinementMode === undefined
               ? input.leagueDiversityProfile
               : renewalRefinementCheckpointProfile(input.leagueDiversityProfile, "current"),
@@ -1251,6 +1314,17 @@ export async function createCareerSectionsFacts(input: {
           detail: input.detail,
           sectionIds: input.sectionIds,
           scenario: "legacy_order",
+        })
+      : input.leagueDiversityProfile?.successorCeilingMode !== undefined
+          || input.leagueDiversityProfile?.successorPathwayMode !== undefined
+      ? successorCeilingProjectionInput({
+          seed,
+          seasonCount: input.seasonCount,
+          detail: input.detail,
+          sectionIds: input.sectionIds,
+          enabled: true,
+          collectPathway:
+            input.leagueDiversityProfile?.successorPathwayMode !== undefined,
         })
       : input.leagueDiversityProfile?.renewalCommonSupportMode !== undefined
       ? renewalCommonSupportProjectionInput({
@@ -1400,6 +1474,28 @@ export async function createCareerSectionsFacts(input: {
           renewalRefinementMode: input.leagueDiversityProfile.renewalRefinementMode,
         },
       });
+  const successorCeilingControl =
+    input.leagueDiversityProfile?.successorCeilingMode === undefined
+      && input.leagueDiversityProfile?.successorPathwayMode === undefined
+      ? undefined
+      : await executeCareerWorldBatch({
+          worldSeeds: input.worldSeeds,
+          seasonCount: input.seasonCount,
+          workerCount: input.workerCount,
+          detail: input.detail,
+          sectionIds: input.sectionIds,
+          checkpointProfile: successorCeilingCheckpointProfile(
+            input.leagueDiversityProfile,
+            "control",
+          ),
+          projectionInput: (seed) => successorCeilingProjectionInput({
+            seed,
+            seasonCount: input.seasonCount,
+            detail: input.detail,
+            sectionIds: input.sectionIds,
+            enabled: false,
+          }),
+        });
   const independentOwnersObservation = input.leagueDiversityProfile?.independentOwnersMode === undefined
     ? undefined
     : await executeIndependentOwnersPurityShadow({
@@ -1517,6 +1613,36 @@ export async function createCareerSectionsFacts(input: {
       ? evaluateProgressiveCurrent16FunnelCheckpoint(
           worlds.map(requiredStationaryAgeSuccessionFacts),
         )
+    : input.leagueDiversityProfile.checkpointKind === "successor_ceiling_l6_43"
+      ? input.leagueDiversityProfile.successorCeilingMode === "canary"
+        ? evaluateSuccessorCeilingPairedCanary({
+            control: requiredSuccessorCeilingWorlds(successorCeilingControl),
+            candidate: requiredSuccessorCeilingWorlds(worlds),
+          })
+        : evaluateSuccessorCeilingPairedCheckpoint({
+            control: requiredSuccessorCeilingWorlds(successorCeilingControl),
+            candidate: requiredSuccessorCeilingWorlds(worlds),
+            seasonCount: input.seasonCount,
+            controlIntegratedFailedGateKeys:
+              evaluateIntegratedPlayerWorldL6_2Checkpoint(
+                requiredCareerWorlds(successorCeilingControl),
+                input.seasonCount,
+              ).failedGateKeys,
+            candidateIntegratedFailedGateKeys:
+              evaluateIntegratedPlayerWorldL6_2Checkpoint(worlds, input.seasonCount)
+                .failedGateKeys,
+          })
+    : input.leagueDiversityProfile.checkpointKind === "successor_pathway_l6_43a"
+      ? input.leagueDiversityProfile.successorPathwayMode === "canary"
+        ? evaluateSuccessorPathwayCanary({
+            control: requiredSuccessorCeilingWorlds(successorCeilingControl),
+            candidate: requiredSuccessorPathwayWorlds(worlds),
+          })
+        : evaluateSuccessorPathwayCheckpoint({
+            control: requiredSuccessorCeilingWorlds(successorCeilingControl),
+            candidate: requiredSuccessorPathwayWorlds(worlds),
+            seasonCount: input.seasonCount,
+          })
     : input.leagueDiversityProfile.checkpointKind === "renewal_common_support_l6_1c"
       ? evaluateRenewalCommonSupportCheckpoint(
           requiredRenewalCommonSupportObservation(renewalCommonSupportObservation),
@@ -1833,7 +1959,10 @@ function createCareerWorldProjection(input: {
   readonly maximumActiveTalksOverride?: number;
   readonly aiMarketNeedSubmissionOrder?: "legacy" | "bounded_succession";
   readonly useRoutineYouthStationaryRunway?: boolean;
+  readonly useSuccessorCeilingStockPolicy?: boolean;
   readonly collectStationaryAgeSuccession?: boolean;
+  readonly collectSuccessorCeiling?: boolean;
+  readonly collectSuccessorPathway?: boolean;
 }): CareerWorldProjection {
   const requested = new Set(input.sectionIds);
   const observedSeasons: ObservedSeason[] = [];
@@ -1844,6 +1973,10 @@ function createCareerWorldProjection(input: {
   const renewalNeedEpisodes: RenewalNeedEpisodeFact[] = [];
   const renewalPopulationSnapshots: RenewalPopulationSnapshot[] = [];
   const academyProspectClasses: AcademyProspectClassProvenanceFact[] = [];
+  const successorCeilingSeasons: SuccessorCeilingIntakeSeasonFact[] = [];
+  const successorPathwayObserver = input.collectSuccessorPathway
+    ? new SuccessorPathwayObserver(input.seed)
+    : undefined;
   const generationalObserver = input.generationalSuccession
     ? new GenerationalSuccessionObserver(input.seed)
     : undefined;
@@ -1903,6 +2036,12 @@ function createCareerWorldProjection(input: {
         : {
             useRoutineYouthStationaryRunway:
               input.useRoutineYouthStationaryRunway,
+          }),
+      ...(input.useSuccessorCeilingStockPolicy === undefined
+        ? {}
+        : {
+            useSuccessorCeilingStockPolicy:
+              input.useSuccessorCeilingStockPolicy,
           }),
       ...(input.leagueDiversity
         ? {
@@ -2029,6 +2168,11 @@ function createCareerWorldProjection(input: {
         }
       },
       observeSeasonAdvancement: ({ seasonNumber, previousCareerState, careerState, facts }) => {
+        successorPathwayObserver?.observeAdvancement({
+          seasonNumber,
+          careerState,
+          facts,
+        });
         generationalObserver?.observeAdvancement({
           seasonNumber,
           previousCareerState,
@@ -2105,6 +2249,16 @@ function createCareerWorldProjection(input: {
                     .digest("hex"),
                 });
               }
+            },
+          }
+        : {}),
+      ...(input.collectSuccessorCeiling
+        ? {
+            observeSuccessorCeilingIntake: (
+              fact: SuccessorCeilingIntakeSeasonFact,
+            ) => {
+              successorCeilingSeasons.push(fact);
+              successorPathwayObserver?.observeIntake(fact);
             },
           }
         : {}),
@@ -2222,6 +2376,10 @@ function createCareerWorldProjection(input: {
     ...(input.collectStationaryAgeSuccession
       ? { exceptionalStock: report.playerEconomyAudit.youngExceptionalStock }
       : {}),
+    ...(input.collectSuccessorCeiling ? { successorCeilingSeasons } : {}),
+    ...(successorPathwayObserver === undefined
+      ? {}
+      : { successorPathway: successorPathwayObserver.facts() }),
   };
 }
 
@@ -3096,6 +3254,39 @@ function requiredStationaryAgeSuccessionFacts(
     renewalNeedEpisodes: world.renewalNeedEpisodes,
     exceptionalStock: world.exceptionalStock,
   };
+}
+
+function requiredCareerWorlds(
+  worlds: readonly CareerWorldProjection[] | undefined,
+): readonly CareerWorldProjection[] {
+  if (worlds === undefined) throw new Error("L6.43 omitted its paired control arm");
+  return worlds;
+}
+
+function requiredSuccessorCeilingWorlds(
+  worlds: readonly CareerWorldProjection[] | undefined,
+) {
+  return requiredCareerWorlds(worlds).map((world) => {
+    if (world.successorCeilingSeasons === undefined) {
+      throw new Error(`Career world ${world.seed} omitted L6.43 ceiling facts`);
+    }
+    return {
+      ...requiredStationaryAgeSuccessionFacts(world),
+      successorCeilingSeasons: world.successorCeilingSeasons,
+    };
+  });
+}
+
+function requiredSuccessorPathwayWorlds(
+  worlds: readonly CareerWorldProjection[] | undefined,
+) {
+  return requiredSuccessorCeilingWorlds(worlds).map((world, index) => {
+    const projection = requiredCareerWorlds(worlds)[index];
+    if (projection?.successorPathway === undefined) {
+      throw new Error(`Career world ${world.owner.worldSeed} omitted L6.43A pathway facts`);
+    }
+    return { ...world, pathway: projection.successorPathway };
+  });
 }
 
 function requiredAssistSupplyFacts(world: CareerWorldProjection): AssistSupplyWorldFacts {
@@ -4611,6 +4802,7 @@ function checkpointPasses(checkpoint: unknown): boolean {
     return squadUseLane?.decision === "GO" && hierarchyLane?.decision === "GO";
   }
   return row.decision === "GO"
+    || row.decision === "CANARY_GO"
     || row.decision === "OWNER_IDENTIFIED"
     || row.decision === "OWNERS_IDENTIFIED";
 }

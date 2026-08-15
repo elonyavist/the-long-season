@@ -3,6 +3,8 @@ import { longRunGateStatus } from "./long-run-gate-status.ts";
 import { createHash } from "node:crypto";
 import { isMainThread, parentPort, Worker, workerData } from "node:worker_threads";
 import {
+  annualCeilingAssignmentPlayerKeys,
+  annualCeilingUnfilledVacancyCount,
   createAnnualWorldIntakeCandidateProviders,
   createFakeDomesticWorld,
   resolveRareProdigyCurrentRatingGuardrail,
@@ -44,6 +46,7 @@ import {
   type CareerActivePlayerStockEntry,
   type FormationKey,
   type LineupSlot,
+  type PlayerPotentialProjection,
   type RoleWeightProfile,
   type SimulateSeasonInput,
   type SimulateSeasonTeamInput,
@@ -213,6 +216,36 @@ export interface Phase80APotentialOutcomeCalibration {
  * `observeSeasonResult` fires for the selected competition only, before the
  * post-season career refresh, and must stay read-only.
  */
+export interface SuccessorCeilingIntakeSeasonFact {
+  readonly seasonNumber: number;
+  readonly activeFiveOrBetterCount: number;
+  readonly targetFiveOrBetterCount: number;
+  readonly fiveAssignmentCount: number;
+  readonly unfilledFiveVacancyCount: number;
+  readonly activeSixCount: number;
+  readonly targetSixCount: number;
+  readonly sixAssignmentCount: number;
+  readonly unfilledSixVacancyCount: number;
+  readonly clubCapRefusalCount: number;
+  readonly reconciliationFailureCount: number;
+  readonly activeSixPlayerIds: readonly string[];
+  readonly sixCandidateFacts: readonly {
+    readonly playerId: string;
+    readonly clubId: string;
+    readonly division: string;
+  }[];
+  readonly sixAssignmentPlayerIds: readonly string[];
+  readonly selectedPlayers: readonly {
+    readonly playerId: string;
+    readonly clubId: string;
+    readonly role: string;
+    readonly developmentEnvironment: string;
+    readonly minimumRating: 5 | 6;
+    /** Canonical dated projection; no report-local potential formula. */
+    readonly projection: PlayerPotentialProjection;
+  }[];
+}
+
 export interface CareerWorldInspection {
   /** Let the canonical AI selector choose from the whole catalog each fixture. */
   readonly selectCatalogFormation?: boolean;
@@ -229,6 +262,8 @@ export interface CareerWorldInspection {
    * false reconstructs the exact pre-runway academy generation path.
    */
   readonly useRoutineYouthStationaryRunway?: boolean;
+  /** Analysis-only L6.43A arm; undefined keeps the pre-L6.43 product. */
+  readonly useSuccessorCeilingStockPolicy?: boolean;
   /**
    * Analysis-only 06B19 factorial arm. This is orchestration metadata, never
    * saved game state; Phase 81A closeout owns removal of both switches.
@@ -296,6 +331,10 @@ export interface CareerWorldInspection {
     readonly careerState: CliCareerState;
     readonly candidates: AnnualWorldIntakeProviderDiagnostics["generatedYouthProspectClasses"];
   }) => void;
+  /** Reads the canonical annual ceiling allocation after accepted-player reconciliation. */
+  readonly observeSuccessorCeilingIntake?: (
+    fact: SuccessorCeilingIntakeSeasonFact,
+  ) => void;
 }
 
 export interface LongRunRetainedSeasonResult {
@@ -4674,6 +4713,12 @@ function advanceCareerForReport(
           useRoutineYouthStationaryRunway:
             inspection.useRoutineYouthStationaryRunway,
         }),
+    ...(inspection?.useSuccessorCeilingStockPolicy === undefined
+      ? {}
+      : {
+          useSuccessorCeilingStockPolicy:
+            inspection.useSuccessorCeilingStockPolicy,
+        }),
     ...(inspection?.renewalAblationPolicy === undefined
       ? {}
       : {
@@ -4795,19 +4840,90 @@ function advanceCareerForReport(
     careerState: advanced.careerState,
     candidates: acceptedProspectClasses,
   });
-  if (
-    annualIntakeDiagnostics.allocation.potentialSixPlayerKeys.some(
-      (id) => !acceptedYouthIds.has(id),
-    )
-  ) {
+  if (annualIntakeDiagnostics.allocation.assignments.some(
+    ({ playerKey }) => !acceptedYouthIds.has(playerKey),
+  )) {
     throw new Error(
-      `Exceptional annual intake was generated but not accepted in season ${context.seasonNumber}`,
+      `Ceiling-assigned annual intake was generated but not accepted in season ${context.seasonNumber}`,
     );
   }
+  const selectedCeilingPlayers = annualIntakeDiagnostics.allocatedCeilingPlacements
+    .map(({ candidate, minimumRating }) => {
+      const generatedAssignment =
+        annualIntakeDiagnostics.generatedCeilingAssignments.find(
+          ({ playerId: generatedId }) => String(generatedId) === candidate.playerKey,
+        );
+      const selectedPlayer = generatedAssignment === undefined
+        ? undefined
+        : advanced.careerState.gameState.players[generatedAssignment.playerId];
+      if (
+        selectedPlayer === undefined
+        || generatedAssignment === undefined
+        || selectedPlayer.primaryRole === undefined
+      ) {
+        throw new Error(`Accepted ceiling assignment lost player ${candidate.playerKey}`);
+      }
+      const projection = derivePlayerPotentialProjection({
+        player: selectedPlayer,
+        currentDate: advanced.careerState.gameState.calendar.currentDate,
+        policy: valuationConfig.potentialProjectionPolicy,
+        ratingScale: valuationConfig.ratingScale,
+      });
+      return {
+        playerId: candidate.playerKey,
+        clubId: candidate.clubKey,
+        role: selectedPlayer.primaryRole,
+        developmentEnvironment: candidate.developmentEnvironment,
+        minimumRating,
+        projection,
+      };
+    })
+    .toSorted((left, right) => left.playerId.localeCompare(right.playerId));
+  const fiveAssignmentPlayerIds = annualCeilingAssignmentPlayerKeys(
+    annualIntakeDiagnostics.allocation,
+    5,
+  );
   const allocatedStoredCeilingSixPlayerIds =
-    annualIntakeDiagnostics.allocation.potentialSixPlayerKeys.map(String);
+    annualCeilingAssignmentPlayerKeys(annualIntakeDiagnostics.allocation, 6);
   const generatedStoredCeilingSixPlayerIds =
-    annualIntakeDiagnostics.generatedStoredCeilingSixPlayerIds.map(String);
+    annualIntakeDiagnostics.generatedCeilingAssignments
+      .filter(({ minimumRating }) => minimumRating === 6)
+      .map(({ playerId }) => String(playerId))
+      .toSorted();
+  inspection?.observeSuccessorCeilingIntake?.({
+    seasonNumber: context.seasonNumber,
+    activeFiveOrBetterCount:
+      annualIntakeDiagnostics.allocation.activeYoungPotentialFiveOrBetterCount,
+    targetFiveOrBetterCount:
+      annualIntakeDiagnostics.allocation.targetActiveYoungPotentialFiveOrBetterCount,
+    fiveAssignmentCount: fiveAssignmentPlayerIds.length,
+    unfilledFiveVacancyCount: annualCeilingUnfilledVacancyCount(
+      annualIntakeDiagnostics.allocation,
+      5,
+    ),
+    activeSixCount: annualIntakeDiagnostics.allocation.activeYoungPotentialSixCount,
+    targetSixCount: annualIntakeDiagnostics.allocation.targetActiveYoungPotentialSixCount,
+    sixAssignmentCount: allocatedStoredCeilingSixPlayerIds.length,
+    unfilledSixVacancyCount: annualCeilingUnfilledVacancyCount(
+      annualIntakeDiagnostics.allocation,
+      6,
+    ),
+    clubCapRefusalCount:
+      annualIntakeDiagnostics.allocation.fiveStarClubCapRefusalCount,
+    reconciliationFailureCount: 0,
+    activeSixPlayerIds: annualIntakeDiagnostics.activeSixPlayers
+      .map(({ playerKey }) => playerKey)
+      .toSorted(),
+    sixCandidateFacts: annualIntakeDiagnostics.exceptionalCandidates
+      .map((candidate) => ({
+        playerId: candidate.playerKey,
+        clubId: candidate.clubKey,
+        division: candidate.division,
+      }))
+      .toSorted((left, right) => left.playerId.localeCompare(right.playerId)),
+    sixAssignmentPlayerIds: allocatedStoredCeilingSixPlayerIds,
+    selectedPlayers: selectedCeilingPlayers,
+  });
   const seasonIndex = context.seasonNumber;
   const postRolloverObservations = phase80AActiveCareerObservations({
     seed: worldSeed,
@@ -4825,17 +4941,17 @@ function advanceCareerForReport(
     careerState: advanced.careerState,
     observations: postRolloverObservations,
     entryClubAssociationByPlayerId: new Map(
-      annualIntakeDiagnostics.allocatedStoredCeilingSixPlacements.map(
-        ({ playerKey, clubKey, division, clubTier }) => [
-          playerKey,
+      annualIntakeDiagnostics.allocatedCeilingPlacements
+        .filter(({ minimumRating }) => minimumRating === 6)
+        .map(({ candidate }) => [
+          candidate.playerKey,
           {
             kind: "club" as const,
-            clubId: clubKey,
-            category: division,
-            competitiveTier: clubTier,
+            clubId: candidate.clubKey,
+            category: candidate.division,
+            competitiveTier: candidate.clubTier,
           },
-        ],
-      ),
+        ]),
     ),
   });
   exceptionalStockSnapshots.push(stockSnapshot);
