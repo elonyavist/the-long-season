@@ -16,6 +16,23 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
+- `PHASE_81A_CHECKPOINT_L6_42_CURRENT16_LIFECYCLE.md` -
+  **`OWNER_IDENTIFIED: observed_ceiling_supply`.** The progressive funnel is
+  `1885 -> 1041 -> 22 -> 13 -> 13`: observed ceiling supply owns `1019/1872`
+  failures and the like-aged cross-check agrees in `7/7` worlds. Opening elite
+  retention is not an owner.
+- `PHASE_81A_CHECKPOINT_L6_41_ROLE_AWARE_AGING.md` - **`STOP_RETHINK`.** The
+  control reproduced L6.40; the candidate missed its intended role/resilience
+  directions, increased opening elite stock, reduced generated elite stock and
+  added an upset failure. Candidate and analysis seam removed.
+- `PHASE_81A_CHECKPOINT_L6_40_STATIONARY_AGE_AND_SUCCESSION.md` -
+  **`OWNERS_IDENTIFIED`.** Opening-stock retention and successor flow hold in
+  `7/7` worlds; succession timing is not an owner (`431/432` viable transitions
+  had at least a season of warning).
+- `PHASE_81A_EMERGENT_SQUAD_AGE_AND_SUCCESSION_AMENDMENT.md` - **accepted A13;
+  Step 16I Done, Step 16J rejected and removed.** One shared football model,
+  opening competition-level age variety and state-derived AI succession; no
+  permanent club-age identity.
 - `PHASE_81A_CHECKPOINT_L6_39_REACHABLE_POTENTIAL_U23_INTERACTION.md` -
   **`STOP / RETHINK`.** The combined arm improves common serious maximum
   current but halves generated current-16 supply, does not improve leadership

@@ -24,6 +24,7 @@ test("canonical integrated observation can omit only the paired-table lane", () 
   const facts = new OwnerAttributionObserver("canonical-integrated").facts();
 
   assert.deepEqual(facts.tableSeasons, []);
+  assert.deepEqual(facts.openingPlayers, []);
   assert.equal(facts.worldSeed, "canonical-integrated");
   assert.equal(facts.reconciliationFailureCount, 0);
 });

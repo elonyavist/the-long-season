@@ -476,6 +476,16 @@ test("role succession recruits the exact role through the canonical transfer pat
     playerLookup.set(id, aging);
     return id;
   });
+  const developmentStrikerId = buyerPlayers.find((id) =>
+    playerLookup.get(id)?.primaryRole === "striker"
+  );
+  assert.notEqual(developmentStrikerId, undefined);
+  const developmentStriker = playerLookup.get(developmentStrikerId!);
+  assert.notEqual(developmentStriker, undefined);
+  playerLookup.set(developmentStrikerId!, {
+    ...developmentStriker!,
+    birthDate: gameDate(20_000 - 19 * 365),
+  });
   const movableStriker = playerFixture(
     playerId("player:succession-striker"),
     "st",
@@ -488,13 +498,31 @@ test("role succession recruits the exact role through the canonical transfer pat
       ...balancedSeniorSquad("succession-seller"),
     ]),
   ]);
-  const needs = deriveAiMarketNeeds({ careerState, asOf: gameDate(20_000) });
+  const needs = deriveAiMarketNeeds({
+    careerState,
+    asOf: gameDate(20_000),
+    collectRoleSuccessionSnapshots: true,
+  });
   const need = needs.find(({ clubId: needClubId, target }) =>
+    needClubId === buyer && target.kind === "role" && target.role === "striker"
+  );
+  const ordinaryNeed = deriveAiMarketNeeds({
+    careerState,
+    asOf: gameDate(20_000),
+  }).find(({ clubId: needClubId, target }) =>
     needClubId === buyer && target.kind === "role" && target.role === "striker"
   );
 
   assert.notEqual(need, undefined);
+  assert.equal(ordinaryNeed?.roleSuccessionSnapshot, undefined);
   assert.deepEqual(need?.reasons, ["role_succession"]);
+  assert.equal(need?.roleSuccessionSnapshot?.incumbent.age, 33);
+  assert.equal(
+    need?.roleSuccessionSnapshot?.sameRoleAlternativeCount,
+    buyerPlayers.filter((id) => playerLookup.get(id)?.primaryRole === "striker").length - 1,
+  );
+  assert.equal(need?.roleSuccessionSnapshot?.bestDevelopmentAlternative?.age, 18);
+  assert.equal(need?.roleSuccessionSnapshot?.bestPrimeAgeAlternative, undefined);
   const result = advanceAiMarketLifecycle({
     careerState,
     fromDate: gameDate(20_000),
@@ -503,6 +531,7 @@ test("role succession recruits the exact role through the canonical transfer pat
       summer: [19_990, 20_050],
       winter: [20_200, 20_220],
     }),
+    collectRoleSuccessionSnapshots: true,
   });
 
   assert.equal(
@@ -511,8 +540,18 @@ test("role succession recruits the exact role through the canonical transfer pat
       && fact.target.kind === "role"
       && fact.target.role === "striker"
       && fact.event === "permanent_target_found"
+      && fact.roleSuccessionSnapshot === undefined
     ),
     true,
+  );
+  assert.equal(
+    result.diagnostics.find((fact) =>
+      fact.clubId === buyer
+      && fact.target.kind === "role"
+      && fact.target.role === "striker"
+      && fact.event === "need_evaluated"
+    )?.roleSuccessionSnapshot?.incumbent.playerId,
+    need?.roleSuccessionSnapshot?.incumbent.playerId,
   );
   assert.equal(
     result.facts.some((fact) =>

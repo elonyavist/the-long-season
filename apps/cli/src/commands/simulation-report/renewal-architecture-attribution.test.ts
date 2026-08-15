@@ -178,6 +178,7 @@ test("renewal episodes reopen after fulfillment and reconcile both total taxonom
   type EpisodeInput = Parameters<typeof renewalNeedEpisodesForSeason>[0];
   const buyer = "club:buyer" as EpisodeInput["diagnostics"][number]["clubId"];
   const target = "player:target" as EpisodeInput["lifecycleFacts"][number]["playerId"];
+  const incumbent = "player:incumbent" as EpisodeInput["lifecycleFacts"][number]["playerId"];
   const asGameDate = (value: number) => value as EpisodeInput["diagnostics"][number]["occurredOn"];
   const episodes = renewalNeedEpisodesForSeason({
     worldSeed: "world",
@@ -190,6 +191,20 @@ test("renewal episodes reopen after fulfillment and reconcile both total taxonom
         clubId: buyer,
         target: { kind: "role" as const, role: "striker" as const },
         event: "need_evaluated" as const,
+        ...(index === 0 ? {
+          roleSuccessionSnapshot: {
+            incumbent: {
+              playerId: incumbent,
+              age: 31,
+              currentAbility: 14,
+              p50Ability: 14,
+              upperAbility: 14,
+            },
+            planningFloor: 12.5,
+            sameRoleAlternativeCount: 1,
+          },
+          successionTargetPoolStage: "qualified_prime_age_loses_generic_score" as const,
+        } : {}),
         count: 1,
       },
       ...(index === 0 ? [{
@@ -220,7 +235,13 @@ test("renewal episodes reopen after fulfillment and reconcile both total taxonom
   ]);
   assert.equal(episodes[0]?.fulfilledPlayerId, target);
   assert.equal(episodes[0]?.terminalDate, 12);
+  assert.equal(episodes[0]?.roleSuccessionSnapshot?.incumbent.playerId, incumbent);
+  assert.equal(
+    episodes[0]?.successionTargetPoolStage,
+    "qualified_prime_age_loses_generic_score",
+  );
   assert.equal(episodes[1]?.fulfilledPlayerId, undefined);
+  assert.equal(Object.hasOwn(episodes[1] ?? {}, "successionTargetPoolStage"), false);
   assert.equal(evaluateRenewalNeedFunnel(episodes).reconciliationFailureCount, 0);
 });
 

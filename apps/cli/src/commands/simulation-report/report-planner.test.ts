@@ -64,6 +64,40 @@ describe("simulation-report planner", () => {
     });
   });
 
+  it("locks L6.40 to the fresh seven-world ten-season attribution population", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-stationary-age-succession-l6-40-7x10",
+      workerCount: 7,
+    });
+    expect(plan.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-stationary-age-succession-l6-40-oos-v1",
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+    });
+  });
+
+  it("locks L6.42 to the completed L6.40 seven-world cache population", () => {
+    const plan = createSimulationReportPlan({
+      profileId: "phase81a-progressive-current16-l6-42a-cached",
+      workerCount: 7,
+    });
+    expect(plan.measurementRequest).toMatchObject({
+      worldCount: 7,
+      seasonCount: 10,
+      workerCount: 7,
+      seedPrefix: "phase81a-stationary-age-succession-l6-40-oos-v1",
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+    });
+    expect(() => createSimulationReportPlan({
+      profileId: "phase81a-progressive-current16-l6-42a-cached",
+      seasonCount: 9,
+    })).toThrow(/refuses measurement overrides/);
+  });
+
   it("locks Checkpoint D2 to two seven-world sets, five historical seasons, and the tactical module", () => {
     const plan = createSimulationReportPlan({
       profileId: "phase81a-d2-specialised-own-squad-agency",

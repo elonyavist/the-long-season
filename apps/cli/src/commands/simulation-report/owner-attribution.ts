@@ -4,6 +4,7 @@ import {
   GENERATED_SQUAD_IDENTITY_KEYS,
   primaryRoleForPosition,
   type AnnualWorldRoleContinuityDiagnostics,
+  type FakeDomesticWorld,
   type GeneratedSquadIdentityKey,
 } from "@game/content";
 import {
@@ -154,6 +155,18 @@ export interface OwnerAttributionPlayerSeasonFact {
   readonly assists: number;
 }
 
+/** Opening player facts captured before the first career season mutates ownership. */
+export interface OwnerAttributionOpeningPlayerFact {
+  readonly competitionId: string;
+  readonly clubId: string;
+  readonly playerId: string;
+  readonly age: number;
+  readonly role: PlayerRole;
+  readonly currentAbility: number;
+  /** True only when content's canonical opening lineup contains this player. */
+  readonly openingStarter: boolean;
+}
+
 export interface OwnerAttributionSelectionLoadSeasonFact {
   readonly competitionId: string;
   readonly seasonNumber: number;
@@ -201,6 +214,8 @@ export interface OwnerAttributionClubIdentitySeasonFact {
 
 export interface OwnerAttributionWorldFacts {
   readonly worldSeed: string;
+  /** Absent only in cached cohorts created before L6.40. */
+  readonly openingPlayers?: readonly OwnerAttributionOpeningPlayerFact[];
   readonly tableSeasons: readonly OwnerAttributionTableSeasonFact[];
   readonly playerSeasons: readonly OwnerAttributionPlayerSeasonFact[];
   readonly selectionLoadSeasons: readonly OwnerAttributionSelectionLoadSeasonFact[];
@@ -340,6 +355,7 @@ export class OwnerAttributionObserver {
   private readonly seasonOneShapes = new Map<string, FormationKey>();
   private readonly intakeRoles = new Map<string, Readonly<Record<PlayerRole, number>>>();
   private readonly tableSeasons: OwnerAttributionTableSeasonFact[] = [];
+  private readonly openingPlayers: OwnerAttributionOpeningPlayerFact[] = [];
   private readonly playerSeasons: OwnerAttributionPlayerSeasonFact[] = [];
   private readonly selectionLoadSeasons: OwnerAttributionSelectionLoadSeasonFact[] = [];
   private readonly playerUseSeasons: OwnerAttributionPlayerUseSeasonFact[] = [];
@@ -363,7 +379,10 @@ export class OwnerAttributionObserver {
     this.includeSquadUse = options.includeSquadUse ?? false;
   }
 
-  public observeOpening(careerState: CliCareerState): void {
+  public observeOpening(
+    careerState: CliCareerState,
+    openingWorld?: Pick<FakeDomesticWorld, "lineupsByClubId">,
+  ): void {
     const registry = careerState.gameState.domesticCompetitionWorld;
     if (registry === undefined) throw new Error("L5.1 opening state has no domestic competition world");
     for (const competitionId of registry.competitionIds) {
@@ -383,6 +402,26 @@ export class OwnerAttributionObserver {
           if (player === undefined) throw new Error(`L5.1 opening player is missing: ${playerId}`);
           return player;
         });
+        const openingStarterIds = new Set(
+          openingWorld?.lineupsByClubId[clubId]?.map(({ playerId }) => playerId) ?? [],
+        );
+        for (const player of players) {
+          if (player.primaryRole === undefined) {
+            throw new Error(`L6.40 opening player role is missing: ${player.id}`);
+          }
+          this.openingPlayers.push({
+            competitionId: String(competitionId),
+            clubId: String(clubId),
+            playerId: String(player.id),
+            age: completedPlayerAge(
+              player.birthDate,
+              careerState.gameState.calendar.currentDate,
+            ),
+            role: player.primaryRole,
+            currentAbility: currentAbility(player),
+            openingStarter: openingStarterIds.has(player.id),
+          });
+        }
         this.openingRoles.set(String(clubId), roleVector(players.map(({ primaryRole }) => primaryRole)));
         this.openingAbilities.set(String(clubId), mean(players.map(currentAbility)));
         this.identities.set(String(clubId), identity.key);
@@ -437,6 +476,7 @@ export class OwnerAttributionObserver {
   public facts(): OwnerAttributionWorldFacts {
     return {
       worldSeed: this.worldSeed,
+      openingPlayers: this.openingPlayers,
       tableSeasons: this.tableSeasons,
       playerSeasons: this.playerSeasons,
       selectionLoadSeasons: this.selectionLoadSeasons,

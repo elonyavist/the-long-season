@@ -38,6 +38,7 @@ import {
   toSimulationReportJsonValue,
   type SimulationReportDetail,
   type SimulationReportJsonValue,
+  type PlayerGenerationExceptionalStockSummary,
 } from "@game/simulation-tools";
 
 import type { CliCareerState, CliPlayer } from "../career/types.ts";
@@ -139,6 +140,11 @@ import {
   type GeneratedPlayerLifecycleWorldFacts,
   type RoutineYouthRunwayArmWorldFacts,
 } from "./succession-priority-attribution.ts";
+import {
+  evaluateProgressiveCurrent16FunnelCheckpoint,
+  evaluateStationaryAgeSuccessionCheckpoint,
+  type StationaryAgeSuccessionWorldInput,
+} from "./stationary-age-succession-attribution.ts";
 
 /** Career modules sharing one world execution. */
 export const CAREER_SECTION_IDS = [
@@ -198,7 +204,9 @@ export type CareerCheckpointKind =
   | "renewal_ladder_l6_26"
   | "population_stationarity_l6_27"
   | "generation_time_stationary_l6_29a"
-  | "routine_youth_runway_l6_31";
+  | "routine_youth_runway_l6_31"
+  | "stationary_age_succession_l6_40"
+  | "progressive_current16_l6_42a";
 
 /** Versioned readers sharing the one product-versus-legacy contest producer. */
 export type StrengthContestMode = "canary" | "full" | "retry_canary" | "retry_full";
@@ -254,6 +262,8 @@ const CHECKPOINT_OBSERVES_GENERATIONAL_SUCCESSION = {
   population_stationarity_l6_27: true,
   generation_time_stationary_l6_29a: true,
   routine_youth_runway_l6_31: true,
+  stationary_age_succession_l6_40: true,
+  progressive_current16_l6_42a: true,
 } as const satisfies Readonly<Record<CareerCheckpointKind, boolean>>;
 
 /** Keeps observer and checkpoint-section routing on one exhaustive policy. */
@@ -288,6 +298,7 @@ interface CareerWorldProjection {
   readonly academyProspectClasses?: readonly AcademyProspectClassProvenanceFact[];
   readonly renewalNeedEpisodes?: readonly RenewalNeedEpisodeFact[];
   readonly renewalPopulationSignatures?: readonly RenewalPopulationSeasonSignature[];
+  readonly exceptionalStock?: PlayerGenerationExceptionalStockSummary;
 }
 
 interface AcademyProspectClassProvenanceFact {
@@ -1285,7 +1296,8 @@ export async function createCareerSectionsFacts(input: {
             || input.leagueDiversityProfile?.checkpointKind === "generated_leader_lane_l6_24"
             || input.leagueDiversityProfile?.checkpointKind === "renewal_ladder_l6_26"
             || input.leagueDiversityProfile?.checkpointKind === "generation_time_stationary_l6_29a"
-            || input.leagueDiversityProfile?.checkpointKind === "routine_youth_runway_l6_31",
+            || input.leagueDiversityProfile?.checkpointKind === "routine_youth_runway_l6_31"
+            || input.leagueDiversityProfile?.checkpointKind === "stationary_age_succession_l6_40",
           collectAcademyProspectClasses:
             input.leagueDiversityProfile?.checkpointKind === "academy_prospect_class_l6_20"
             || input.leagueDiversityProfile?.checkpointKind === "generated_player_lifecycle_l6_23"
@@ -1312,7 +1324,8 @@ export async function createCareerSectionsFacts(input: {
             || input.leagueDiversityProfile?.checkpointKind === "generated_leader_lane_l6_24"
             || input.leagueDiversityProfile?.checkpointKind === "renewal_ladder_l6_26"
             || input.leagueDiversityProfile?.checkpointKind === "generation_time_stationary_l6_29a"
-            || input.leagueDiversityProfile?.checkpointKind === "routine_youth_runway_l6_31",
+            || input.leagueDiversityProfile?.checkpointKind === "routine_youth_runway_l6_31"
+            || input.leagueDiversityProfile?.checkpointKind === "stationary_age_succession_l6_40",
           standingsHierarchy:
             input.leagueDiversityProfile?.checkpointKind === "standings_hierarchy_l5_2"
             || input.leagueDiversityProfile?.checkpointKind === "integrated_player_world_l5_4"
@@ -1349,7 +1362,10 @@ export async function createCareerSectionsFacts(input: {
             input.leagueDiversityProfile?.checkpointKind === "renewal_refinement_l6_1a"
             || input.leagueDiversityProfile?.checkpointKind === "independent_owners_l6_1b",
           collectRenewalAnalysis:
-            input.leagueDiversityProfile?.checkpointKind === "renewal_refinement_l6_1a",
+            input.leagueDiversityProfile?.checkpointKind === "renewal_refinement_l6_1a"
+            || input.leagueDiversityProfile?.checkpointKind === "stationary_age_succession_l6_40",
+          collectStationaryAgeSuccession:
+            input.leagueDiversityProfile?.checkpointKind === "stationary_age_succession_l6_40",
           ...(input.leagueDiversityProfile?.renewalAblationArm === undefined
             ? {}
             : { renewalAblationArm: input.leagueDiversityProfile.renewalAblationArm }),
@@ -1492,6 +1508,14 @@ export async function createCareerSectionsFacts(input: {
           worlds,
           successionPriorityCandidate ?? [],
           input.seasonCount,
+        )
+    : input.leagueDiversityProfile.checkpointKind === "stationary_age_succession_l6_40"
+      ? evaluateStationaryAgeSuccessionCheckpoint(
+          worlds.map(requiredStationaryAgeSuccessionFacts),
+        )
+    : input.leagueDiversityProfile.checkpointKind === "progressive_current16_l6_42a"
+      ? evaluateProgressiveCurrent16FunnelCheckpoint(
+          worlds.map(requiredStationaryAgeSuccessionFacts),
         )
     : input.leagueDiversityProfile.checkpointKind === "renewal_common_support_l6_1c"
       ? evaluateRenewalCommonSupportCheckpoint(
@@ -1809,6 +1833,7 @@ function createCareerWorldProjection(input: {
   readonly maximumActiveTalksOverride?: number;
   readonly aiMarketNeedSubmissionOrder?: "legacy" | "bounded_succession";
   readonly useRoutineYouthStationaryRunway?: boolean;
+  readonly collectStationaryAgeSuccession?: boolean;
 }): CareerWorldProjection {
   const requested = new Set(input.sectionIds);
   const observedSeasons: ObservedSeason[] = [];
@@ -1842,10 +1867,10 @@ function createCareerWorldProjection(input: {
     input.seasonCount,
     createTranslator("en"),
     undefined,
-    (careerState) => {
+    (careerState, openingWorld) => {
       rememberPlayerNames(careerState, names);
       generationalObserver?.observeOpening(careerState);
-      ownerAttributionObserver?.observeOpening(careerState);
+      ownerAttributionObserver?.observeOpening(careerState, openingWorld);
     },
     {
       selectCatalogFormation: true,
@@ -1870,6 +1895,9 @@ function createCareerWorldProjection(input: {
       ...(input.aiMarketNeedSubmissionOrder === undefined
         ? {}
         : { aiMarketNeedSubmissionOrder: input.aiMarketNeedSubmissionOrder }),
+      ...(input.collectStationaryAgeSuccession
+        ? { collectRoleSuccessionSnapshots: true }
+        : {}),
       ...(input.useRoutineYouthStationaryRunway === undefined
         ? {}
         : {
@@ -2191,6 +2219,9 @@ function createCareerWorldProjection(input: {
       ? {}
       : { renewalNeedEpisodes }),
     ...(renewalPopulationSignatures === undefined ? {} : { renewalPopulationSignatures }),
+    ...(input.collectStationaryAgeSuccession
+      ? { exceptionalStock: report.playerEconomyAudit.youngExceptionalStock }
+      : {}),
   };
 }
 
@@ -3046,6 +3077,25 @@ function requiredOwnerAttributionFacts(world: CareerWorldProjection): OwnerAttri
     throw new Error(`Career world ${world.seed} omitted owner-attribution facts`);
   }
   return world.ownerAttribution;
+}
+
+function requiredStationaryAgeSuccessionFacts(
+  world: CareerWorldProjection,
+): StationaryAgeSuccessionWorldInput {
+  if (
+    world.ownerAttribution === undefined
+    || world.renewalArchitecture === undefined
+    || world.renewalNeedEpisodes === undefined
+    || world.exceptionalStock === undefined
+  ) {
+    throw new Error(`Career world ${world.seed} omitted L6.40 attribution facts`);
+  }
+  return {
+    owner: world.ownerAttribution,
+    architecture: world.renewalArchitecture,
+    renewalNeedEpisodes: world.renewalNeedEpisodes,
+    exceptionalStock: world.exceptionalStock,
+  };
 }
 
 function requiredAssistSupplyFacts(world: CareerWorldProjection): AssistSupplyWorldFacts {
@@ -4560,7 +4610,9 @@ function checkpointPasses(checkpoint: unknown): boolean {
   if (squadUseLane !== undefined || hierarchyLane !== undefined) {
     return squadUseLane?.decision === "GO" && hierarchyLane?.decision === "GO";
   }
-  return row.decision === "GO" || row.decision === "OWNER_IDENTIFIED";
+  return row.decision === "GO"
+    || row.decision === "OWNER_IDENTIFIED"
+    || row.decision === "OWNERS_IDENTIFIED";
 }
 
 function evaluateRenewalRefinementCheckpoint(

@@ -14,12 +14,12 @@ active step. Nothing else.
 Phases 0 through 81 are complete; what they delivered is in the code and
 `docs/audits/`.
 
-**Phase 81A - Contextual Tactical Agency - is Reopened after Step 16H.** L6.39
-tested truthful reachable potential with canonical U23 participation in four
-fresh paired `7 x 10` arms. Combined current-16 supply fell `16 -> 8`, generated
-leadership did not improve and age-33-plus output shares remained near `0.40`.
-Every candidate was removed. Current report:
-`docs/audits/PHASE_81A_CHECKPOINT_L6_39_REACHABLE_POTENTIAL_U23_INTERACTION.md`.
+**Phase 81A - Contextual Tactical Agency - remains Reopened after Step 16K1.**
+L6.41 rejected and removed role-aware aging. L6.42A now identifies the precise
+current-product owner: observed ceiling supply. Its funnel is
+`1885 generated -> 1041 senior-observed -> 22 ceiling-16 -> 13 current-16 ->
+13 retained`; opening elite retention is not an owner (`71/447`). Current
+report: `docs/audits/PHASE_81A_CHECKPOINT_L6_42_CURRENT16_LIFECYCLE.md`.
 
 The former contract/free-agent/background-fixture plan is Phase 81B, Ready but
 entry-blocked under
@@ -28,12 +28,12 @@ Step 01 is next and Step 07 closes on a `750 x 10` with exactly `7` workers.
 
 ## Next Action
 
-- L6.39: about `19.6m` U23 minutes plus truthful potential improve common
-  serious maximum current but not renewal. Current-product season ten contains
-  roughly `92` opening current-16 seniors against `16` generated current-16
-  players across seven First Divisions; generated elites already average about
-  `30.7` starts. Next: decompose stationary elite stock, annual successor flow
-  and exceptional-stock allocation before changing behaviour.
+- Open only the observed-ceiling-supply owner. The next gameplay proposal must
+  increase structurally reachable current-16 ceilings without origin bonuses,
+  generic growth, protected minutes or the rejected aging policy.
+- Keep `844/1885` players with no senior observation as a separate secondary
+  loss. It is not allowed to displace the majority ceiling owner (`1019/1872`,
+  coherent in `6/7` worlds).
 - No generic growth, U23 retry, synthetic external pool or direct age/output
   malus is authorized.
 - Phase 81A's final fresh `7 x 2` is byte-identical at closeout; L6.31 remains

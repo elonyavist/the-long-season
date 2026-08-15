@@ -1,7 +1,9 @@
-import type {
-  AiMarketDiagnosticFact,
-  AiMarketDiagnosticReason,
-  AiMarketLifecycleFact,
+import {
+  AI_SUCCESSION_TARGET_POOL_STAGES,
+  type AiRoleSuccessionNeedSnapshot,
+  type AiMarketDiagnosticFact,
+  type AiMarketDiagnosticReason,
+  type AiMarketLifecycleFact,
 } from "@game/engine";
 
 import type { CliPlayer } from "../career/types.ts";
@@ -46,6 +48,10 @@ export interface RenewalNeedEpisodeFact {
   readonly role: RenewalNeedRole;
   readonly needEpisodeOrdinal: number;
   readonly firstAppearanceDate: number;
+  /** First canonical need-time context; later rosters cannot reconstruct it. */
+  readonly roleSuccessionSnapshot?: AiRoleSuccessionNeedSnapshot;
+  /** Strongest target-pool stage reached by this episode. */
+  readonly successionTargetPoolStage?: AiMarketDiagnosticFact["successionTargetPoolStage"];
   readonly maximumStage: RenewalNeedStage;
   readonly terminalOutcome: RenewalNeedTerminalOutcome;
   /** Exact acquired player; present only when the lifecycle fulfilled this episode. */
@@ -131,6 +137,8 @@ interface MutableRenewalNeedEpisode {
   readonly role: RenewalNeedRole;
   readonly needEpisodeOrdinal: number;
   readonly firstAppearanceDate: number;
+  roleSuccessionSnapshot?: AiRoleSuccessionNeedSnapshot;
+  successionTargetPoolStage?: AiMarketDiagnosticFact["successionTargetPoolStage"];
   maximumStage: RenewalNeedStage;
   lastReason?: AiMarketDiagnosticReason;
   terminalOutcome?: RenewalNeedTerminalOutcome;
@@ -204,6 +212,19 @@ export function renewalNeedEpisodesForSeason(input: {
         diagnosticStage(event.fact),
       );
       if (event.fact.reason !== undefined) episode.lastReason = event.fact.reason;
+      if (
+        episode.roleSuccessionSnapshot === undefined
+        && event.fact.roleSuccessionSnapshot !== undefined
+      ) {
+        episode.roleSuccessionSnapshot = event.fact.roleSuccessionSnapshot;
+      }
+      const successionTargetPoolStage = laterSuccessionTargetPoolStage(
+        episode.successionTargetPoolStage,
+        event.fact.successionTargetPoolStage,
+      );
+      if (successionTargetPoolStage !== undefined) {
+        episode.successionTargetPoolStage = successionTargetPoolStage;
+      }
       continue;
     }
     const role = input.playerRoleById[String(event.fact.playerId)];
@@ -254,6 +275,19 @@ export function renewalNeedEpisodesForSeason(input: {
       ...episode,
       terminalOutcome: terminalOutcome ?? "recruitment_impossible",
     }));
+}
+
+function laterSuccessionTargetPoolStage(
+  current: AiMarketDiagnosticFact["successionTargetPoolStage"],
+  candidate: AiMarketDiagnosticFact["successionTargetPoolStage"],
+): AiMarketDiagnosticFact["successionTargetPoolStage"] {
+  if (candidate === undefined) return current;
+  if (current === undefined) return candidate;
+  const currentIndex = AI_SUCCESSION_TARGET_POOL_STAGES.indexOf(current);
+  const candidateIndex = AI_SUCCESSION_TARGET_POOL_STAGES.indexOf(candidate);
+  return candidateIndex >= currentIndex
+    ? candidate
+    : current;
 }
 
 /** Aggregates the episode table and proves both stage and terminal totals reconcile. */

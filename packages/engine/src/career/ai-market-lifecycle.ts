@@ -81,6 +81,31 @@ export type AiMarketNeedTarget =
   | { readonly kind: "department"; readonly department: PlayerSquadDepartment }
   | { readonly kind: "role"; readonly role: PlayerRole };
 
+/** Public, decision-time player facts retained only for succession attribution. */
+export interface AiSuccessionPlayerSnapshot {
+  readonly playerId: PlayerId;
+  readonly age: number;
+  readonly currentAbility: number;
+  readonly p50Ability: number;
+  readonly upperAbility: number;
+}
+
+/**
+ * Minimal non-derivable context for one exact-role succession need.
+ *
+ * The market report cannot rebuild this from a later roster after transfers,
+ * releases and development. Keeping only the incumbent and the two strongest
+ * public alternatives avoids copying the whole candidate population.
+ */
+export interface AiRoleSuccessionNeedSnapshot {
+  readonly incumbent: AiSuccessionPlayerSnapshot;
+  /** Existing exact-role public quality floor used by target qualification. */
+  readonly planningFloor: number;
+  readonly sameRoleAlternativeCount: number;
+  readonly bestPrimeAgeAlternative?: AiSuccessionPlayerSnapshot;
+  readonly bestDevelopmentAlternative?: AiSuccessionPlayerSnapshot;
+}
+
 /** Derives the broad squad floor owned by one total market target. */
 export function aiMarketTargetDepartment(
   target: AiMarketNeedTarget,
@@ -103,6 +128,8 @@ export interface AiMarketNeed {
   readonly expiringContractCount: number;
   readonly wageLoadRatio: number;
   readonly canRecruit: boolean;
+  /** Present only for an exact-role succession need; never read by selection. */
+  readonly roleSuccessionSnapshot?: AiRoleSuccessionNeedSnapshot;
 }
 
 /** Submission order used only to preserve the measured Phase 81A control. */
@@ -254,6 +281,8 @@ export interface AiMarketDiagnosticFact {
   readonly successionTargetPoolStage?: AiSuccessionTargetPoolStage;
   /** Whether the competition transfer window was open for this observation. */
   readonly transferWindowOpen?: boolean;
+  /** Decision-time context copied from the need; observation only. */
+  readonly roleSuccessionSnapshot?: AiRoleSuccessionNeedSnapshot;
   /** Number of identical observations compacted into this row. */
   readonly count: number;
 }
@@ -315,6 +344,8 @@ export function deriveAiMarketNeeds(input: {
   readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
   /** Analysis-only pre-06B16 market semantics; Phase 81A closeout removes it. */
   readonly useRoleSuccessionNeeds?: boolean;
+  /** Observation-only L6.40 context; ordinary career paths leave it disabled. */
+  readonly collectRoleSuccessionSnapshots?: boolean;
 }): readonly AiMarketNeed[] {
   return deriveAiMarketNeedsFromAssessments({
     ...input,
@@ -324,6 +355,7 @@ export function deriveAiMarketNeeds(input: {
       input.valuationConfig,
     ),
     useRoleSuccessionNeeds: input.useRoleSuccessionNeeds !== false,
+    collectRoleSuccessionSnapshots: input.collectRoleSuccessionSnapshots === true,
   });
 }
 
@@ -333,6 +365,7 @@ function deriveAiMarketNeedsFromAssessments(input: {
   readonly assessmentByPlayerId: ReadonlyMap<PlayerId, PublicPlayerAssessment>;
   readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
   readonly useRoleSuccessionNeeds: boolean;
+  readonly collectRoleSuccessionSnapshots: boolean;
 }): readonly AiMarketNeed[] {
   const contracts = activeContractsByPlayer(input.careerState);
   const needs: AiMarketNeed[] = [];
@@ -462,6 +495,15 @@ function deriveAiMarketNeedsFromAssessments(input: {
       const assessments = players.map((player) =>
         requiredAssessment(input.assessmentByPlayerId, player.id)
       );
+      const roleSuccessionSnapshot = input.collectRoleSuccessionSnapshots
+        ? deriveRoleSuccessionNeedSnapshot({
+            agingIncumbents,
+            assessments,
+            assessmentByPlayerId: input.assessmentByPlayerId,
+            planningFloor: average(assessments.map(({ currentAbility }) => currentAbility))
+              - input.marketBehaviorPolicy.aiLifecycle.weakestQualityGap,
+          })
+        : undefined;
       needs.push({
         clubId,
         target: { kind: "role", role },
@@ -478,6 +520,7 @@ function deriveAiMarketNeedsFromAssessments(input: {
           clubId,
           input.marketBehaviorPolicy,
         ),
+        ...(roleSuccessionSnapshot === undefined ? {} : { roleSuccessionSnapshot }),
       });
     }
   }
@@ -513,6 +556,8 @@ export function advanceAiMarketLifecycle(input: {
   readonly useRoleSuccessionNeeds?: boolean;
   /** Analysis-only legacy ordering control; Phase 81A closeout removes it. */
   readonly needSubmissionOrder?: AiMarketNeedSubmissionOrder;
+  /** Observation-only L6.40 context; Phase 81A closeout owns removal. */
+  readonly collectRoleSuccessionSnapshots?: boolean;
 }): AdvanceAiMarketLifecycleResult {
   if (
     input.throughDate <= input.fromDate
@@ -531,6 +576,9 @@ export function advanceAiMarketLifecycle(input: {
         ...(input.useRoleSuccessionNeeds === undefined
           ? {}
           : { useRoleSuccessionNeeds: input.useRoleSuccessionNeeds }),
+        ...(input.collectRoleSuccessionSnapshots === undefined
+          ? {}
+          : { collectRoleSuccessionSnapshots: input.collectRoleSuccessionSnapshots }),
       }),
     };
   }
@@ -561,6 +609,7 @@ export function advanceAiMarketLifecycle(input: {
       marketBehaviorPolicy: input.marketBehaviorPolicy,
       useRoleSuccessionNeeds: input.useRoleSuccessionNeeds !== false,
       needSubmissionOrder: input.needSubmissionOrder ?? "legacy",
+      collectRoleSuccessionSnapshots: input.collectRoleSuccessionSnapshots === true,
     });
     careerState = submitted.careerState;
     facts.push(...submitted.facts);
@@ -597,6 +646,9 @@ export function advanceAiMarketLifecycle(input: {
       ...(input.useRoleSuccessionNeeds === undefined
         ? {}
         : { useRoleSuccessionNeeds: input.useRoleSuccessionNeeds }),
+      ...(input.collectRoleSuccessionSnapshots === undefined
+        ? {}
+        : { collectRoleSuccessionSnapshots: input.collectRoleSuccessionSnapshots }),
     }),
   };
 }
@@ -905,6 +957,7 @@ function submitDueAiMarketTalks(input: {
   readonly marketBehaviorPolicy: MarketBehaviorCalibrationConfig;
   readonly useRoleSuccessionNeeds: boolean;
   readonly needSubmissionOrder: AiMarketNeedSubmissionOrder;
+  readonly collectRoleSuccessionSnapshots: boolean;
 }): {
   readonly careerState: CareerState;
   readonly facts: readonly AiMarketLifecycleFact[];
@@ -924,6 +977,7 @@ function submitDueAiMarketTalks(input: {
     assessmentByPlayerId,
     marketBehaviorPolicy: input.marketBehaviorPolicy,
     useRoleSuccessionNeeds: input.useRoleSuccessionNeeds,
+    collectRoleSuccessionSnapshots: input.collectRoleSuccessionSnapshots,
   });
   const opportunityNeeds = deriveEliteProspectOpportunityNeeds({
     careerState,
@@ -2233,6 +2287,9 @@ function diagnosticFact(
     ...(reason === undefined ? {} : { reason }),
     ...(playerId === undefined ? {} : { playerId }),
     ...(successionTargetPoolStage === undefined ? {} : { successionTargetPoolStage }),
+    ...(event !== "need_evaluated" || need.roleSuccessionSnapshot === undefined
+      ? {}
+      : { roleSuccessionSnapshot: need.roleSuccessionSnapshot }),
     count: 1,
   };
 }
@@ -2251,12 +2308,121 @@ function accumulateDiagnosticFacts(
       fact.playerId ?? "",
       fact.successionTargetPoolStage ?? "",
       fact.transferWindowOpen === true ? "open" : "closed",
+      successionSnapshotKey(fact.roleSuccessionSnapshot),
     ].join("|");
     const previous = accumulator.get(key);
     accumulator.set(key, previous === undefined
       ? fact
       : { ...previous, count: previous.count + fact.count });
   }
+}
+
+function successionPlayerSnapshot(
+  assessment: PublicPlayerAssessment,
+): AiSuccessionPlayerSnapshot {
+  return {
+    playerId: assessment.playerId,
+    age: assessment.age,
+    currentAbility: assessment.currentAbility,
+    p50Ability: assessment.p50Ability,
+    upperAbility: assessment.upperAbility,
+  };
+}
+
+function deriveRoleSuccessionNeedSnapshot(input: {
+  readonly agingIncumbents: readonly Player[];
+  readonly assessments: readonly PublicPlayerAssessment[];
+  readonly assessmentByPlayerId: ReadonlyMap<PlayerId, PublicPlayerAssessment>;
+  readonly planningFloor: number;
+}): AiRoleSuccessionNeedSnapshot {
+  const incumbent = input.agingIncumbents.reduce((best, candidate) => {
+    const bestAssessment = requiredAssessment(input.assessmentByPlayerId, best.id);
+    const candidateAssessment = requiredAssessment(input.assessmentByPlayerId, candidate.id);
+    return candidateAssessment.currentAbility > bestAssessment.currentAbility
+      || (
+        candidateAssessment.currentAbility === bestAssessment.currentAbility
+        && String(candidate.id).localeCompare(String(best.id)) < 0
+      )
+      ? candidate
+      : best;
+  });
+  const incumbentAssessment = requiredAssessment(
+    input.assessmentByPlayerId,
+    incumbent.id,
+  );
+  const alternatives = input.assessments.filter(
+    ({ playerId }) => playerId !== incumbent.id,
+  );
+  return {
+    incumbent: successionPlayerSnapshot(incumbentAssessment),
+    planningFloor: input.planningFloor,
+    sameRoleAlternativeCount: alternatives.length,
+    ...optionalBestSuccessionAlternative(
+      "bestPrimeAgeAlternative",
+      alternatives.filter(({ age }) => age >= 21 && age <= 29),
+    ),
+    ...optionalBestSuccessionAlternative(
+      "bestDevelopmentAlternative",
+      alternatives.filter(({ age }) => age < 21),
+    ),
+  };
+}
+
+function optionalBestSuccessionAlternative<
+  Key extends "bestPrimeAgeAlternative" | "bestDevelopmentAlternative",
+>(
+  key: Key,
+  assessments: readonly PublicPlayerAssessment[],
+): Readonly<Partial<Record<Key, AiSuccessionPlayerSnapshot>>> {
+  const best = assessments.reduce<PublicPlayerAssessment | undefined>(
+    (current, candidate) => {
+      if (current === undefined) return candidate;
+      return candidate.upperAbility > current.upperAbility
+        || (
+          candidate.upperAbility === current.upperAbility
+          && candidate.p50Ability > current.p50Ability
+        )
+        || (
+          candidate.upperAbility === current.upperAbility
+          && candidate.p50Ability === current.p50Ability
+          && candidate.currentAbility > current.currentAbility
+        )
+        || (
+          candidate.upperAbility === current.upperAbility
+          && candidate.p50Ability === current.p50Ability
+          && candidate.currentAbility === current.currentAbility
+          && String(candidate.playerId).localeCompare(String(current.playerId)) < 0
+        )
+        ? candidate
+        : current;
+    },
+    undefined,
+  );
+  return (best === undefined ? {} : { [key]: successionPlayerSnapshot(best) }) as
+    Readonly<Partial<Record<Key, AiSuccessionPlayerSnapshot>>>;
+}
+
+function successionSnapshotKey(
+  snapshot: AiRoleSuccessionNeedSnapshot | undefined,
+): string {
+  if (snapshot === undefined) return "";
+  const playerKey = (player: AiSuccessionPlayerSnapshot | undefined) =>
+    player === undefined
+      ? ""
+      : [
+          player.playerId,
+          player.age,
+          player.currentAbility,
+          player.p50Ability,
+          player.upperAbility,
+        ].join(":");
+  return [
+    playerKey(snapshot.incumbent),
+    snapshot.sameRoleAlternativeCount,
+    snapshot.planningFloor,
+    playerKey(snapshot.bestPrimeAgeAlternative),
+    playerKey(snapshot.bestDevelopmentAlternative),
+  ].join("/");
 }
 
 function isTransferWindowOpen(windows: SeasonTransferWindows, date: GameDate): boolean {

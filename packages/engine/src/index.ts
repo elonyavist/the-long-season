@@ -40,6 +40,8 @@ export {
   type AiMarketNeedReason,
   type AiMarketNeedTarget,
   type AiMarketNeedSubmissionOrder,
+  type AiRoleSuccessionNeedSnapshot,
+  type AiSuccessionPlayerSnapshot,
   type AiSuccessionTargetPoolStage,
   type AiTransferAffordabilitySnapshot,
   type DeriveAiTransferAffordabilitySnapshotInput,

@@ -241,6 +241,8 @@ export interface CareerWorldInspection {
   };
   /** Analysis-only L6.5 order arm; Phase 81A closeout removes the legacy case. */
   readonly aiMarketNeedSubmissionOrder?: "legacy" | "bounded_succession";
+  /** Observation-only L6.40 succession context; ordinary reports do no work. */
+  readonly collectRoleSuccessionSnapshots?: boolean;
   /** Receives each completed selected-competition season. */
   readonly observeSeasonResult?: (context: {
     readonly seasonNumber: number;
@@ -1379,7 +1381,10 @@ export function createCareerWorldFacts(
     rows: readonly CliPlayerParticipationRow[],
     careerState: CliCareerState,
   ) => void,
-  observeOpeningCareerState?: (careerState: CliCareerState) => void,
+  observeOpeningCareerState?: (
+    careerState: CliCareerState,
+    openingWorld: FakeDomesticWorld,
+  ) => void,
   inspection?: CareerWorldInspection,
 ): CareerWorldFacts {
   const league = createFakeDomesticWorld({
@@ -1398,7 +1403,7 @@ export function createCareerWorldFacts(
         }),
   });
   const initialCareerState = careerStateFromNewWorld("save:simulation-report" as CliSaveId, league, seed);
-  observeOpeningCareerState?.(initialCareerState);
+  observeOpeningCareerState?.(initialCareerState, league);
   const annualIntakeObservations: PlayerGenerationAnnualIntakeObservation[] = [];
   const canonicalFreeAgentSigningObservations:
     PlayerGenerationFreeAgentSigningObservation[] = [];
@@ -4718,6 +4723,9 @@ function advanceCareerForReport(
     ...(inspection?.aiMarketNeedSubmissionOrder === undefined
       ? {}
       : { aiMarketNeedSubmissionOrder: inspection.aiMarketNeedSubmissionOrder }),
+    ...(inspection?.collectRoleSuccessionSnapshots === undefined
+      ? {}
+      : { collectRoleSuccessionSnapshots: inspection.collectRoleSuccessionSnapshots }),
     playerDevelopmentEnvironmentConfig: selectPlayerDevelopmentEnvironmentConfig(
       careerStateWithParticipation.gameState.meta.calibrationVersions,
     ),

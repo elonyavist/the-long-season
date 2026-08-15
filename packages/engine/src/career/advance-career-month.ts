@@ -70,6 +70,8 @@ export interface AdvanceCareerMonthsInput {
   readonly useRoleSuccessionMarketNeeds?: boolean;
   /** Analysis-only Phase 81A legacy-order control; closeout owns removal. */
   readonly aiMarketNeedSubmissionOrder?: "legacy" | "bounded_succession";
+  /** Observation-only L6.40 succession facts; ordinary careers leave it off. */
+  readonly collectRoleSuccessionSnapshots?: boolean;
 }
 
 /** Structured diagnostic for one applied season/month checkpoint. */
@@ -169,6 +171,9 @@ export function advanceCareerMonths(input: AdvanceCareerMonthsInput): AdvanceCar
         ...(input.aiMarketNeedSubmissionOrder === undefined
           ? {}
           : { needSubmissionOrder: input.aiMarketNeedSubmissionOrder }),
+        ...(input.collectRoleSuccessionSnapshots === undefined
+          ? {}
+          : { collectRoleSuccessionSnapshots: input.collectRoleSuccessionSnapshots }),
       });
   const careerStateAfterMarket = marketLifecycle?.careerState ?? careerStateAfterContracts;
   if (input.toDate <= fromDate) {

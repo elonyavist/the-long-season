@@ -28,9 +28,22 @@ remaining reachable-potential x canonical-U23 interaction in four fresh paired
 arms. Combined current-16 supply fell to `8` against control `16`, leadership
 did not improve and age-33-plus output shares remained near `0.40`; every
 candidate was removed. Generic growth, more U23 minutes and direct age/output
-penalties remain forbidden. Stationary elite stock versus annual successor
-flow is the next attribution question.
+penalties remain forbidden. Step 16I then identified an aggregate stock/flow
+problem; Step 16J's role-aware aging candidate moved both sides in the wrong
+direction and was removed. Steps 16K/16K1 now locate the precise owner at
+observed ceiling supply; opening elite retention is not an owner under the
+player-level test.
 Phase 81B remains unstarted and blocked until the absolute finding is resolved.
+
+Amendment A13 is accepted and Step 16I is **Done** with
+`OWNERS_IDENTIFIED`. Step 16J is **Done** with `STOP_RETHINK`: control reproduced
+L6.40, while the candidate increased opening current-16 stock `91 -> 98`,
+reduced generated current-16 stock `15 -> 10`, missed its role/resilience gates
+and added an upset failure. No candidate code remains. Step 16K stopped an
+invalid terminal-reachability premise; Step 16K1 is **Done** with
+`OWNER_IDENTIFIED: observed_ceiling_supply`. Only `22/1041` senior-observed
+generated players carry an observed current-16 ceiling. The next gameplay step
+may open only that owner.
 
 ## Historical Execution Record
 
@@ -450,6 +463,10 @@ contexts; it never owns the analytic diversity gate.
 | 16F | [Reachable-potential compression owner](16f-checkpoint-l6-37-reachable-potential-compression-owner.md) | no | Done: owner identified |
 | 16G | [Shared reachable-potential policy](16g-shared-reachable-potential-policy-and-paired-checkpoint.md) | yes | Done: `STOP / RETHINK`; removed |
 | 16H | [Reachable potential x U23 participation](16h-reachable-potential-u23-participation-interaction.md) | yes | Done: `STOP / RETHINK`; removed |
+| 16I | [Stationary age and succession attribution](16i-checkpoint-l6-40-stationary-age-and-succession-attribution.md) | no | Done: `OWNERS_IDENTIFIED` |
+| 16J | [Role-aware late-career aging](16j-role-aware-late-career-aging-and-paired-checkpoint.md) | yes | Done: `STOP_RETHINK`; removed |
+| 16K | [Current-16 lifecycle owner](16k-checkpoint-l6-42-current16-lifecycle-owner.md) | no | Done: `STOP_INSTRUMENT` |
+| 16K1 | [Progressive current-16 funnel](16k1-checkpoint-l6-42a-progressive-current16-funnel.md) | no | Done: `OWNER_IDENTIFIED` |
 
 No later step starts while its preceding checkpoint is unresolved.
 

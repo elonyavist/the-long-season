@@ -180,6 +180,8 @@ export interface AdvanceCareerOneSeasonInput {
   readonly useRoleSuccessionMarketNeeds?: boolean;
   /** Analysis-only Phase 81A legacy-order control; never persisted. */
   readonly aiMarketNeedSubmissionOrder?: "legacy" | "bounded_succession";
+  /** Observation-only L6.40 succession facts; ordinary careers leave it off. */
+  readonly collectRoleSuccessionSnapshots?: boolean;
 }
 
 /** Stable operation keys emitted to let tests and reports verify ordering. */
@@ -555,6 +557,9 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
     ...(input.aiMarketNeedSubmissionOrder === undefined
       ? {}
       : { aiMarketNeedSubmissionOrder: input.aiMarketNeedSubmissionOrder }),
+    ...(input.collectRoleSuccessionSnapshots === undefined
+      ? {}
+      : { collectRoleSuccessionSnapshots: input.collectRoleSuccessionSnapshots }),
   });
   if (monthlyLifecycle.marketLifecycle !== undefined) {
     operationOrder.push("ai_market_lifecycle");
