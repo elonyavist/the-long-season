@@ -191,8 +191,8 @@ pnpm cli ten-season-report \
 - Write the Phase 81 report with delivered behaviour, code/refactor removals,
   verification, manual inspection, warnings, residual monitors, and an explicit
   statement that this cohort observed no loans and no races.
-- Write the background-world handoff, now owned by Phase 81B. It is scoped in
-  `docs/steps/81b-season-anchored-contracts-free-agent-economy-and-background-fixtures/`,
+- Write the background-world handoff, now owned by Phase 81C. It is scoped in
+  `docs/steps/81c-season-clock-contracts-and-complete-domestic-world/`,
   so the handoff confirms its entry gate rather than restating its scope:
   the carried monitor is inside band, the four seams below exist, and no loan,
   posture, or race behaviour was introduced.
@@ -270,7 +270,7 @@ graphify update .
 | `goals_per_match_avg` inside its unchanged band at cohort scale, beside the inherited `36/634/80` | **met** - `2.670` mean, `2.740` p95, `0/50` failing; F1 |
 | The report states plainly that this cohort observed no loans and no races | **met** |
 | Phase 81 is complete | **met**, with the line above recorded as not met rather than claimed |
-| Phase 81A is the only next owner; Phase 81B background seams are named | **met** |
+| Phase 81A is the only next owner; Phase 81C background seams are named | **met** |
 | Phase 79 Step 14 remains unrun and unclaimed | **met** - and two of its checks are named in its own step document by this step |
 
 ## Handoff, 2026-08-07
@@ -280,7 +280,7 @@ modified here. The working tree carried no change between the run and the replay
 which is what makes the one-line report diff a proof of determinism rather than of
 luck.
 
-Phase 81B's background-world entry evidence is confirmed: the carried monitor
+Phase 81C's background-world entry evidence is confirmed: the carried monitor
 is inside band at cohort scale, no loan, posture or race behaviour exists, and
 the four seams it consumes are in
 place - the named squad-depth accessor, the context constructor taking an explicit

@@ -16,10 +16,33 @@ Do not read every report in this directory before every step. Most reports are h
 
 Read these only when the current step asks for current long-run readiness context:
 
-- `PHASE_81A_DEVELOPMENT_REALIZATION_RECOVERY_CONTRACT.md` - **active after
-  L6.43A.** Observation-only monthly L6.43B separates expected ceiling,
-  ceiling loss, late opportunity and conversion rate; L6.43C may change only
-  its demonstrated owner and preserves a majority of failed prospects.
+- **Phase 81A is closed with `STOP_RETHINK`.** Its succession hypothesis is
+  falsified: special five/six-star lanes over a mutable `Player.potential`
+  cannot resolve generational renewal. L6.43B below is the last valid evidence;
+  **L6.44 is not run** and Steps 16M-C/16N are `superseded_not_executed`. The
+  structural answer is Phase 81B. These artifacts are evidence of the old model,
+  never targets for the new one.
+- `PHASE_81A_L6_43B_PREFLIGHT_FINDINGS.md` **(new)** - **L6.43B is complete:
+  `OWNER_IDENTIFIED: expected_ceiling_below_16_at_intake`, `173/173`, `7/7`
+  worlds.** Thirteen findings with evidence and a falsification condition each.
+  The decisive ones: the exposure denominator counts the eight development
+  months a season the lifecycle actually closes, not twelve calendar months;
+  the intake projection **overstates** outcomes by `+1.55`; the ceiling is lost
+  around age `19`, `152/154` of them before sustained exposure; and five-star is
+  a rating band `[16, 16.5)`, so its ceilings are `16.01..16.49` by definition
+  while the elite-capable tail lives in the six-star lane at `17.02..19.75`.
+  **The five-star correction branches are withdrawn**; the next work is a
+  report-only measurement of the six-star lane in Phase 81B Step 00.
+- `PHASE_81A_DEVELOPMENT_REALIZATION_RECOVERY_CONTRACT.md` - **active through
+  L6.43B, which is now complete.** Observation-only monthly L6.43B ran `7 x 15`
+  and separated six exclusive loss states plus two non-failure outcomes,
+  `right_censored_at_horizon` and `recovered_before_judgement`; neither may name
+  an owner and both are excluded from every owner denominator. The judgement
+  curve is a frozen snapshot so a candidate cannot move its own judgement age,
+  window or exposure denominator. L6.43C may change only a demonstrated owner,
+  preserves a majority of failed prospects, and is gated on the canonical
+  age-composition targets as well as succession. The `0.20..0.50` conversion
+  band is a frozen product hypothesis and no output may move it.
 - `PHASE_81A_CHECKPOINT_L6_43A_SUCCESSOR_PATHWAY.md` -
   **`OWNER_IDENTIFIED: development_realization`.** Of `424` closed selected-
   prospect windows, `173` reach senior use and `900` minutes but not current

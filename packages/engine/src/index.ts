@@ -309,6 +309,7 @@ export {
   type FixtureParticipationSideContext,
 } from "./career/player-participation.ts";
 export {
+  completedPlayerAgeAtDevelopmentMonth,
   derivePlayerDevelopmentEnvironmentEvidence,
   developPlayersFromParticipationRows,
   monthlyDevelopmentVariance,
@@ -322,7 +323,9 @@ export {
   type PlayerDevelopmentErrorCode,
   type PlayerDevelopmentEnvironmentEvidence,
   type PlayerDevelopmentResult,
+  type PlayerDevelopmentBucketMargin,
   type PlayerMonthlyDevelopmentChange,
+  type PlayerMonthlyDevelopmentObservation,
 } from "./career/player-development.ts";
 export {
   applyPlayerAgingPolicy,
@@ -332,12 +335,14 @@ export {
   type ApplyPlayerAgingPolicyResult,
 } from "./career/player-aging-policy.ts";
 export {
+  broadPositionGroup,
   environmentMultiplierFromBasisPoints,
   monthlyDevelopmentPolicy,
   monthlyGrowthAgeMultiplier,
   monthlyOpportunityMultiplier,
   monthlyPerformanceModifier,
   type BroadPositionGroup,
+  type MonthlyDevelopmentParticipationFacts,
   type MonthlyDevelopmentPolicy,
   type MonthlyDevelopmentPolicyInput,
 } from "./career/player-development-policy.ts";

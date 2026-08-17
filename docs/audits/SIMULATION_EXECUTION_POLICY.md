@@ -58,7 +58,7 @@ The phase sequence has evolved since this policy was created; the worker
 contract has not. Phase 81 Step 15 completed its checkpointed `50 x 20` engine
 run. The remaining scheduled long runs are:
 
-- Phase 81B Step 07: world integrity, exactly `750 x 10`, `750` stable
+- Phase 81C Step 07: world integrity, exactly `750 x 10`, `750` stable
   one-world shards and exactly `7` workers;
 - Phase 82B Step 09: completed competitive market, `50 x 20`, `50` stable
   shards and exactly `7` workers.

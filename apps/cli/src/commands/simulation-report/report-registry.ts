@@ -141,6 +141,9 @@ export const SIMULATION_REPORT_PROFILE_IDS = [
   "phase81a-successor-ceiling-l6-43-paired-7x10",
   "phase81a-successor-pathway-l6-43a-paired-canary-7x1",
   "phase81a-successor-pathway-l6-43a-paired-7x10",
+  "phase81a-development-realization-l6-43b-canary-7x2",
+  "phase81a-development-realization-l6-43b-replay-7x10",
+  "phase81a-development-realization-l6-43b-7x15",
   "phase81a-renewal-ablation-l6-1-control-7x10",
   "phase81a-renewal-ablation-l6-1-market-7x10",
   "phase81a-renewal-ablation-l6-1-blueprint-7x10",
@@ -222,6 +225,9 @@ const CAREER_PROFILE_CHECKPOINT_KIND = {
   "phase81a-successor-ceiling-l6-43-paired-7x10": "successor_ceiling_l6_43",
   "phase81a-successor-pathway-l6-43a-paired-canary-7x1": "successor_pathway_l6_43a",
   "phase81a-successor-pathway-l6-43a-paired-7x10": "successor_pathway_l6_43a",
+  "phase81a-development-realization-l6-43b-canary-7x2": "development_realization_l6_43b",
+  "phase81a-development-realization-l6-43b-replay-7x10": "development_realization_l6_43b",
+  "phase81a-development-realization-l6-43b-7x15": "development_realization_l6_43b",
   "phase81a-renewal-ablation-l6-1-control-7x10": "renewal_ablation_l6_1",
   "phase81a-renewal-ablation-l6-1-market-7x10": "renewal_ablation_l6_1",
   "phase81a-renewal-ablation-l6-1-blueprint-7x10": "renewal_ablation_l6_1",
@@ -298,6 +304,19 @@ const CAREER_PROFILE_CACHE_SUFFIX = {
   "phase81a-successor-ceiling-l6-43-paired-7x10": "-facts-v1",
   "phase81a-successor-pathway-l6-43a-paired-canary-7x1": "-facts-v1",
   "phase81a-successor-pathway-l6-43a-paired-7x10": "-facts-v1",
+  // A cached world is matched on profile, seed, season count, detail and
+  // section ids only, so an inspection flag that adds or reshapes a projection
+  // field cannot invalidate it: this suffix is the only lever. v1 carried no
+  // observation rows at all; v2 carried them for a cohort widened by the
+  // six-star lane. Both are retired.
+  // v4 retires v3, which carried monthly rows but no cohort header and no
+  // record of the months the lifecycle actually closed. A world cached without
+  // those cannot produce them: the cache matches on profile, seed, world index,
+  // world count, season count, detail and section ids only, so a payload that
+  // gained fields is invisible to it and this suffix is the only lever.
+  "phase81a-development-realization-l6-43b-canary-7x2": "-facts-v4",
+  "phase81a-development-realization-l6-43b-replay-7x10": "-facts-v4",
+  "phase81a-development-realization-l6-43b-7x15": "-facts-v4",
   "phase81a-renewal-ablation-l6-1-control-7x10": "-facts-v2",
   "phase81a-renewal-ablation-l6-1-market-7x10": "-facts-v2",
   "phase81a-renewal-ablation-l6-1-blueprint-7x10": "-facts-v2",
@@ -1195,6 +1214,51 @@ export const SIMULATION_REPORT_PROFILES = {
       profileId: "phase81a-successor-pathway-l6-43a-paired-7x10",
       worldCount: 7,
       seasonCount: 10,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-successor-pathway-l6-43a-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-development-realization-l6-43b-canary-7x2": {
+    id: "phase81a-development-realization-l6-43b-canary-7x2",
+    titleKey: "simulationReport.profile.phase81aDevelopmentRealizationL6_43BReplay.title",
+    descriptionKey: "simulationReport.profile.phase81aDevelopmentRealizationL6_43BReplay.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-development-realization-l6-43b-canary-7x2",
+      worldCount: 7,
+      seasonCount: 2,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-successor-pathway-l6-43a-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-development-realization-l6-43b-replay-7x10": {
+    id: "phase81a-development-realization-l6-43b-replay-7x10",
+    titleKey: "simulationReport.profile.phase81aDevelopmentRealizationL6_43BReplay.title",
+    descriptionKey: "simulationReport.profile.phase81aDevelopmentRealizationL6_43BReplay.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-development-realization-l6-43b-replay-7x10",
+      worldCount: 7,
+      seasonCount: 10,
+      includedSectionIds: CAREER_SECTION_IDS,
+      detail: "diagnostic",
+      seedPrefix: "phase81a-successor-pathway-l6-43a-v1",
+      workerCount: 7,
+    },
+  },
+  "phase81a-development-realization-l6-43b-7x15": {
+    id: "phase81a-development-realization-l6-43b-7x15",
+    titleKey: "simulationReport.profile.phase81aDevelopmentRealizationL6_43B.title",
+    descriptionKey: "simulationReport.profile.phase81aDevelopmentRealizationL6_43B.description",
+    measurementRequest: {
+      mode: "profile",
+      profileId: "phase81a-development-realization-l6-43b-7x15",
+      worldCount: 7,
+      seasonCount: 15,
       includedSectionIds: CAREER_SECTION_IDS,
       detail: "diagnostic",
       seedPrefix: "phase81a-successor-pathway-l6-43a-v1",
@@ -2308,6 +2372,9 @@ async function leagueDiversityExecution(
     careerProfileId === "phase81a-successor-pathway-l6-43a-paired-canary-7x1"
       ? "canary" as const
       : careerProfileId === "phase81a-successor-pathway-l6-43a-paired-7x10"
+        || careerProfileId === "phase81a-development-realization-l6-43b-canary-7x2"
+        || careerProfileId === "phase81a-development-realization-l6-43b-replay-7x10"
+        || careerProfileId === "phase81a-development-realization-l6-43b-7x15"
         ? "full" as const
         : undefined;
   return {

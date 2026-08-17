@@ -10,6 +10,7 @@ import {
   type MarketBehaviorCalibrationConfig,
   type PlayerDevelopmentEnvironmentConfig,
   type PlayerDevelopmentMonthKey,
+  type PlayerId,
   type PlayerWagePolicyConfig,
   type PlayerParticipationRow,
   type SeasonTransferWindows,
@@ -23,6 +24,7 @@ import {
 import {
   developPlayersFromParticipationRows,
   type PlayerMonthlyDevelopmentChange,
+  type PlayerMonthlyDevelopmentObservation,
 } from "./player-development.ts";
 import {
   advanceAiContractLifecycle,
@@ -72,6 +74,16 @@ export interface AdvanceCareerMonthsInput {
   readonly aiMarketNeedSubmissionOrder?: "legacy" | "bounded_succession";
   /** Observation-only L6.40 succession facts; ordinary careers leave it off. */
   readonly collectRoleSuccessionSnapshots?: boolean;
+  /**
+   * Observation-only L6.43B seam retaining already-produced monthly changes.
+   *
+   * The monthly development rows exist regardless; the summary boundary
+   * normally aggregates them to counts and discards the per-player facts.
+   * Supplying player ids retains exactly those rows without recomputing any
+   * development, so an observed run and an unobserved run develop identically.
+   * Ordinary careers leave it off and the result carries no observation key.
+   */
+  readonly observeMonthlyDevelopmentForPlayerIds?: readonly PlayerId[];
 }
 
 /** Structured diagnostic for one applied season/month checkpoint. */
@@ -123,6 +135,14 @@ export interface AdvanceCareerMonthsResult {
   readonly contractLifecycle?: AdvanceAiContractLifecycleResult;
   /** AI market facts reached through canonical negotiations when windows were supplied. */
   readonly marketLifecycle?: AdvanceAiMarketLifecycleResult;
+  /**
+   * Retained canonical monthly changes for the observed players only.
+   *
+   * Present only when `observeMonthlyDevelopmentForPlayerIds` was supplied, so
+   * an unobserved result is structurally identical to one produced before this
+   * seam existed.
+   */
+  readonly monthlyDevelopmentObservations?: readonly PlayerMonthlyDevelopmentObservation[];
 }
 
 /**
@@ -176,12 +196,16 @@ export function advanceCareerMonths(input: AdvanceCareerMonthsInput): AdvanceCar
           : { collectRoleSuccessionSnapshots: input.collectRoleSuccessionSnapshots }),
       });
   const careerStateAfterMarket = marketLifecycle?.careerState ?? careerStateAfterContracts;
+  const observedPlayerIds = input.observeMonthlyDevelopmentForPlayerIds === undefined
+    ? undefined
+    : new Set(input.observeMonthlyDevelopmentForPlayerIds);
   if (input.toDate <= fromDate) {
     return {
       careerState: careerStateAfterMarket,
       summaries: [],
       ...(contractLifecycle === undefined ? {} : { contractLifecycle }),
       ...(marketLifecycle === undefined ? {} : { marketLifecycle }),
+      ...(observedPlayerIds === undefined ? {} : { monthlyDevelopmentObservations: [] }),
     };
   }
 
@@ -202,6 +226,7 @@ export function advanceCareerMonths(input: AdvanceCareerMonthsInput): AdvanceCar
       });
   let careerState = careerStateWithAcademyParticipation;
   const summaries: CareerMonthlyLifecycleSummary[] = [];
+  const monthlyDevelopmentObservations: PlayerMonthlyDevelopmentObservation[] = [];
 
   while (true) {
     const batch = selectNextPlayerParticipationDevelopmentBatch({
@@ -220,6 +245,9 @@ export function advanceCareerMonths(input: AdvanceCareerMonthsInput): AdvanceCar
       seasonId,
       participationRows: batch.rows,
       developmentEnvironmentConfig: input.playerDevelopmentEnvironmentConfig,
+      ...(input.observeMonthlyDevelopmentForPlayerIds === undefined
+        ? {}
+        : { observePlayerIds: input.observeMonthlyDevelopmentForPlayerIds }),
     });
     let playerParticipationLedger = developed.careerState.playerParticipationLedger;
     if (playerParticipationLedger === undefined) {
@@ -237,6 +265,10 @@ export function advanceCareerMonths(input: AdvanceCareerMonthsInput): AdvanceCar
       ...developed.careerState,
       playerParticipationLedger,
     });
+
+    if (developed.monthlyObservations !== undefined) {
+      monthlyDevelopmentObservations.push(...developed.monthlyObservations);
+    }
 
     for (const monthKey of batch.monthKeys) {
       summaries.push(monthlySummary({
@@ -258,6 +290,7 @@ export function advanceCareerMonths(input: AdvanceCareerMonthsInput): AdvanceCar
     summaries,
     ...(contractLifecycle === undefined ? {} : { contractLifecycle }),
     ...(marketLifecycle === undefined ? {} : { marketLifecycle }),
+    ...(observedPlayerIds === undefined ? {} : { monthlyDevelopmentObservations }),
   };
 }
 

@@ -2,6 +2,36 @@
 
 ## Status
 
+**Closed with `STOP_RETHINK`. L6.43B is the last valid evidence; L6.44 is not
+run.**
+
+The phase's succession hypothesis is falsified, not unfinished. An architecture
+built on special five/six-star generation lanes and a mutable `Player.potential`
+cannot resolve generational renewal coherently: that one field is simultaneously
+hidden truth, the source of the public forecast, the growth limit consumed by
+monthly development, and a value the aging policy compresses toward current
+ability. L6.43B measured the consequence end to end - conversion finishing at
+`99.9%` of a ceiling that had already descended, opportunity never denied,
+a forecast that **overstates** outcomes by `+1.55`, and a five-star lane whose
+`16.01..16.49` ceilings are the definition of its rating band.
+
+Steps 16M-C and 16N are `superseded_not_executed`. Neither is blocked or
+pending: 16M-C's every branch is withdrawn by the measurement that named its
+owner, and 16N cannot prove that an adopted policy survives when none was
+adopted. Neither is redefined to answer a different question, and no policy that
+was never adopted is simulated to produce an HTML world.
+
+**A phase closes correctly with `STOP_RETHINK` when its hypothesis is
+falsified.** The tactical-agency work this phase delivered stands; what fails is
+the succession model, and the structural answer moves to **Phase 81B**, which
+replaces the mutable potential and the special lanes rather than correcting a
+selection rule over them. The L6.43B artifacts remain evidence of the old model,
+never targets for the new one, and the locked L6.43B profile stays executable as
+that model's historical baseline until Phase 81B's own instrumentation replaces
+it.
+
+The reopening that led here, kept for provenance:
+
 **Reopened after Step 16H.** Checkpoint F recorded `GO` for the smaller option-B
 product accepted by Amendments A11/A12, but manual inspection of the current
 L6.31 HTML found an absolute late-career performer-age failure that its relative
@@ -38,9 +68,24 @@ rejected it: replacement parity `0/7`, generated leader share `0.2071`. Step
 closed selected-prospect windows, `173` reach senior use and `900` minutes but
 never current ability `16`; this owner is largest in `6/7` worlds. The failed
 stock remains analysis-only, the next correction may touch only development
-realization. Step 16M-B is Ready to separate the four mechanisms through an
-observation-only monthly replay of the exact `173`-player cohort; Step 16M-C
-and Step 16N remain blocked.
+realization. **Step 16M-B is Done** with `OWNER_IDENTIFIED:
+expected_ceiling_below_16_at_intake`, `173/173`, coherent in `7/7` worlds, over
+the exact `173`-player cohort at **fifteen** seasons, with `154` windows closed
+and `19` still open. It cleared conversion and opportunity as owners: core
+attributes finish at `99.9%` of ceiling and exposure runs `p50 0.81` with every
+player above the frozen `0.50`. The intake projection **overstates** outcomes by
+`+1.55`, so no candidate may raise it; the ceiling is lost around age `19`,
+`152/154` of them before sustained exposure.
+
+**The five-star correction branches in Step 16M-C are withdrawn rather than
+opened.** Five-star is a rating band `[16, 16.5)`, so the cohort's
+`16.01..16.49` ceilings are its definition and no selection rule over that lane
+could produce an elite player. The elite-capable tail exists in the same worlds
+and intakes as the six-star lane, `17.02..19.75`, which L6.43A deliberately
+excluded from attribution. The next work is a report-only measurement of that
+lane, judged per world under the `5/7` rule, in Phase 81B Step 00; no gameplay
+change is authorized before it. Step 16N remains blocked and runs at fifteen
+seasons.
 Phase 81B remains unstarted and blocked until the absolute finding is resolved.
 
 Amendment A13 is accepted and Step 16I is **Done** with
@@ -194,10 +239,10 @@ That contract owns the thesis, target values, measurement protocol, analytic
 definitions, and rejected alternatives. Step documents own only their local
 Implementation and handoff.
 
-The phase previously numbered 81A is now Phase 81B under
-[`81b-season-anchored-contracts-free-agent-economy-and-background-fixtures`](../81b-season-anchored-contracts-free-agent-economy-and-background-fixtures/README.md).
-No market, contract, free-agent, background-fixture, or simulate-match work moved
-into this phase.
+The next phase is the player career/population/recruitment engine under
+[`81b-player-career-trajectory-population-and-recruitment-engine`](../81b-player-career-trajectory-population-and-recruitment-engine/README.md).
+Season-clock contracts, complete background fixtures and `simulate-match` move
+to Phase 81C; this phase implements none of them.
 
 ## User-Facing Goal
 
@@ -216,7 +261,7 @@ evidence rather than hidden facts.
   `0.0064/0.0117` against a `0.0295` floor.
 - The three frozen `no_dominant_*` gates retain their original readers and
   `0.55` threshold.
-- Phase 81B, 82A and 82B are not started.
+- Phase 81B, Phase 81C, 82A and 82B are not started.
 - Phase 79 Steps 14-15 remain Reopened, paused, and unclaimed.
 
 ## Locked Product Contract
@@ -480,9 +525,9 @@ contexts; it never owns the analytic diversity gate.
 | 16L | [Structural successor-ceiling stock](16l-structural-successor-ceiling-stock.md) | yes | Done; focused `77/77` green |
 | 16M | [Paired successor renewal](16m-checkpoint-l6-43-paired-successor-renewal.md) | no | Done: `STOP_RETHINK`; candidate analysis-only |
 | 16M-A | [Selected-player pathway attribution](16ma-checkpoint-l6-43a-successor-pathway-attribution.md) | no | Done: `OWNER_IDENTIFIED: development_realization` |
-| 16M-B | [Development-realization mechanism](16mb-checkpoint-l6-43b-development-realization-mechanism.md) | no | Ready: observation-only monthly attribution |
-| 16M-C | [Owner correction and paired checkpoint](16mc-development-realization-owner-correction.md) | conditional | Blocked by 16M-B owner |
-| 16N | [Integrated successor HTML](16n-checkpoint-l6-44-integrated-successor-html.md) | no | Blocked by 16M-C GO |
+| 16M-B | [Development-realization mechanism](16mb-checkpoint-l6-43b-development-realization-mechanism.md) | no | Complete: `expected_ceiling_below_16_at_intake`, `173/173`, `7/7` |
+| 16M-C | [Owner correction and paired checkpoint](16mc-development-realization-owner-correction.md) | no | `superseded_not_executed`: every branch withdrawn, none pending |
+| 16N | [Integrated successor HTML](16n-checkpoint-l6-44-integrated-successor-html.md) | no | `superseded_not_executed`: L6.44 not run, no policy was adopted |
 
 No later step starts while its preceding checkpoint is unresolved.
 

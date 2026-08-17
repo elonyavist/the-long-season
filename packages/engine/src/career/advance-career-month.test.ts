@@ -24,6 +24,8 @@ import {
   type PlayerId,
 } from "@game/domain";
 
+import type { PlayerMonthlyDevelopmentObservation } from "./player-development.ts";
+import { monthlyDevelopmentPolicy } from "./player-development-policy.ts";
 import {
   advanceCareerMonths as advanceCareerMonthsWithPolicy,
   monthKeyForCareerDate,
@@ -327,3 +329,154 @@ function abilitySet(value: number): PlayerAbilities {
     },
   };
 }
+
+test("monthly development observation retains rows without changing development", () => {
+  const player = playerId("player:observed-growth");
+  const other = playerId("player:unobserved-growth");
+  const currentDate = gameDate(fromISO("2026-08-01"));
+  const monthKeys = ["2026-08", "2026-09", "2026-10"];
+  const toDate = gameDate(fromISO("2026-11-01"));
+  const state = careerStateWithParticipation({
+    currentDate,
+    player,
+    monthKeys,
+  });
+
+  const unobserved = advanceCareerMonths({
+    careerState: state,
+    worldSeed: "observation-world",
+    toDate,
+  });
+  const observed = advanceCareerMonths({
+    careerState: state,
+    worldSeed: "observation-world",
+    toDate,
+    observeMonthlyDevelopmentForPlayerIds: [player],
+  });
+
+  // The observed run must develop identically; only the retained payload differs.
+  assert.equal("monthlyDevelopmentObservations" in unobserved, false);
+  const { monthlyDevelopmentObservations, ...observedWithoutPayload } = observed;
+  assert.deepEqual(observedWithoutPayload, unobserved);
+
+  assert.deepEqual(
+    monthlyDevelopmentObservations?.map(({ change }) => change.monthKey),
+    monthKeys,
+  );
+  assert.equal(
+    monthlyDevelopmentObservations?.every(({ change }) => change.playerId === player),
+    true,
+  );
+
+  // Every observed month carries an exhaustive relevance-bucket split.
+  // A hard cap bounds growth rather than clamping a generated value, so a
+  // capped bucket may legitimately hold current above its effective potential.
+  for (const observation of monthlyDevelopmentObservations ?? []) {
+    assert.deepEqual(
+      observation.bucketMargins.map(({ bucket }) => bucket),
+      ["coreForRole", "secondaryForRole", "allowedButLow", "cappedOutOfRole"],
+    );
+    assert.equal(
+      observation.bucketMargins.reduce((sum, margin) => sum + margin.attributeCount, 0),
+      25,
+    );
+  }
+
+  // The retained rating facts must be exactly the ledger's, and sufficient on
+  // their own: recomposing the canonical policy input from the observation
+  // reproduces the policy derived from the ledger row itself, multiplier for
+  // multiplier. Minutes come from the change, so nothing is stored twice.
+  const ledgerRows = Object.values(state.playerParticipationLedger?.rows ?? {});
+  for (const observation of monthlyDevelopmentObservations ?? []) {
+    const row = ledgerRows.find(
+      (candidate) =>
+        candidate.playerId === observation.change.playerId
+        && candidate.monthKey === observation.change.monthKey,
+    );
+    assert.notEqual(row, undefined, observation.change.monthKey);
+    assert.equal(observation.ratingTotal, row!.ratingTotal);
+    assert.equal(observation.ratingSamples, row!.ratingSamples);
+
+    const policyInput = {
+      positionGroup: observation.change.positionGroup,
+      age: observation.change.age,
+      positiveGrowthEnvironmentBasisPoints:
+        observation.change.positiveGrowthEnvironmentBasisPoints,
+    } as const;
+    assert.deepEqual(
+      monthlyDevelopmentPolicy({
+        ...policyInput,
+        participation: {
+          minutes: observation.change.minutes,
+          ratingTotal: observation.ratingTotal,
+          ratingSamples: observation.ratingSamples,
+        },
+      }),
+      monthlyDevelopmentPolicy({ ...policyInput, participation: row! }),
+    );
+  }
+
+  // The split exists to expose relevance-proportional growth: per attribute,
+  // core must outgrow the lowest-relevance bucket over the same months.
+  const perAttributeGrowth = (bucket: string): number => {
+    const margin = (observation: PlayerMonthlyDevelopmentObservation) =>
+      observation.bucketMargins.find((entry) => entry.bucket === bucket)!;
+    const first = margin(monthlyDevelopmentObservations![0]!);
+    const last = margin(monthlyDevelopmentObservations!.at(-1)!);
+    return (last.currentTotal - first.currentTotal) / last.attributeCount;
+  };
+  assert.equal(perAttributeGrowth("coreForRole") > perAttributeGrowth("cappedOutOfRole"), true);
+
+  // Observing a player with no participation retains an empty payload rather
+  // than dropping the key, so the consumer's shape never depends on the data.
+  const empty = advanceCareerMonths({
+    careerState: state,
+    worldSeed: "observation-world",
+    toDate,
+    observeMonthlyDevelopmentForPlayerIds: [other],
+  });
+  assert.deepEqual(empty.monthlyDevelopmentObservations, []);
+});
+
+test("observation captures only months processed while it was requested", () => {
+  const player = playerId("player:late-observation");
+  const currentDate = gameDate(fromISO("2026-08-01"));
+  const firstBatch = ["2026-08", "2026-09", "2026-10"];
+  const secondBatch = ["2026-11", "2026-12", "2027-01"];
+  const state = careerStateWithParticipation({
+    currentDate,
+    player,
+    monthKeys: [...firstBatch, ...secondBatch],
+  });
+
+  // The first batch runs before the player is observed, exactly as a prospect
+  // assigned at a later season intake is developed before he is selected.
+  const beforeRequest = advanceCareerMonths({
+    careerState: state,
+    worldSeed: "late-observation-world",
+    toDate: gameDate(fromISO("2026-11-01")),
+  });
+  const afterRequest = advanceCareerMonths({
+    careerState: beforeRequest.careerState,
+    worldSeed: "late-observation-world",
+    fromDate: gameDate(fromISO("2026-11-01")),
+    toDate: gameDate(fromISO("2027-02-01")),
+    observeMonthlyDevelopmentForPlayerIds: [player],
+  });
+
+  const observedMonths = (afterRequest.monthlyDevelopmentObservations ?? [])
+    .map(({ change }) => change.monthKey);
+
+  // No month closed before the request may appear retroactively.
+  assert.deepEqual(observedMonths, secondBatch);
+  for (const monthKey of firstBatch) {
+    assert.equal(observedMonths.includes(monthKey), false);
+  }
+
+  // Every month closed while observing is captured exactly once.
+  assert.equal(new Set(observedMonths).size, observedMonths.length);
+  assert.equal(
+    observedMonths.length,
+    afterRequest.summaries.filter((summary) => summary.developmentChangeCount > 0).length,
+  );
+});

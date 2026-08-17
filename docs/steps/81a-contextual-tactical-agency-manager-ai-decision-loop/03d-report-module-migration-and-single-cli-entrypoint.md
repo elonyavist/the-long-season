@@ -484,7 +484,7 @@ surface before the first Step 03D production edit:
   `PHASE_81A_HARD_CAP_REACHABILITY_REPORT.md`,
   `PHASE_81_SEASON_RECAP_DESIGN.md`,
   `LONG_RUN_MANUAL_INSPECTION_GUIDE.md`, the Phase 81A README, this document,
-  `04-conserved-tactical-contributions.md`, and Phase 81B Step 07 - migrate
+  `04-conserved-tactical-contributions.md`, and Phase 81C Step 07 - migrate
   executable recipes, never historical outcomes.
 
 Historical step/audit files remain historical evidence and are not bulk-edited

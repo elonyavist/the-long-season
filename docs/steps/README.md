@@ -66,9 +66,10 @@ Provide an open, incremental, and iterative execution guide for the project: one
   phase's player-model scope, so the monitor transfers unchanged to Phase 81,
   which owns the match engine. Threshold, denominator, and severity class all
   stay as they are, and Phase 81 may not transfer it again.
-- Phase 81 is Done. Phase 81A is now the contextual tactical-agency successor;
-  the former Phase 81A contract/free-agent/background-fixture work is
-  renumbered Phase 81B. Market work remains Phase 82A and Phase 82B.
+- Phase 81 is Done. Phase 81A is the contextual tactical-agency successor.
+  The player-trajectory/population/recruitment engine is now planned as Phase
+  81B; season-clock contracts and the complete domestic world follow as Phase
+  81C. Market work remains Phase 82A and Phase 82B.
 - `docs/steps/80-graphical-and-structural-rework/`
 - Status: Done. All nine steps are complete and the phase handed control to
   Phase 80A on 2026-07-31.
@@ -146,51 +147,54 @@ Provide an open, incremental, and iterative execution guide for the project: one
   cohort belongs to Phase 81 Step 15 and must use checkpoints, `50` stable
   shards, and exactly `7` workers.
 
-## Completed Rework Continuation
+## Reopened Rework Continuation
 
 - `docs/steps/81a-contextual-tactical-agency-manager-ai-decision-loop/`
-- Status: Done. Checkpoint F accepted the smaller option-B product without
-  relabelling the failed structural/materiality gates. Club role identity drives
-  formation variety; pre-match AI uses its own available squad; live AI reacts
-  to match state; canonical tactical facts and chapters survive reload.
+- Status: Reopened only for the longitudinal player-renewal finding. The
+  tactical option-B product remains accepted: club role identity drives
+  formation variety, pre-match AI uses its available squad, live AI reacts to
+  match state, and canonical tactical facts survive reload. Current evidence is
+  handed to Phase 81B Step 00 before any new player-model gameplay change.
 - Reports: `docs/audits/PHASE_81A_CONTEXTUAL_TACTICAL_AGENCY_REPORT.md` and
   `docs/audits/PHASE_81A_INTEGRATED_COHORT.md`.
 
 ## Planned Continuation
 
-- `docs/steps/81b-season-anchored-contracts-free-agent-economy-and-background-fixtures/`
-- Status: Ready, not started. Step 01 must measure and replace the draft numeric
-  assumptions before any implementation. Originally numbered Phase 81A;
-  renumbered Phase 81B when the tactical-agency successor was inserted ahead of
-  it.
-- It owns three measured defects and two features. Contract expiry is anchored
-  to the season boundary through one named owner, replacing
-  `startsOn + durationYears * 365` and the `0..120` day generation scatter; the
-  offered term becomes months with a season-end floor and a `60` month ceiling,
-  which is what FIFA's own minimum requires and what the `18-30` band needs; and
-  the AI gets a free-agent signing policy, because the pool sits at a measured
-  `20-23%` share and does not drain. The pool is treated as cyclical: it is
-  frozen as a peak of `5-7%` of a competition's senior population at the
-  season boundary, a trough near `2%` once the window closes, and a drain
-  between them achieved mostly by signings. The delta is the gate; the level is
-  description, because a pool whose peak equals its trough sits inside any level
-  band while being exactly the defect.
-- Steps 02 and 03 are reported together. Shortening contracts without a signing
-  policy produces a larger warehouse and would measure as a regression.
-- It then resolves background fixtures for the selected club's division inside
-  `advanceCareerMonths`, adds the simulate-match command on the same producer,
-  and measures market density against bands frozen in its Step 01.
-- Its Step 06 decides whether Phase 82A is still justified and freezes the
-  final evidence contract. Step 07 then runs and resumes a checkpointed
-  `750 x 10` with `750` one-world shards and exactly `7` workers, reporting
-  complete selected-division tables, scorers, assists, transfers and tactical
-  usage through one canonical report and a derived local diagnostic view.
-- The `750 x 10` observes the Phase 81B market foundation but no loans or races;
-  it therefore does not replace Phase 82B's completed-market cohort.
+- `docs/steps/81b-player-career-trajectory-population-and-recruitment-engine/`
+- Status: Draft proposal, blocked behind Phase 81A closeout. It replaces the
+  ambiguous mutable-potential model with one latent career trajectory, one
+  continuous player population and one probability-based public assessment.
+- It owns the entire ability pyramid: useful `10-13` players, strong `14-15`
+  players and a thin non-zero `16+` tail across three divisions. It also owns
+  development, role/family aging, rare permanent injury damage, mandatory
+  retirement by season-end age 37 and AI intents for upgrade, depth and
+  succession.
+- The AI free-agent channel moved into this phase because generational renewal
+  cannot be evaluated while generated players accumulate unowned. Owned-market
+  and free-agent candidates use the same need/scoring policy; contract timing
+  remains unchanged here.
+- Checkpoints progress through `7 x 1`, `7 x 2`, `7 x 5`, decisive/repeated
+  `7 x 15`, then a `50 x 20` player-model HTML split into four five-season
+  windows. Every batch uses
+  `simulation-report`, Node 24.16.0 and exactly seven workers when seven worlds
+  exist. The HTML does not claim a complete domestic world.
+
+- `docs/steps/81c-season-clock-contracts-and-complete-domestic-world/`
+- Status: Planned and blocked behind Phase 81B GO. It owns season-anchored
+  contracts, month-precision terms, all domestic background fixtures required
+  by canonical rollover, `simulate-match` on the shared producer and the
+  complete-world evidence.
+- Its Step 00 must first close the known ordering, rollover, denominator,
+  runner-ownership and operational-budget contradictions. Selected-division-
+  only progression is explicitly rejected as a basis for ten-season rollover.
+- After a locked `7 x 10` canary, its final checkpoint runs/resumes `750 x 10`
+  with 750 stable shards and exactly seven workers. It remeasures the free-agent
+  cadence without creating a second AI signing policy, and hands control to
+  Phase 82A only on a truthful GO.
 
 - `docs/steps/82a-incoming-offers-market-postures-and-loans/`
 - Status: Planned and entry-gated, previously numbered 80B. It starts only after
-  Phase 80A, Phase 81, Phase 81A and Phase 81B are Done, and market density has
+  Phase 80A, Phase 81, Phase 81A, Phase 81B and Phase 81C are Done, and market density has
   been measured against the frozen bands.
 - It owns durable sale/loan postures, selected-club incoming offers, one final
   counterproposal, bidirectional loans, three wage-share choices, real
@@ -246,7 +250,7 @@ Provide an open, incremental, and iterative execution guide for the project: one
   exactly `7` workers, and a repeated run proving deterministic checkpoint reuse
   - `resumed=50`, `simulated_worlds=0`, one differing line of `1493`. It observed
   no loans and no races, so it is engine evidence only, and it handed control to
-  Phase 81A. The background-world seams are consumed later by Phase 81B.
+  Phase 81A. The background-world seams are consumed later by Phase 81C.
 
 ## Completed User-Requested Phase
 

@@ -9,8 +9,11 @@ import {
   mapPlayerAbilities,
   rawDiagnosticAbilityAverage,
   readPlayerAbility,
+  roleAttributeBucket,
   roleCurrentAbility,
   rolePotentialAbility,
+  ROLE_ATTRIBUTE_BUCKETS,
+  type RoleAttributeBucket,
   type CareerState,
   type ClubId,
   type Player,
@@ -33,6 +36,7 @@ import { completedPlayerAge } from "../player-state/completed-player-age.ts";
 import { applyPlayerAgingPolicy } from "./player-aging-policy.ts";
 import { deriveClubDevelopmentEnvironment } from "./club-development-environment.ts";
 import {
+  broadPositionGroup,
   monthlyDevelopmentPolicy,
   type BroadPositionGroup,
 } from "./player-development-policy.ts";
@@ -88,6 +92,13 @@ export interface DevelopPlayersFromParticipationRowsInput {
   readonly participationRows: readonly PlayerParticipationRow[];
   /** Version-linked seven-state environment policy selected by an Adapter. */
   readonly developmentEnvironmentConfig: PlayerDevelopmentEnvironmentConfig;
+  /**
+   * Observation-only L6.43B seam requesting a per-month bucket split.
+   *
+   * Development is identical whether or not this is supplied; the flag only
+   * decides whether an extra read of the already-computed player is recorded.
+   */
+  readonly observePlayerIds?: readonly PlayerId[];
 }
 
 /** Input for deriving canonical environment evidence without developing players. */
@@ -147,6 +158,48 @@ export interface PlayerMonthlyDevelopmentChange extends PlayerDevelopmentChange 
   readonly developmentVariance: number;
 }
 
+/**
+ * Relevance-bucket ability aggregate for one observed player-month.
+ *
+ * Totals and count rather than means: the mean is derivable, so storing it
+ * would duplicate one fact. Growth is applied per attribute in proportion to
+ * role relevance while ability is measured as a weighted average over the same
+ * weights, so the aggregate role margin cannot show which bucket stopped
+ * moving. Only an observed diagnostic needs that split.
+ */
+export interface PlayerDevelopmentBucketMargin {
+  /** Canonical relevance bucket for the player's development role. */
+  readonly bucket: RoleAttributeBucket;
+  /** Attributes falling in this bucket for that role. */
+  readonly attributeCount: number;
+  /** Sum of current ability across the bucket after this month. */
+  readonly currentTotal: number;
+  /** Sum of effective potential across the bucket, role hard caps applied. */
+  readonly potentialTotal: number;
+}
+
+/** One observed player-month carrying the canonical change plus bucket split. */
+export interface PlayerMonthlyDevelopmentObservation {
+  /** The canonical monthly change, unchanged and not recomputed. */
+  readonly change: PlayerMonthlyDevelopmentChange;
+  /** Role whose profile defined the buckets and hard caps. */
+  readonly developmentRole: PlayerRole;
+  /** Bucket split taken at this exact monthly checkpoint. */
+  readonly bucketMargins: readonly PlayerDevelopmentBucketMargin[];
+  /**
+   * Rating evidence the canonical policy reads and the change does not carry.
+   *
+   * A consumer recomposes `MonthlyDevelopmentParticipationFacts` from these two
+   * numbers plus the minutes already on `change`, and calls the canonical
+   * policy rather than restating any multiplier. Minutes are deliberately not
+   * repeated here: a derived value stored twice is a value that can disagree
+   * with itself.
+   */
+  readonly ratingTotal: PlayerParticipationRow["ratingTotal"];
+  /** Sample count paired with `ratingTotal`; zero means no rated minutes. */
+  readonly ratingSamples: PlayerParticipationRow["ratingSamples"];
+}
+
 /** Result of one pure ordered player-development batch. */
 export interface PlayerDevelopmentResult {
   /** Copied career state with developed abilities and role familiarity. */
@@ -157,6 +210,14 @@ export interface PlayerDevelopmentResult {
   readonly monthlyChanges: readonly PlayerMonthlyDevelopmentChange[];
   /** Familiarity changes reached from cumulative same-season exposure. */
   readonly roleAdaptationChanges: readonly PlayerRoleAdaptationChange[];
+  /**
+   * Bucket-split observations for the requested players only.
+   *
+   * Present only when `observePlayerIds` was supplied. The split is taken at
+   * the exact monthly checkpoint because the batch career state reflects up to
+   * three applied months and could not attribute a value to one of them.
+   */
+  readonly monthlyObservations?: readonly PlayerMonthlyDevelopmentObservation[];
 }
 
 /** Explicit scalar summary used by development decisions and reports. */
@@ -223,14 +284,19 @@ export function developPlayersFromParticipationRows(
   input: DevelopPlayersFromParticipationRowsInput,
 ): PlayerDevelopmentResult {
   const orderedRows = validateAndOrderParticipationRows(input);
+  const observedPlayerIds = input.observePlayerIds === undefined
+    ? undefined
+    : new Set(input.observePlayerIds);
   if (orderedRows.length === 0) {
     return {
       careerState: input.careerState,
       changes: [],
       monthlyChanges: [],
       roleAdaptationChanges: [],
+      ...(observedPlayerIds === undefined ? {} : { monthlyObservations: [] }),
     };
   }
+  const monthlyObservations: PlayerMonthlyDevelopmentObservation[] = [];
 
   const players: Partial<Record<PlayerId, Player>> = {
     ...input.careerState.gameState.players,
@@ -286,7 +352,7 @@ export function developPlayersFromParticipationRows(
     const roleProfile = getPlayerRoleProfile(developmentRole);
 
     players[player.id] = developed.player;
-    monthlyChanges.push({
+    const monthlyChange: PlayerMonthlyDevelopmentChange = {
       playerId: player.id,
       monthKey: participationRow.monthKey,
       age,
@@ -301,7 +367,17 @@ export function developPlayersFromParticipationRows(
       roleCurrentAbilityBefore: roleCurrentAbility(player.abilities, roleProfile),
       roleCurrentAbilityAfter: roleCurrentAbility(developed.player.abilities, roleProfile),
       rolePotentialAbility: rolePotentialAbility(developed.player.potential, roleProfile),
-    });
+    };
+    monthlyChanges.push(monthlyChange);
+    if (observedPlayerIds?.has(player.id) === true) {
+      monthlyObservations.push({
+        change: monthlyChange,
+        developmentRole,
+        bucketMargins: bucketMarginsForPlayer(developed.player, developmentRole),
+        ratingTotal: participationRow.ratingTotal,
+        ratingSamples: participationRow.ratingSamples,
+      });
+    }
   }
 
   const stateAfterAbilities = createCareerState({
@@ -329,7 +405,47 @@ export function developPlayersFromParticipationRows(
     }),
     monthlyChanges,
     roleAdaptationChanges: adapted.changes,
+    ...(observedPlayerIds === undefined ? {} : { monthlyObservations }),
   };
+}
+
+/**
+ * Splits one developed player's abilities by canonical relevance bucket.
+ *
+ * Effective potential applies the role hard cap exactly as the growth loop
+ * does, so a bucket margin of zero means the same thing in both places.
+ */
+function bucketMarginsForPlayer(
+  player: Player,
+  developmentRole: PlayerRole,
+): readonly PlayerDevelopmentBucketMargin[] {
+  const totals = new Map<RoleAttributeBucket, { count: number; current: number; potential: number }>();
+  for (const bucket of ROLE_ATTRIBUTE_BUCKETS) {
+    totals.set(bucket, { count: 0, current: 0, potential: 0 });
+  }
+
+  foldPlayerAbilities(player.abilities, 0, (_unused, value, abilityPath) => {
+    const bucket = roleAttributeBucket(developmentRole, abilityPath);
+    const entry = totals.get(bucket)!;
+    const potentialValue = Number(readPlayerAbility(player.potential, abilityPath));
+    const hardCap = hardCapForRoleAbility(developmentRole, abilityPath);
+    entry.count += 1;
+    entry.current += Number(value);
+    entry.potential += hardCap === undefined
+      ? potentialValue
+      : Math.min(potentialValue, hardCap);
+    return 0;
+  });
+
+  return ROLE_ATTRIBUTE_BUCKETS.map((bucket) => {
+    const entry = totals.get(bucket)!;
+    return {
+      bucket,
+      attributeCount: entry.count,
+      currentTotal: roundDelta(entry.current),
+      potentialTotal: roundDelta(entry.potential),
+    };
+  });
 }
 
 interface DevelopOnePlayerMonthInput {
@@ -617,12 +733,28 @@ function aggregatePlayerChanges(input: {
   });
 }
 
+/**
+ * Completed age a birth date has reached at one development month's checkpoint.
+ *
+ * The single answer to "how old was he that month", exposed so a diagnostic can
+ * age a player across months he never played without owning a second reading of
+ * the development calendar. The month-end boundary stays private deliberately:
+ * a consumer given the raw date could place the checkpoint elsewhere, and two
+ * calendars that disagree by one day would silently move a player across an age
+ * band and out of his growth window.
+ */
+export function completedPlayerAgeAtDevelopmentMonth(
+  birthDate: Player["birthDate"],
+  monthKey: PlayerDevelopmentMonthKey,
+): number {
+  return completedPlayerAge(birthDate, gameDate(monthEndEpochDay(monthKey)));
+}
+
 function playerAgeAtMonthCheckpoint(
   player: Player,
   monthKey: PlayerDevelopmentMonthKey,
 ): number {
-  const checkpointDate = monthEndEpochDay(monthKey);
-  return completedPlayerAge(player.birthDate, gameDate(checkpointDate));
+  return completedPlayerAgeAtDevelopmentMonth(player.birthDate, monthKey);
 }
 
 function monthEndEpochDay(monthKey: PlayerDevelopmentMonthKey): number {
@@ -641,30 +773,6 @@ function monthEndEpochDay(monthKey: PlayerDevelopmentMonthKey): number {
   return fromISO(
     `${String(nextYear).padStart(4, "0")}-${String(nextMonth).padStart(2, "0")}-01`,
   ) - 1;
-}
-
-function broadPositionGroup(position: PlayerPosition | undefined): BroadPositionGroup {
-  switch (position) {
-    case "gk":
-      return "goalkeeper";
-    case "rb":
-    case "cb":
-    case "lb":
-    case "rwb":
-    case "lwb":
-      return "defender";
-    case "dm":
-    case "cm":
-    case "am":
-    case "rm":
-    case "lm":
-      return "midfielder";
-    case "rw":
-    case "lw":
-    case "st":
-    default:
-      return "attacker";
-  }
 }
 
 function developmentRoleForPosition(position: PlayerPosition | undefined): PlayerRole {

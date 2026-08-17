@@ -12,7 +12,8 @@ state.
 
 ## Accepted Semantics
 
-- AI uses public current/P50/upper, need, budget, contract, posture, and risk
+- AI uses the Phase 81B public probability assessment, need, budget, contract,
+  posture, and risk
   appetite; stored ceiling is forbidden.
 - At most five unresolved incoming permanent/loan offers combined.
 - At most one unresolved negotiation per `(buying club, player)` pair.

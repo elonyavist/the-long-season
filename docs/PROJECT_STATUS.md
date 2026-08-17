@@ -14,38 +14,37 @@ active step. Nothing else.
 Phases 0 through 81 are complete; what they delivered is in the code and
 `docs/audits/`.
 
-**Phase 81A - Contextual Tactical Agency - remains Reopened; Step 16M-B is
-Ready after L6.43A identified `development_realization`.**
-L6.41 rejected and removed role-aware aging. L6.42A now identifies the precise
-current-product owner: observed ceiling supply. Its funnel is
-`1885 generated -> 1041 senior-observed -> 22 ceiling-16 -> 13 current-16 ->
-13 retained`; opening elite retention is not an owner (`71/447`). Step 16L's
-stock was reachable but L6.43 rejected it: `728` assignments produced
-replacement parity in `0/7` worlds and leader share `0.2071`. L6.43A traces
-`716` selected players; among `424` closed windows, `173` reach senior use and
-`900` minutes but not current ability `16`. The owner is largest in `6/7`
-worlds with zero reconciliation failures. Active recovery contract:
-`docs/audits/PHASE_81A_DEVELOPMENT_REALIZATION_RECOVERY_CONTRACT.md`.
+**Phase 81A - Contextual Tactical Agency - is closed with `STOP_RETHINK`.** Its
+succession hypothesis is falsified: special five/six-star generation lanes over
+a mutable `Player.potential` - simultaneously hidden truth, forecast source,
+growth limit and compressed value - cannot resolve generational renewal.
+L6.43B is the last valid evidence and returned
+`OWNER_IDENTIFIED: expected_ceiling_below_16_at_intake`, `173/173`, `7/7`
+worlds: conversion finishes at `99.9%` of an already-descended ceiling,
+opportunity was never denied (exposure p50 `0.81`), the forecast **overstates**
+outcomes by `+1.55`, and five-star is a rating band `[16, 16.5)` so its
+`16.01..16.49` ceilings are its definition. **L6.44 is not run**; Steps 16M-C
+and 16N are `superseded_not_executed`, neither blocked nor pending. A phase may
+close correctly with `STOP_RETHINK` when its hypothesis is falsified. Evidence:
+`docs/audits/PHASE_81A_L6_43B_PREFLIGHT_FINDINGS.md`.
 
-The former contract/free-agent/background-fixture plan is Phase 81B, Ready but
-entry-blocked under
-`docs/steps/81b-season-anchored-contracts-free-agent-economy-and-background-fixtures/`;
-Step 01 is next and Step 07 closes on a `750 x 10` with exactly `7` workers.
+Next is `docs/steps/81b-player-career-trajectory-population-and-recruitment-engine/`:
+population, trajectory, forecast, development, aging and one recruitment/free-
+agent policy. Contract clock, complete domestic fixtures, `simulate-match` and
+the `750 x 10` follow in `docs/steps/81c-season-clock-contracts-and-complete-domestic-world/`.
 
 ## Next Action
 
-- Execute observation-only Step 16M-B on the exact L6.43A seeds and `173` IDs;
-  monthly facts distinguish ceiling, timing and conversion without guessing.
-- Step 16M-C remains blocked until one mechanism is identified; Step 16N then
-  requires its fresh paired GO before seam-free JSON/HTML.
-- Keep `844/1885` players with no senior observation as a separate secondary
-  loss. It is not allowed to displace the majority ceiling owner (`1019/1872`,
-  coherent in `6/7` worlds).
+- **Execute Phase 81B Step 00**: freeze the baseline and numeric register before
+  any gameplay change. Its entry gate is satisfied - 81A closed, L6.44 formally
+  superseded, product decisions accepted.
+- Step 00 owns the six-star baseline measurement, on the **old** model in the
+  locked baseline profile: supply, minutes, `16+`, intake forecast, ceiling
+  loss, censoring, outcome. The six-star lane is today load-bearing - the only
+  elite-capable generation, ceilings `17.02..19.75` - so it may not be removed
+  before the new continuous tail is proven reachable.
 - No generic growth, U23 retry, synthetic external pool or direct age/output
   malus is authorized.
-- Phase 81A's final fresh `7 x 2` is byte-identical at closeout; L6.31 remains
-  green only against its relative paired targets; the tactical-shape report is
-  `PASS`. Neither result clears the new absolute age finding.
 - **`pnpm cli simulation-report` is the only report entrypoint.** Use
   `--list-modules`, `--list-profiles`, `--help`, or `--from-report=<json>`;
   relative output resolves from the workspace root.
@@ -71,9 +70,10 @@ Five findings have no owner. None is a licence to widen anything.
 
 ### Do Not Start
 
-- Phase 81B is Ready but not started; its Step 01 numeric baseline is mandatory
-  before behaviour. Phases 82A and 82B remain Draft and entry-gated. Phase 79
-  Steps 14-15 stay Reopened and unclaimed.
+- Phase 81B is approved and its entry gate is satisfied; Step 00 is authorized
+  and its baseline/product contract is mandatory before any behavior change.
+  Phase 81C, 82A and 82B remain entry-gated. Phase
+  79 Steps 14-15 stay Reopened and unclaimed.
 
 ### Checkpoint A: STOP / RETHINK, And What It Falsified (81A Step 03)
 

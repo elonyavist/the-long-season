@@ -332,6 +332,108 @@ test("one real generated career reaches canonical low-detail academy participati
   }
 });
 
+test("a real two-season L6.43B world delivers monthly development rows to the projection", async () => {
+  const checkpointDirectoryPath = await mkdtemp(join(tmpdir(), "phase81a-l6-43b-observation-"));
+  try {
+    const facts = await createCareerSectionsFacts({
+      worldSeeds: ["phase81a-l6-43b-observation-world-00001"],
+      seasonCount: 2,
+      workerCount: 1,
+      detail: "diagnostic",
+      sectionIds: ["development"],
+      leagueDiversityProfile: {
+        profileId: "phase81a-l6-43b-observation-test",
+        checkpointDirectoryPath,
+        checkpointKind: "development_realization_l6_43b",
+        successorPathwayMode: "full",
+      },
+    });
+    const checkpoint = record(record(facts.sections.development).checkpoint);
+    // The cohort joins the observer in the season after its own assignment, so
+    // two seasons is the shortest horizon that can deliver a row at all. Both
+    // counts are asserted: a present-but-empty sub-field is the exact shape
+    // that let three earlier runs report a green gate over no evidence.
+    const observed = array(record(checkpoint.developmentRealization).observedWorlds);
+    const world = record(observed[0]);
+    // The observed cohort must be the pathway cohort itself, not a superset.
+    // Season one's assignments are the ones observable in season two, and the
+    // six-star lane is deliberately outside the attributed population.
+    const firstSeasonAssignments = array(record(array(checkpoint.worlds)[0]).players)
+      .filter((player) => record(player).assignmentSeason === 1);
+
+    assert.equal(world.worldSeed, "phase81a-l6-43b-observation-world-00001");
+    assert.ok(firstSeasonAssignments.length > 0);
+    assert.equal(world.observedPlayerCount, firstSeasonAssignments.length);
+    assert.ok(Number(world.observedMonthCount) > 0);
+
+    // Reconciliation. The header set must be the assignment set observable at
+    // this horizon - `assignmentSeason <= seasonCount - 1` - exactly, with no
+    // duplicate and no stranger. Counting alone would pass while one player was
+    // silently swapped for another, so the ids are compared as sets.
+    const cohort = array(world.cohort).map((entry) => record(entry));
+    const headerIds = cohort.map((entry) => String(entry.playerId));
+    const assignmentIds = firstSeasonAssignments
+      .map((player) => String(record(player).playerId));
+    assert.equal(new Set(headerIds).size, headerIds.length);
+    assert.deepEqual(headerIds.toSorted(), assignmentIds.toSorted());
+    for (const entry of cohort) {
+      assert.notEqual(entry.birthDate, undefined);
+      assert.notEqual(entry.naturalPosition, undefined);
+    }
+
+    // Chronology, against the lifecycle rather than against calendar
+    // arithmetic. `closedDevelopmentMonthKeys` is the engine's own record of the
+    // months a development checkpoint actually ran in.
+    const closedMonthKeys = array(world.closedDevelopmentMonthKeys).map(String);
+    const anchors = cohort.map((entry) =>
+      String(entry.firstEligibleDevelopmentMonthKey));
+    const earliestAnchor = anchors.toSorted()[0]!;
+
+    // No retained row predates its own player's boundary, and none belongs to a
+    // player without one.
+    assert.equal(world.rowsOutsideRecordedBoundaryCount, 0);
+    // ...and that is not vacuous: months were closed before these players
+    // existed, so a boundary placed at the assignment month would have charged
+    // real, already-spent months as lost opportunity.
+    assert.ok(closedMonthKeys.some((monthKey) => monthKey < earliestAnchor));
+    // The boundary is a month the lifecycle actually reaches, not a calendar
+    // guess: every anchor names a month the world went on to close.
+    for (const anchor of new Set(anchors)) {
+      assert.ok(closedMonthKeys.includes(anchor), anchor);
+    }
+    // The denominator basis is smaller than the calendar, and that is the whole
+    // reason it is read from the lifecycle instead of computed from dates.
+    // Measured on this world: eight development checkpoints per season, running
+    // August to March, and nothing at all from April to July. A month with no
+    // participation row anywhere closes no checkpoint, so a calendar-derived
+    // denominator would charge every player a third of every year that no
+    // player could ever have used, and `sustained_opportunity_insufficient`
+    // would absorb players who were never denied anything.
+    assert.equal(new Set(closedMonthKeys).size, closedMonthKeys.length);
+    assert.equal(closedMonthKeys.filter((monthKey) => monthKey < earliestAnchor).length, 8);
+    assert.equal(closedMonthKeys.filter((monthKey) => monthKey >= earliestAnchor).length, 8);
+    assert.equal(
+      closedMonthKeys.every((monthKey, index) =>
+        index === 0 || monthKey === nextCalendarMonthKey(closedMonthKeys[index - 1]!)),
+      false,
+    );
+    // Season one's eight checkpoints all precede the boundary, so the cohort is
+    // charged for none of them, and the four-month gap before the boundary is
+    // charged to nobody either.
+    assert.ok(closedMonthKeys.filter((monthKey) => monthKey < earliestAnchor).every(
+      (monthKey) => anchors.every((anchor) => monthKey < anchor),
+    ));
+    // Every joined player produced exactly one row per processable month after
+    // his boundary: no month is missing, partial or counted twice.
+    assert.equal(
+      Number(world.observedMonthCount),
+      cohort.length * closedMonthKeys.filter((monthKey) => monthKey >= earliestAnchor).length,
+    );
+  } finally {
+    await rm(checkpointDirectoryPath, { recursive: true, force: true });
+  }
+});
+
 test("league-diversity resume rebuilds byte-identical facts from one complete-world checkpoint", async () => {
   const checkpointDirectoryPath = await mkdtemp(join(tmpdir(), "phase81a-l1-checkpoint-"));
   const input = {
@@ -806,4 +908,19 @@ function record(value: unknown): Record<string, unknown> {
 function array(value: unknown): unknown[] {
   assert.ok(Array.isArray(value));
   return value;
+}
+
+/**
+ * Calendar successor of a `YYYY-MM` key, used only to expose gaps.
+ *
+ * Deliberately local to the test. Production code never derives one month key
+ * from another: which months a development checkpoint runs in is a fact the
+ * lifecycle reports, and rebuilding it here as arithmetic is exactly the
+ * mistake the chronology gate exists to catch.
+ */
+function nextCalendarMonthKey(monthKey: string): string {
+  const [year, month] = monthKey.split("-").map(Number) as [number, number];
+  return month === 12
+    ? `${year + 1}-01`
+    : `${year}-${String(month + 1).padStart(2, "0")}`;
 }

@@ -12,7 +12,7 @@ and A12. The closeout integrates canonical evidence; it does not invent a new
 `phase81a-f` evaluator, relabel historical failures, or use final output to
 choose another coefficient.
 
-Phase 81B Step 07 still owns the `750 x 10` world-integrity run. Complete
+Phase 81C Step 07 still owns the `750 x 10` world-integrity run. Complete
 background standings and the final inspection HTML do not exist until that
 phase implements background fixtures.
 
@@ -44,7 +44,7 @@ the analytic job display seven.
 | --- | --- | --- | --- |
 | tactical shape | canonical analytic matrix, one deterministic job | conservation and the frozen Phase 81 dominance invariants | human enjoyment or career AI behaviour |
 | option-B continuity | fresh `7` worlds x `2` seasons, three divisions, `25,704` team-matches, exactly `7` workers | own-squad/opponent-blind selection, live reactions, availability, rotation, formation retention and report reconciliation | post-match gameplay preparation or subjective fun |
-| renewal | paired current-engine L6.31 control/candidate, in-sample and OOS, `7 x 10` per arm | stationary youth runway, ready replacements and generated leaders | Phase 81B contracts, free agents or background fixtures |
+| renewal | paired current-engine L6.31 control/candidate, in-sample and OOS, `7 x 10` per arm | stationary youth runway, ready replacements and generated leaders | Phase 81B player model or Phase 81C contracts/background fixtures |
 | persistence | focused JSON, SQLite and web-runtime round trips on current schema | exact durable tactical facts and chapters | old beta-save compatibility, which is intentionally unsupported |
 
 The Step 16 acceptance population was not used to choose gameplay values. The
@@ -84,7 +84,7 @@ the rebuild is a determinism check, not a new calibration sample.
 - A12 records post-match preparation as `not_implemented_in_mvp`, not passed;
 - pre-match AI is deliberately opponent-blind. A future opponent-aware feature
   requires manager-visible information latency and AI/manager parity;
-- Phase 81B owns background fixtures, season-anchored contracts and the
+- Phase 81C owns background fixtures, season-anchored contracts and the
   `750 x 10` world-integrity view.
 
 ## Expected Files
@@ -98,7 +98,7 @@ the rebuild is a determinism check, not a new calibration sample.
 - `docs/roadmaps/CAREER_WEB_SECTION_ROADMAP.md`.
 - this phase `README.md`.
 - this step document.
-- `../81b-season-anchored-contracts-free-agent-economy-and-background-fixtures/README.md`.
+- `../81c-season-clock-contracts-and-complete-domestic-world/README.md`.
 
 No production or report-registry file belongs to this evidence-only step. A
 failed current reader reopens its existing owner instead of being patched here.

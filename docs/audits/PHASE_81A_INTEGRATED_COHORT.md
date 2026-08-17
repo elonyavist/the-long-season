@@ -23,7 +23,8 @@ materiality or post-match preparation targets.
 The analytic profile sees the whole tactical-shape matrix but not career AI or
 human enjoyment. The E population sees two-season availability, selection,
 live reactions and rotation but no human subjective experience. L6.31 sees
-ten-season renewal but not Phase 81B contracts, free agents or background
+ten-season renewal but not Phase 81B replacement semantics or Phase 81C
+contracts/background
 fixtures. The persistence suite sees current-schema identity, not old beta-save
 compatibility.
 
@@ -107,7 +108,7 @@ or guessed `4-4-2` default is stored.
   explain the completed match only.
 - Pre-match AI deliberately does not read the opponent. Opponent-aware planning
   requires a later visible-information and parity contract.
-- Phase 81B still owns background fixtures, season-anchored contracts, the
+- Phase 81C still owns background fixtures, season-anchored contracts, the
   free-agent cycle and the final `750 x 10` world-integrity HTML.
 
 ## Residual Findings Outside This Decision

@@ -2,14 +2,14 @@
 
 ## Status
 
-**Draft.** Deferred behind Phase 81A and Phase 81B; this phase was previously
-numbered 80B. Do not start Phase 82A.
+**Draft.** Deferred behind Phase 81A, Phase 81B and Phase 81C; this phase was
+previously numbered 80B. Do not start Phase 82A.
 
 The product contract was accepted before the phase order changed. Treat the
 cross-phase requirements added on 2026-08-02
 - the shared season boundary, the free-agent cycle this phase must not close -
 as intent to re-verify rather than as frozen numbers. They will be revised
-against what Phases 81, 81A and 81B actually measure.
+against what Phases 81, 81A, 81B and 81C actually measure.
 
 ## Goal
 
@@ -31,22 +31,24 @@ The accepted product contract is:
   redefines squad depth in one owner rather than across every reader.
 - Phase 81A is Done, including its integrated tactical-agency checkpoint and
   its manager/AI information-parity contract.
-- Phase 81B is Done and measured: contract expiry anchored to the season
-  boundary through one named owner, offered terms expressed in months inside the
-  accepted `18-30` band, an AI free-agent signing policy that drains the pool,
-  background fixtures resolved in the selected club's division through
-  `advanceCareerMonths`, the simulate-match command sharing the L1 producer,
-  and Step 07's checkpointed `750 x 10` world-integrity report completed and
-  replayed with exactly `7` workers.
+- Phase 81B is Done and measured: one continuous player population, canonical
+  public forecast/development Interfaces and one recruitment/free-agent policy
+  cover upgrade, depth and succession without a hidden oracle.
+- Phase 81C is Done and measured: contract expiry is season-anchored, offered
+  terms use months, required domestic background fixtures complete through the
+  canonical producer, `simulate-match` shares that producer, and Step 07's
+  checkpointed `750 x 10` completes/replays with exactly `7` workers.
 - Market density has been measured against the frozen bands and the measurement
   is recorded. This phase is authorized on evidence that loans are the missing
   channel, not as an assumption.
-- The public current/P50/upper assessment is canonical and shared with AI.
+- The Phase 81B absolute probability forecast is canonical and shared with AI;
+  latent trajectory is never exposed.
 - Quarterly development, dynamic environment, player supply, and value exist.
 - Incompatible beta saves have been deleted.
 - Phase 79 Step 14 remains Reopened, paused, and unclaimed.
 
-This entry gate is not satisfied while Phase 81A or Phase 81B is open. The
+This entry gate is not satisfied while Phase 81A, Phase 81B or Phase 81C is
+open. The
 market-density measurement is a required input, not a formality: if
 the measured density already sits inside the frozen bands, the loan channel is
 re-argued before this phase starts rather than assumed.
@@ -82,7 +84,7 @@ re-argued before this phase starts rather than assumed.
   `player_not_for_sale` reply remains valid and must be shown explicitly
   without recomputing willingness in React.
 - Loans work in both directions and end at the current season's end. That
-  boundary is the one named season-boundary owner introduced by Phase 81B, the
+  boundary is the one named season-boundary owner introduced by Phase 81C, the
   same one contract expiry uses. This phase adds a consumer, never a second
   definition.
 - No recall, extension, option/obligation, loan fee, resale share, bonus, or
@@ -103,15 +105,16 @@ re-argued before this phase starts rather than assumed.
 - AI uses real squad need and plausible rotation value; only real minutes and
   ratings produce development.
 - A loan and a free-agent signing solve the same squad gap, so this phase is the
-  first competitor to the channel Phase 81B calibrated. Step 07 re-measures that
-  phase's free-agent cycle - peak, trough, and attributed drain - and repairs a
+  first competitor to the recruitment channel Phase 81B owns. Step 07
+  re-measures the Phase 81C free-agent cycle - peak, trough, and attributed
+  drain - and repairs a
   shortfall in the loan need policy rather than in the free-agent policy or the
   frozen band. Loans add a channel; they may not quietly close another.
 - Incompatible beta saves are deleted without migration.
 - Phase 82A runs no longitudinal cohort. Phase 81 Step 15 ran the historical
   checkpointed `50 x 20`, and Phase 81A Step 16 closes the later contextual
-  tactical engine. Phase 81B Step 07 adds a `750 x 10` over complete
-  selected-division fixtures and the free-agent foundation, but still observes
+  tactical engine. Phase 81C Step 07 adds a `750 x 10` over complete domestic
+  fixtures and the free-agent foundation, but still observes
   no loans or races. None can certify the completed competitive market. The
   checkpointed `50 x 20` over that market therefore remains Phase 82B's
   closeout. Phase 82A keeps shard/checkpoint/worker wiring working and

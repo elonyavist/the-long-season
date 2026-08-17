@@ -1,4 +1,4 @@
-PHASE_DIR_TO_EXECUTE: docs/steps/81a-contextual-tactical-agency-manager-ai-decision-loop
+PHASE_DIR_TO_EXECUTE: docs/steps/81b-player-career-trajectory-population-and-recruitment-engine
 
 Execute the whole documented phase, one step at a time, without waiting for
 approval between steps.

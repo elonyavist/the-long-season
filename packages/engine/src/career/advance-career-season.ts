@@ -19,6 +19,7 @@ import {
   type LeagueTableRules,
   type MarketBehaviorCalibrationConfig,
   type PlayerDevelopmentEnvironmentConfig,
+  type PlayerDevelopmentMonthKey,
   type PlayerId,
   type PlayerWagePolicyConfig,
   type SeasonTransferWindows,
@@ -32,6 +33,7 @@ import {
   deliverCareerInboxMessages,
 } from "./career-inbox-lifecycle.ts";
 import { advanceCareerMonths, type CareerMonthlyLifecycleSummary } from "./advance-career-month.ts";
+import type { PlayerMonthlyDevelopmentObservation } from "./player-development.ts";
 import {
   applyEndOfSeasonPlayerExits,
   type PlayerExitReason,
@@ -182,6 +184,14 @@ export interface AdvanceCareerOneSeasonInput {
   readonly aiMarketNeedSubmissionOrder?: "legacy" | "bounded_succession";
   /** Observation-only L6.40 succession facts; ordinary careers leave it off. */
   readonly collectRoleSuccessionSnapshots?: boolean;
+  /**
+   * Observation-only L6.43B seam retaining canonical monthly development rows.
+   *
+   * Forwarded verbatim to the monthly lifecycle, which already produces those
+   * rows and normally discards them at its summary boundary. Ordinary careers
+   * leave it off and the season result carries no observation key.
+   */
+  readonly observeMonthlyDevelopmentForPlayerIds?: readonly PlayerId[];
 }
 
 /** Stable operation keys emitted to let tests and reports verify ordering. */
@@ -459,6 +469,31 @@ export interface AdvanceCareerOneSeasonAdvanced {
   readonly careerState: CareerState;
   /** Structured facts describing the advancement. */
   readonly facts: CareerSeasonAdvancementFacts;
+  /**
+   * Retained canonical monthly development rows for the observed players.
+   *
+   * Deliberately a sibling of `facts` rather than a member of it: this is
+   * out-of-band observation for one diagnostic step, not part of the canonical
+   * season fact payload that saves and reports consume. Present only when
+   * `observeMonthlyDevelopmentForPlayerIds` was supplied.
+   */
+  readonly monthlyDevelopmentObservations?: readonly PlayerMonthlyDevelopmentObservation[];
+  /**
+   * Development month checkpoints this season's lifecycle actually closed.
+   *
+   * A month with no participation row anywhere produces no development
+   * checkpoint at all, so a calendar year is not the set of months in which
+   * development was possible. An exposure denominator built from the calendar
+   * would charge every player for months no player could have used, and would
+   * make an opportunity category absorb players who were never denied
+   * anything. This is the lifecycle's own record of which months existed,
+   * published so a diagnostic never rebuilds the football calendar to find out.
+   *
+   * Chronological and free of repeats: a month is closed exactly once. Present
+   * only when `observeMonthlyDevelopmentForPlayerIds` was supplied, for the
+   * same reason the rows are.
+   */
+  readonly closedDevelopmentMonthKeys?: readonly PlayerDevelopmentMonthKey[];
 }
 
 /** Invalid canonical season advancement result. */
@@ -560,6 +595,12 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
     ...(input.collectRoleSuccessionSnapshots === undefined
       ? {}
       : { collectRoleSuccessionSnapshots: input.collectRoleSuccessionSnapshots }),
+    ...(input.observeMonthlyDevelopmentForPlayerIds === undefined
+      ? {}
+      : {
+          observeMonthlyDevelopmentForPlayerIds:
+            input.observeMonthlyDevelopmentForPlayerIds,
+        }),
   });
   if (monthlyLifecycle.marketLifecycle !== undefined) {
     operationOrder.push("ai_market_lifecycle");
@@ -749,6 +790,15 @@ export function advanceCareerOneSeason(input: AdvanceCareerOneSeasonInput): Adva
   return {
     status: "advanced",
     careerState,
+    ...(monthlyLifecycle.monthlyDevelopmentObservations === undefined
+      ? {}
+      : {
+          monthlyDevelopmentObservations:
+            monthlyLifecycle.monthlyDevelopmentObservations,
+          closedDevelopmentMonthKeys: monthlyLifecycle.summaries.map(
+            ({ monthKey }) => monthKey,
+          ),
+        }),
     facts: {
       mode: input.mode.kind,
       selectedClubId: input.careerState.selectedClubId,

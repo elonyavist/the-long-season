@@ -25,7 +25,7 @@ that Phase 82B is already scheduled to change.
 The match engine is not the reason. Under the 2026-08-02 phase order Phase 81
 is already Done, Phase 81A has closed the contextual engine, and Phase 81B has
 run its `750 x 10` world-integrity cohort. The latter observes complete
-selected-division fixtures and the free-agent foundation, but no loans or races.
+complete domestic fixtures and the free-agent foundation, but no loans or races.
 The completed-market cohort therefore still belongs to Phase 82B Step 09.
 
 ## What To Implement
@@ -84,7 +84,7 @@ graphify update .
 - Owned and selectable headcounts remain distinct, no loan mutates
   `Club.playerIds`, and no concurrent negotiation was scheduled for one player.
 - The report states plainly that no longitudinal cohort was run or claimed.
-- The Phase 81B free-agent cycle is reported beside its original values, showing
+- The Phase 81C free-agent cycle is reported beside its original values, showing
   that adding loans did not close the contract-expiry channel.
 - Cohort infrastructure is proven working by a bounded run.
 - Warnings remain visible and truthfully classified.

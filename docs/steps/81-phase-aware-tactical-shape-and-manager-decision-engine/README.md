@@ -412,7 +412,7 @@ The longitudinal command runs only in Step 15.
 - This phase's `50 x 20` completes and replays with 50 stable shards and exactly
   seven workers, and the report states plainly that it observed no loans and no
   races and is therefore not market evidence.
-- Phase 81B receives a truthful background-world handoff naming the contract-duration
+- Phase 81C receives a truthful background-world handoff naming the contract-duration
   representation change, the background-fixture resolution point, and the
   simulate-match command.
 - Phase 79 Step 14 remains separately unrun and unclaimed.

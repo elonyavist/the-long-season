@@ -31,7 +31,7 @@ targets feel contested and losing a signing is a real, explainable event.
 - Owned and selectable squad accessors exist and structural floors use the
   selectable Interface.
 - Public value is club-independent and UI, valuation, willingness, and AI use
-  the same public current/`P50`/upper assessment.
+  the same Phase 81B absolute probability assessment and never latent truth.
 - Phase 79 Step 14 remains Reopened, paused, and unclaimed.
 
 ## Verified Starting Facts
@@ -328,7 +328,7 @@ checkpointed market `50 x 20`, run and replayed with exactly seven workers over
 This is the second market-scale `50 x 20`, and the duplication is deliberate.
 Phase 81 Step 15 ran the first against a world with no postures, loans, or races.
 Phase 81A Step 16 later owns integrated acceptance of the contextual-agency
-engine. Phase 81B Step 07 then runs `750 x 10` over complete selected-division
+engine. Phase 81C Step 07 then runs `750 x 10` over complete domestic
 fixtures and its free-agent foundation. None sees both loans and races, so none
 can serve as completed-market evidence. Reusing any of them here would certify
 a competitive market no cohort saw.
@@ -337,14 +337,14 @@ Step 09 also measures market density against the frozen bands and records every
 measured value, inside band or not. The bands are frozen before the run; a miss
 is reported and assigned to a named owner, never absorbed by adjusting the band.
 
-It additionally re-measures the free-agent cycle calibrated in Phase 81B - peak
+It additionally re-measures the free-agent cycle calibrated in Phase 81C - peak
 at the season boundary, trough once the window closes, and the drain between
 them attributed between signings and exits. Two changes in this release act on
 that channel: the mandatory three-day player stage slows every free-agent
 signing, and loans introduced in Phase 82A compete for the same squad gaps.
 Contract expiry drives `62.5%` of real movements, so a channel that quietly
 stops draining would undo the largest gain of the earlier work while every gate
-here stayed green. The cycle is therefore reported beside its Phase 81B values,
+here stayed green. The cycle is therefore reported beside its Phase 81C values,
 and a shortfall is repaired in the mechanism that caused it.
 
 Phase 79 Step 14 remains paused, unrun, and unclaimed.

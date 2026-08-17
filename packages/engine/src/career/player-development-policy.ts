@@ -1,7 +1,41 @@
-import type { PlayerParticipationRow } from "@game/domain";
+import type { PlayerParticipationRow, PlayerPosition } from "@game/domain";
 
 /** Broad position bucket used by the development lifecycle. */
 export type BroadPositionGroup = "goalkeeper" | "defender" | "midfielder" | "attacker";
+
+/**
+ * Maps one natural football position onto its development bucket.
+ *
+ * The single owner of this mapping. It lives beside the age curve it feeds,
+ * because a consumer that knows a player's position must never restate how the
+ * curve groups it. Two byte-identical private copies existed before this, and a
+ * third was about to be written the moment a report needed the group.
+ */
+export function broadPositionGroup(
+  position: PlayerPosition | undefined,
+): BroadPositionGroup {
+  switch (position) {
+    case "gk":
+      return "goalkeeper";
+    case "rb":
+    case "cb":
+    case "lb":
+    case "rwb":
+    case "lwb":
+      return "defender";
+    case "dm":
+    case "cm":
+    case "am":
+    case "rm":
+    case "lm":
+      return "midfielder";
+    case "rw":
+    case "lw":
+    case "st":
+    default:
+      return "attacker";
+  }
+}
 
 const REALISTIC_MONTHLY_MINUTES = 270;
 const REGULAR_MONTHLY_MINUTES = 180;
@@ -9,14 +43,32 @@ const PERFORMANCE_MODIFIER_LIMIT = 0.15;
 const NEUTRAL_RATING = 6.5;
 const STRONG_RATING_DISTANCE = 1.5;
 
+/**
+ * The only participation evidence this policy reads.
+ *
+ * Declared structurally rather than as the whole ledger row so a diagnostic can
+ * retain these three numbers instead of a row carrying fixture-idempotency
+ * bookkeeping it never uses. A `PlayerParticipationRow` satisfies it as is, and
+ * widening what the policy reads becomes a typed change here that every caller
+ * and every observer must answer.
+ */
+export interface MonthlyDevelopmentParticipationFacts {
+  /** Total minutes played in the month being processed. */
+  readonly minutes: PlayerParticipationRow["minutes"];
+  /** Sum of structured match ratings sampled for this player. */
+  readonly ratingTotal: PlayerParticipationRow["ratingTotal"];
+  /** Number of match-rating samples included in `ratingTotal`. */
+  readonly ratingSamples: PlayerParticipationRow["ratingSamples"];
+}
+
 /** Input facts used to derive one monthly development multiplier. */
 export interface MonthlyDevelopmentPolicyInput {
   /** Broad football bucket for the player's natural role. */
   readonly positionGroup: BroadPositionGroup;
   /** Whole-year age at the month being processed. */
   readonly age: number;
-  /** Durable participation row for the month being processed. */
-  readonly participation: PlayerParticipationRow;
+  /** Participation evidence for the month being processed. */
+  readonly participation: MonthlyDevelopmentParticipationFacts;
   /** Club environment weighted by the row's exact played minutes. */
   readonly positiveGrowthEnvironmentBasisPoints: number;
 }
@@ -105,7 +157,7 @@ export function monthlyGrowthAgeMultiplier(group: BroadPositionGroup, age: numbe
   return 0;
 }
 
-function averageRating(row: PlayerParticipationRow): number | undefined {
+function averageRating(row: MonthlyDevelopmentParticipationFacts): number | undefined {
   return row.ratingSamples === 0 ? undefined : row.ratingTotal / row.ratingSamples;
 }
 

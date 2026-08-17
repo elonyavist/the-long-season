@@ -30,6 +30,7 @@ import {
   type AiMarketDiagnosticFact,
   type AiSuccessionTargetPoolStage,
   type FormationKey,
+  type PlayerMonthlyDevelopmentObservation,
   type SimulateSeasonResult,
 } from "@game/engine";
 import { toISO } from "@game/shared";
@@ -46,6 +47,7 @@ import {
   createCareerWorldFacts,
   type CareerWorldInspection,
   type CareerWorldFacts,
+  type MonthlyDevelopmentCohortEntry,
   type SuccessorCeilingIntakeSeasonFact,
 } from "./career-world-facts.ts";
 import {
@@ -147,6 +149,7 @@ import {
   evaluateSuccessorCeilingPairedCheckpoint,
   evaluateSuccessorPathwayCanary,
   evaluateSuccessorPathwayCheckpoint,
+  evaluateDevelopmentRealizationL6_43BCheckpoint,
   evaluateStationaryAgeSuccessionCheckpoint,
   SuccessorPathwayObserver,
   type StationaryAgeSuccessionWorldInput,
@@ -215,7 +218,8 @@ export type CareerCheckpointKind =
   | "stationary_age_succession_l6_40"
   | "progressive_current16_l6_42a"
   | "successor_ceiling_l6_43"
-  | "successor_pathway_l6_43a";
+  | "successor_pathway_l6_43a"
+  | "development_realization_l6_43b";
 
 /** Versioned readers sharing the one product-versus-legacy contest producer. */
 export type StrengthContestMode = "canary" | "full" | "retry_canary" | "retry_full";
@@ -275,6 +279,7 @@ const CHECKPOINT_OBSERVES_GENERATIONAL_SUCCESSION = {
   progressive_current16_l6_42a: true,
   successor_ceiling_l6_43: true,
   successor_pathway_l6_43a: true,
+  development_realization_l6_43b: true,
 } as const satisfies Readonly<Record<CareerCheckpointKind, boolean>>;
 
 /** Keeps observer and checkpoint-section routing on one exhaustive policy. */
@@ -312,6 +317,22 @@ interface CareerWorldProjection {
   readonly exceptionalStock?: PlayerGenerationExceptionalStockSummary;
   readonly successorCeilingSeasons?: readonly SuccessorCeilingIntakeSeasonFact[];
   readonly successorPathway?: SuccessorPathwayWorldFacts;
+  /**
+   * Observation-only L6.43B monthly rows for the accumulated cohort.
+   *
+   * Rows name their month, never a `seasonNumber`, so they cannot enter the
+   * season-prefix hash that gates continuity against the earlier run.
+   */
+  readonly monthlyDevelopmentObservations?: readonly PlayerMonthlyDevelopmentObservation[];
+  /**
+   * One header per observed five-star assignment, rows or no rows.
+   *
+   * Carried beside the rows because a player who never plays produces none, and
+   * he is exactly the case the step must classify rather than lose.
+   */
+  readonly monthlyDevelopmentCohort?: readonly MonthlyDevelopmentCohortEntry[];
+  /** Development months this world's lifecycle closed; the denominator basis. */
+  readonly closedDevelopmentMonthKeys?: readonly string[];
 }
 
 interface AcademyProspectClassProvenanceFact {
@@ -1223,6 +1244,7 @@ function successorCeilingProjectionInput(input: {
   readonly sectionIds: readonly CareerSectionId[];
   readonly enabled: boolean;
   readonly collectPathway?: boolean;
+  readonly collectMonthlyDevelopment?: boolean;
 }) {
   return {
     seed: input.seed,
@@ -1242,6 +1264,7 @@ function successorCeilingProjectionInput(input: {
     collectStationaryAgeSuccession: true,
     collectSuccessorCeiling: true,
     collectSuccessorPathway: input.collectPathway === true,
+    collectMonthlyDevelopmentObservations: input.collectMonthlyDevelopment === true,
     useSuccessorCeilingStockPolicy: input.enabled,
   } as const;
 }
@@ -1325,6 +1348,9 @@ export async function createCareerSectionsFacts(input: {
           enabled: true,
           collectPathway:
             input.leagueDiversityProfile?.successorPathwayMode !== undefined,
+          collectMonthlyDevelopment:
+            input.leagueDiversityProfile?.checkpointKind
+              === "development_realization_l6_43b",
         })
       : input.leagueDiversityProfile?.renewalCommonSupportMode !== undefined
       ? renewalCommonSupportProjectionInput({
@@ -1440,6 +1466,8 @@ export async function createCareerSectionsFacts(input: {
             || input.leagueDiversityProfile?.checkpointKind === "stationary_age_succession_l6_40",
           collectStationaryAgeSuccession:
             input.leagueDiversityProfile?.checkpointKind === "stationary_age_succession_l6_40",
+          collectMonthlyDevelopmentObservations:
+            input.leagueDiversityProfile?.checkpointKind === "development_realization_l6_43b",
           ...(input.leagueDiversityProfile?.renewalAblationArm === undefined
             ? {}
             : { renewalAblationArm: input.leagueDiversityProfile.renewalAblationArm }),
@@ -1643,6 +1671,29 @@ export async function createCareerSectionsFacts(input: {
             candidate: requiredSuccessorPathwayWorlds(worlds),
             seasonCount: input.seasonCount,
           })
+    : input.leagueDiversityProfile.checkpointKind === "development_realization_l6_43b"
+      // The historical checkpoint is reused verbatim, not recomputed: the
+      // replay's purpose is to prove that turning the observer on changes
+      // nothing an earlier run already established. The one declared sub-field
+      // it adds names its months rather than a `seasonNumber`, so those rows
+      // stay invisible to the season-prefix hash.
+      ? evaluateDevelopmentRealizationL6_43BCheckpoint({
+          control: requiredSuccessorCeilingWorlds(successorCeilingControl),
+          candidate: requiredSuccessorPathwayWorlds(worlds),
+          seasonCount: input.seasonCount,
+          observation: worlds.map((world) => ({
+            worldSeed: world.seed,
+            // The population under attribution, one entry per selected
+            // five-star assignment, present whether or not he ever played:
+            // zero opportunity is the outcome this step must classify rather
+            // than an absence it may drop.
+            cohort: world.monthlyDevelopmentCohort ?? [],
+            rows: world.monthlyDevelopmentObservations ?? [],
+            // Which months development could happen in at all. Read from the
+            // engine's own lifecycle record, never rebuilt from the calendar.
+            closedDevelopmentMonthKeys: world.closedDevelopmentMonthKeys ?? [],
+          })),
+        })
     : input.leagueDiversityProfile.checkpointKind === "renewal_common_support_l6_1c"
       ? evaluateRenewalCommonSupportCheckpoint(
           requiredRenewalCommonSupportObservation(renewalCommonSupportObservation),
@@ -1961,6 +2012,8 @@ function createCareerWorldProjection(input: {
   readonly useRoutineYouthStationaryRunway?: boolean;
   readonly useSuccessorCeilingStockPolicy?: boolean;
   readonly collectStationaryAgeSuccession?: boolean;
+  /** Observation-only L6.43B monthly development seam; off for ordinary runs. */
+  readonly collectMonthlyDevelopmentObservations?: boolean;
   readonly collectSuccessorCeiling?: boolean;
   readonly collectSuccessorPathway?: boolean;
 }): CareerWorldProjection {
@@ -2030,6 +2083,9 @@ function createCareerWorldProjection(input: {
         : { aiMarketNeedSubmissionOrder: input.aiMarketNeedSubmissionOrder }),
       ...(input.collectStationaryAgeSuccession
         ? { collectRoleSuccessionSnapshots: true }
+        : {}),
+      ...(input.collectMonthlyDevelopmentObservations
+        ? { collectMonthlyDevelopmentObservations: true }
         : {}),
       ...(input.useRoutineYouthStationaryRunway === undefined
         ? {}
@@ -2380,6 +2436,19 @@ function createCareerWorldProjection(input: {
     ...(successorPathwayObserver === undefined
       ? {}
       : { successorPathway: successorPathwayObserver.facts() }),
+    // Forwarded only when requested. The world facts already carry these rows;
+    // dropping them here made the observation silently empty while every other
+    // gate stayed green, so the projection must pass them through explicitly.
+    ...(input.collectMonthlyDevelopmentObservations
+      && report.monthlyDevelopmentObservations !== undefined
+      && report.monthlyDevelopmentCohort !== undefined
+      && report.closedDevelopmentMonthKeys !== undefined
+      ? {
+          monthlyDevelopmentObservations: report.monthlyDevelopmentObservations,
+          monthlyDevelopmentCohort: report.monthlyDevelopmentCohort,
+          closedDevelopmentMonthKeys: report.closedDevelopmentMonthKeys,
+        }
+      : {}),
   };
 }
 

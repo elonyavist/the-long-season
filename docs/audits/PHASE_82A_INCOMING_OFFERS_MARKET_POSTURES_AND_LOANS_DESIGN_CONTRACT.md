@@ -29,12 +29,13 @@ Complete the lower-division talent loop:
 
 - Phase 80 is complete.
 - Phase 80A is complete with green bounded diagnostics.
-- Phases 81 and 81A are complete, and Phase 81B Step 07 has completed and
+- Phases 81 and 81A are complete, and Phase 81C Step 07 has completed and
   replayed its checkpointed `750 x 10` world-integrity cohort with exactly
   `7` workers.
 - Phase 81B's market-density recommendation explicitly authorizes the loan
   channel; this phase does not start merely because it is next.
-- AI and manager use the same public current/P50/upper assessment.
+- AI and manager use the same Phase 81B absolute probability assessment and
+  never latent truth.
 - No production change remains pending before the market lifecycle work starts.
 - Incompatible beta saves are deleted; no compatibility migration is required.
 
@@ -113,7 +114,8 @@ state may pretend a player is listed without persisting the canonical fact.
 ## Incoming Permanent Offers
 
 - AI clubs may target selected-club players during valid transfer windows.
-- Target selection uses public current/P50/upper, club need, budget, risk
+- Target selection uses the Phase 81B public probability assessment, club need,
+  budget, risk
   appetite, contract, and seller posture.
 - Stored ceiling is forbidden from live target selection and pricing.
 - The selected club may have at most `5` unresolved incoming permanent/loan
@@ -375,7 +377,7 @@ The match engine is not part of this argument. Before this phase starts,
 Phase 81A must have closed on its Step 16 integrated acceptance, so the engine
 observed here is the accepted contextual-agency engine. Phase 81 Step 15 remains
 historical engine evidence and Phase 81A Step 16 becomes the current engine
-evidence. Phase 81B Step 07 adds broad evidence over complete selected-division
+evidence. Phase 81C Step 07 adds broad evidence over complete domestic
 fixtures and the free-agent foundation. None is completed-market evidence
 because none observes both loans and races.
 
@@ -386,14 +388,14 @@ working infrastructure rather than rebuilding it.
 ## Effect On The Free-Agent Channel
 
 A loan and a free-agent signing solve the same squad gap, so this phase is the
-first real competitor to the channel Phase 81B calibrated. That phase froze the
-free-agent pool as a cycle - peak of `5-7%` of a competition's senior
+first real competitor to the channel Phase 81B owns and Phase 81C calibrated.
+Phase 81C froze the free-agent pool as a cycle - peak of `5-7%` of a competition's senior
 population at the season boundary, trough near `2%` once the window closes, and
 a drain between them attributed mostly to signings rather than to players
 leaving football.
 
 Step 07 re-measures that cycle once loans exist, with unchanged seeds and
-denominators, and records it beside the Phase 81B values. If clubs now borrow
+denominators, and records it beside the Phase 81C values. If clubs now borrow
 instead of signing and the pool stops reaching its trough, the correction
 belongs to the loan need policy: a borrowed player occupies a rotation slot
 temporarily, and preferring that over a permanent free signing for a structural

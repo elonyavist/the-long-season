@@ -268,6 +268,46 @@ test("advanceCareerOneSeason flushes residual youth participation through the ca
   }
 });
 
+test("the observed season reports exactly the development months its lifecycle closed", () => {
+  const youthId = playerId("player:selected-youth");
+  const input = {
+    careerState: careerStateWithYouthParticipation(youthId),
+    worldSeed: "youth-residual-flush-world",
+    mode: { kind: "completedSeason", tableRules: TABLE_RULES },
+  } as const;
+
+  const unobserved = advanceCareerOneSeason(input);
+  const observed = advanceCareerOneSeason({
+    ...input,
+    observeMonthlyDevelopmentForPlayerIds: [youthId],
+  });
+
+  assert.equal(unobserved.status, "advanced");
+  assert.equal(observed.status, "advanced");
+  if (unobserved.status !== "advanced" || observed.status !== "advanced") return;
+
+  // An unobserved season must stay structurally identical to one produced
+  // before this seam existed: the month record is observation, not a product
+  // fact, and a caller that never asked for it must not receive it.
+  assert.equal(unobserved.closedDevelopmentMonthKeys, undefined);
+
+  const closedMonthKeys = observed.closedDevelopmentMonthKeys ?? [];
+  assert.ok(closedMonthKeys.length > 0);
+  // Chronological and closed exactly once. A repeated month would silently
+  // double whatever a consumer charges against it.
+  assert.deepEqual([...closedMonthKeys], [...new Set(closedMonthKeys)].toSorted());
+  // The binding claim: development happens only inside a closed checkpoint, so
+  // a consumer may treat this list as the complete set of months in which
+  // development was possible, and charge nothing outside it.
+  for (const { change } of observed.monthlyDevelopmentObservations ?? []) {
+    assert.ok(closedMonthKeys.includes(change.monthKey), change.monthKey);
+  }
+  assert.equal(
+    unobserved.facts.playerDevelopment.changeCount,
+    observed.facts.playerDevelopment.changeCount,
+  );
+});
+
 test("advanceCareerOneSeason facts are enough for an adapter report without rerunning season rules", () => {
   const result = advanceCareerOneSeason({
     careerState: completedCareerStateFixture(),

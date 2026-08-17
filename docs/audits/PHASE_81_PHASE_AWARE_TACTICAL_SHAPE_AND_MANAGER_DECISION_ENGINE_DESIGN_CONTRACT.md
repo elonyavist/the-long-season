@@ -811,6 +811,6 @@ Phase 81 is complete only when:
   fielded by;
 - the checkpointed `50 x 20` completes and replays with exactly seven workers,
   and its report states that it observed no loans and no races;
-- Phase 81B receives a truthful background-world handoff naming the contract-duration
+- Phase 81C receives a truthful background-world handoff naming the contract-duration
   representation change, the background-fixture resolution point, and the
   simulate-match command, while Phase 79 Step 14 stays unrun and unclaimed.

@@ -1,8 +1,13 @@
 import { selectPlayerValuationConfig } from "@game/content";
 import {
+  broadPositionGroup,
+  completedPlayerAgeAtDevelopmentMonth,
   derivePlayerPotentialProjection,
+  monthlyDevelopmentPolicy,
+  type BroadPositionGroup,
   type CareerSeasonAdvancementFacts,
   type PlayerExitReason,
+  type PlayerMonthlyDevelopmentObservation,
   type PlayerPotentialProjection,
   type YouthLifecycleOutcome,
 } from "@game/engine";
@@ -516,10 +521,85 @@ export function evaluateSuccessorPathwayCanary(input: {
 }
 
 /**
+ * Season boundary the frozen L6.43A checkpoint was measured at.
+ *
+ * Not a configuration knob and not a horizon. The evaluator below is a
+ * ten-season instrument in its bones - it refuses any other season count,
+ * expects `11 - assignmentSeason` boundaries per player, and reads season ten
+ * by name - and the frozen decision population is defined at exactly that
+ * boundary. A longer run does not extend the baseline; it observes past it.
+ */
+const SUCCESSOR_PATHWAY_BASELINE_SEASON_COUNT = 10;
+
+/** Paired successor arms cut back to the frozen baseline boundary. */
+export interface SuccessorPathwayBaselineArms {
+  readonly control: readonly SuccessorCeilingArmWorldInput[];
+  readonly candidate: readonly (SuccessorCeilingArmWorldInput & {
+    readonly pathway: SuccessorPathwayWorldFacts;
+  })[];
+  readonly seasonCount: number;
+}
+
+/**
+ * Cuts a longer run's facts back to the baseline the legacy evaluator measures.
+ *
+ * `evaluateSuccessorPathwayCheckpoint` stays exactly as L6.43A left it. Teaching
+ * it about fifteen seasons would change the very numbers a continuity replay
+ * exists to reproduce, so a longer run instead hands it only what a ten-season
+ * run would have produced. The population it then evaluates is the frozen `716`
+ * rather than five further intake classes wearing the same name.
+ *
+ * At ten seasons every filter here is a no-op, which is what makes the `7 x 10`
+ * replay's byte-identity a proof rather than a coincidence. Below ten the
+ * baseline does not exist yet, and the season count passes through unchanged so
+ * the legacy evaluator reports that itself instead of being told otherwise.
+ */
+export function successorPathwayBaselineArms(
+  input: SuccessorPathwayBaselineArms,
+): SuccessorPathwayBaselineArms {
+  return {
+    control: input.control.map(baselineArmWorld),
+    candidate: input.candidate.map((world) => ({
+      ...baselineArmWorld(world),
+      pathway: {
+        ...world.pathway,
+        assignments: world.pathway.assignments.filter(withinBaselineSeasons),
+        boundaries: world.pathway.boundaries.filter(withinBaselineSeasons),
+      },
+    })),
+    seasonCount: Math.min(
+      input.seasonCount,
+      SUCCESSOR_PATHWAY_BASELINE_SEASON_COUNT,
+    ),
+  };
+}
+
+function baselineArmWorld(
+  world: SuccessorCeilingArmWorldInput,
+): SuccessorCeilingArmWorldInput {
+  return {
+    ...world,
+    successorCeilingSeasons:
+      world.successorCeilingSeasons.filter(withinBaselineSeasons),
+    owner: {
+      ...world.owner,
+      playerSeasons: world.owner.playerSeasons.filter(withinBaselineSeasons),
+    },
+  };
+}
+
+function withinBaselineSeasons(fact: { readonly seasonNumber: number }): boolean {
+  return fact.seasonNumber <= SUCCESSOR_PATHWAY_BASELINE_SEASON_COUNT;
+}
+
+/**
  * Attributes the rejected successor cohort without changing its football.
  *
  * Only closed academy windows enter owner ranking. A 17-year-old still in the
  * academy at season ten is a future observation, not a failed replacement.
+ *
+ * Deliberately ten-season only, and left that way. A caller on a longer horizon
+ * passes its facts through `successorPathwayBaselineArms` first.
  */
 export function evaluateSuccessorPathwayCheckpoint(input: {
   readonly control: readonly SuccessorCeilingArmWorldInput[];
@@ -613,6 +693,874 @@ export function evaluateSuccessorPathwayCheckpoint(input: {
     reconciliationFailureCount,
     worlds: worlds.toSorted((left, right) => left.worldSeed.localeCompare(right.worldSeed)),
   };
+}
+
+/**
+ * The six frozen loss states, in the contract's own order.
+ *
+ * Evaluability is resolved before mechanism: a player who could not be judged,
+ * or whose ceiling was never there, is not evidence about conversion.
+ */
+const DEVELOPMENT_REALIZATION_LOSS_STATES = [
+  "expected_ceiling_below_16_at_intake",
+  "ceiling_lost_before_realization",
+  "right_censored_at_horizon",
+  "sustained_opportunity_insufficient",
+  "realization_under_viable_projection",
+  "instrument_failure",
+] as const;
+export type DevelopmentRealizationLossState =
+  typeof DEVELOPMENT_REALIZATION_LOSS_STATES[number];
+
+/**
+ * Every way a frozen-cohort player can resolve, exactly once.
+ *
+ * `recovered_before_judgement` is an outcome, not a seventh loss state: a member
+ * of a cohort selected for having failed by season ten who nevertheless reaches
+ * current `16` before his judgement age. He satisfies none of the six - not
+ * censored, ceiling held, opportunity sufficient, and state five requires that
+ * `16` was never reached - and he is not a failure, so he is excluded from every
+ * owner denominator on the same ground as a censored player.
+ */
+export type DevelopmentRealizationOutcome =
+  | DevelopmentRealizationLossState
+  | "recovered_before_judgement";
+
+/** Whether a lost ceiling disappeared before or after sustained exposure. */
+export type CeilingLossTiming =
+  | "before_sustained_exposure"
+  | "after_sustained_exposure";
+
+/** Frozen fraction below which opportunity is materially insufficient. */
+const SUSTAINED_EXPOSURE_SHARE = 0.5;
+/** Role-weighted current ability that defines an elite senior player. */
+const ELITE_CURRENT_ABILITY = 16;
+
+/** One frozen-cohort player resolved against the observed monthly evidence. */
+export interface DevelopmentRealizationPlayerEvaluation {
+  readonly playerId: string;
+  readonly outcome: DevelopmentRealizationOutcome;
+  /** Present only on `ceiling_lost_before_realization`. */
+  readonly lossTiming?: CeilingLossTiming;
+  /**
+   * Exposure actually taken, `sum(ageMultiplier * opportunityMultiplier)`.
+   *
+   * Stored beside its denominator rather than as a ratio: the share is
+   * derivable from the two, and a stored ratio is a third number that can
+   * disagree with them.
+   */
+  readonly observedExposure: number;
+  /** Exposure that existed to be taken, over months development could occur. */
+  readonly availableExposure: number;
+  /** First month cumulative exposure reached the frozen sustained fraction. */
+  readonly sustainedExposureMonthKey?: string;
+  /** First month role potential fell below elite, if it ever did. */
+  readonly ceilingLostMonthKey?: string;
+  /** First closed month at or after the group's judgement age. */
+  readonly judgementMonthKey?: string;
+  /** Highest role-weighted current ability observed up to judgement. */
+  readonly maxRoleCurrentAbility: number | "not_observed";
+  /**
+   * Assignment-time median projection, the fact that decides the first state.
+   *
+   * Recorded because it decided this player's outcome and was otherwise
+   * invisible: a whole cohort resolving to the intake state looked like an
+   * instrument defect until this number could be read.
+   *
+   * `not_observed` only when the assignment carried no projection at all, which
+   * is itself an instrument failure. It is never defaulted to a number: a
+   * fabricated zero would silently drag the reported distribution down.
+   */
+  readonly intakeExpectedCeiling: number | "not_observed";
+  /**
+   * Relevance-bucket split at the last month inside his growth window.
+   *
+   * Growth is applied per attribute in proportion to role relevance while
+   * ability is measured as a weighted average over the same weights, so the
+   * aggregate margin cannot show which bucket stopped moving. This is the only
+   * fact that can distinguish a ceiling that was too low from a conversion that
+   * could not finish, and it is dated rather than reconstructed.
+   */
+  readonly finalBucketMargins?: readonly {
+    readonly bucket: string;
+    readonly attributeCount: number;
+    readonly currentTotal: number;
+    readonly potentialTotal: number;
+  }[];
+  /** Named cause; present only on `instrument_failure`. */
+  readonly instrumentFailureReason?: string;
+}
+
+/** Shape of one measured distribution, reported beside the state it explains. */
+export interface DevelopmentRealizationDistribution {
+  readonly minimum: number | "not_observed";
+  readonly p10: number | "not_observed";
+  readonly p50: number | "not_observed";
+  readonly p90: number | "not_observed";
+  readonly maximum: number | "not_observed";
+}
+
+/**
+ * Facts that are true of players across states, reported without moving any.
+ *
+ * A player resolves to exactly one exclusive state. These say what else was
+ * true of him. Keeping them here rather than folding them into the taxonomy is
+ * deliberate: a horizon that has not closed, a ceiling that disappeared and the
+ * opportunity a player received are three different facts, and letting any of
+ * them re-open a resolved state would edit the owner rule after seeing output.
+ */
+export interface DevelopmentRealizationCrossCuttingFacts {
+  /** Assignment-time median projections over the resolved population. */
+  readonly intakeExpectedCeiling: DevelopmentRealizationDistribution;
+  /** How many of those medians sit below elite. */
+  readonly intakeExpectedCeilingBelowEliteCount: number;
+  /**
+   * Players whose judgement age the horizon never reached.
+   *
+   * Deliberately not `censoredCount`, which counts the exclusive state. A
+   * player resolved at intake may also have an open horizon; both are true and
+   * only one is his state.
+   */
+  readonly horizonEndsBeforeJudgementCount: number;
+  /** Players whose role potential fell below elite before judgement. */
+  readonly ceilingLostBeforeJudgementCount: number;
+  /** Observed exposure over available exposure, across the same population. */
+  readonly exposureShare: DevelopmentRealizationDistribution;
+}
+
+/**
+ * What the allocator saw when it selected, read from the canonical projection.
+ *
+ * Derived at read time from the projections already carried by the pathway
+ * facts; nothing here is a second persisted copy of them. It exists to separate
+ * two allocation failures that the median alone cannot tell apart: a stored
+ * ceiling and an upper tail that reach elite while the median never does, which
+ * means the allocator is buying remote upside rather than credible prospects;
+ * or an upper tail that does not reach elite either, which means no
+ * elite-capable young player is being generated at all.
+ */
+export interface DevelopmentRealizationIntakeProfile {
+  readonly playerCount: number;
+  readonly currentAbility: DevelopmentRealizationDistribution;
+  readonly p50Ability: DevelopmentRealizationDistribution;
+  readonly upperAbility: DevelopmentRealizationDistribution;
+  readonly storedCeilingAbility: DevelopmentRealizationDistribution;
+  /** How many of each reach elite; the cross-tab the decision turns on. */
+  readonly reachingEliteCount: {
+    readonly p50Ability: number;
+    readonly upperAbility: number;
+    readonly storedCeilingAbility: number;
+  };
+}
+
+/** Observation payload one world contributes to the L6.43B evaluator. */
+export interface DevelopmentRealizationWorldObservation {
+  readonly worldSeed: string;
+  readonly cohort: readonly {
+    readonly playerId: string;
+    readonly birthDate: number;
+    readonly naturalPosition: string;
+    readonly firstEligibleDevelopmentMonthKey: string;
+  }[];
+  readonly rows: readonly PlayerMonthlyDevelopmentObservation[];
+  readonly closedDevelopmentMonthKeys: readonly string[];
+}
+
+/** One world's resolved frozen cohort. */
+export interface DevelopmentRealizationWorldEvaluation {
+  readonly worldSeed: string;
+  readonly decisionPopulationCount: number;
+  readonly evaluableCount: number;
+  readonly censoredCount: number;
+  readonly recoveredCount: number;
+  readonly outcomeCounts: Readonly<Record<DevelopmentRealizationOutcome, number>>;
+  readonly lossTimingCounts: Readonly<Record<CeilingLossTiming, number>>;
+  readonly crossCutting: DevelopmentRealizationCrossCuttingFacts;
+  readonly players: readonly DevelopmentRealizationPlayerEvaluation[];
+  readonly reconciliationFailureCount: number;
+}
+
+/** L6.43B mechanism decision over the frozen decision population. */
+export interface DevelopmentRealizationCheckpointDecision {
+  readonly decision:
+    | "OWNER_IDENTIFIED"
+    | "MIXED"
+    | "UNDERPOWERED"
+    | "STOP_INSTRUMENT";
+  readonly owner: DevelopmentRealizationLossState | "mixed" | "underpowered" | "instrument";
+  readonly ownerCoherenceWorldCount: number;
+  readonly pooledEvaluableCount: number;
+  readonly pooledCensoredCount: number;
+  readonly pooledRecoveredCount: number;
+  readonly pooledOutcomeCounts: Readonly<Record<DevelopmentRealizationOutcome, number>>;
+  readonly pooledLossTimingCounts: Readonly<Record<CeilingLossTiming, number>>;
+  readonly pooledOwnerShare: number | "not_observed";
+  readonly pooledOwnerMargin: number | "not_observed";
+  /**
+   * Share of the evaluable frozen cohort that recovered.
+   *
+   * A baseline reading of zero is a valid measurement of the shipped product.
+   * Strict positivity binds only on a Step 16M-C candidate seeking adoption.
+   */
+  readonly frozenFailureCohortRecoveryShare: number | "not_observed";
+  /** Pooled facts that are true across states, never reassigning one. */
+  readonly pooledCrossCutting: DevelopmentRealizationCrossCuttingFacts;
+  /** What the allocator saw at intake, pooled over the frozen population. */
+  readonly pooledIntakeProfile: DevelopmentRealizationIntakeProfile;
+  readonly worlds: readonly DevelopmentRealizationWorldEvaluation[];
+  readonly reconciliationFailureCount: number;
+}
+
+/**
+ * The control growth curve, frozen as this checkpoint's measuring instrument.
+ *
+ * A snapshot, not a second copy of a live policy, and the distinction is the
+ * whole point. Step 16M-C's admitted candidate reshapes
+ * `monthlyGrowthAgeMultiplier`. If this evaluator read that function at runtime
+ * the candidate would move its own judgement age, its own growth window and its
+ * own exposure denominator all at once, and the two arms would be scored on
+ * different instruments while appearing to share one. The contract forbids
+ * exactly that: a player is judged at his control window-close age, never at a
+ * candidate's.
+ *
+ * A test proves this table equals the shipped curve today, so it cannot be a
+ * transcription error. When a candidate diverges that test is *expected* to
+ * fail - that failure is the signal that control and candidate have parted, and
+ * it is answered by asserting the divergence. This table is never edited to
+ * follow a candidate.
+ *
+ * Ages absent from a group's row pay nothing. That is the curve's own shape
+ * rather than a default standing in for a missing case: outside these bands the
+ * shipped policy returns zero.
+ */
+const L6_43B_CONTROL_GROWTH_AGE_MULTIPLIER = {
+  goalkeeper: { 16: 0.3, 17: 0.3, 18: 0.6, 19: 0.6, 20: 0.6, 21: 0.6, 22: 0.75, 23: 0.75, 24: 0.75, 25: 0.45, 26: 0.45, 27: 0.45 },
+  defender: { 16: 0.25, 17: 0.85, 18: 0.85, 19: 0.85, 20: 0.85, 21: 0.65, 22: 0.65, 23: 0.65, 24: 0.35, 25: 0.35 },
+  midfielder: { 16: 0.25, 17: 0.85, 18: 0.85, 19: 0.85, 20: 0.85, 21: 0.65, 22: 0.65, 23: 0.65, 24: 0.35, 25: 0.35, 26: 0.2 },
+  attacker: { 16: 0.25, 17: 0.85, 18: 0.85, 19: 0.85, 20: 0.85, 21: 0.65, 22: 0.65, 23: 0.65, 24: 0.35, 25: 0.35 },
+} as const satisfies Readonly<Record<BroadPositionGroup, Readonly<Record<number, number>>>>;
+
+/**
+ * The frozen control weight for one group at one age.
+ *
+ * Exported so the test that binds this table to the shipped policy reads the
+ * same accessor the evaluator does, rather than its own copy of the lookup.
+ */
+export function l6_43BControlGrowthAgeMultiplier(
+  group: BroadPositionGroup,
+  age: number,
+): number {
+  const band: Readonly<Record<number, number>> =
+    L6_43B_CONTROL_GROWTH_AGE_MULTIPLIER[group];
+  return band[age] ?? 0;
+}
+
+/**
+ * Age at which the frozen control curve stops paying this group anything.
+ *
+ * Read from the frozen table rather than restated as `26`/`27`/`28`, and never
+ * from the runtime curve. The scan takes the last age still paid and adds one,
+ * which survives a band with a gap in it; a first-zero scan would not.
+ */
+function judgementAge(group: BroadPositionGroup): number {
+  return Object.keys(L6_43B_CONTROL_GROWTH_AGE_MULTIPLIER[group])
+    .map(Number)
+    .reduce((latest, age) => Math.max(latest, age), 0) + 1;
+}
+
+/**
+ * Resolves one frozen-cohort player against his own observed months.
+ *
+ * Every multiplier comes from the canonical policy, recomposed from the facts
+ * the observation retained; nothing here restates an age band, a minute band or
+ * a growth formula. The denominator counts only months the lifecycle actually
+ * closed, because a month in which no development checkpoint ran was available
+ * to nobody and charging it would measure the fixture calendar.
+ */
+function evaluateDevelopmentRealizationPlayer(input: {
+  readonly playerId: string;
+  readonly birthDate: number;
+  readonly naturalPosition: string;
+  readonly firstEligibleDevelopmentMonthKey: string;
+  readonly rows: readonly PlayerMonthlyDevelopmentObservation[];
+  readonly closedDevelopmentMonthKeys: readonly string[];
+  readonly intakeExpectedCeiling: number;
+}): DevelopmentRealizationPlayerEvaluation {
+  const group = broadPositionGroup(
+    input.naturalPosition as Parameters<typeof broadPositionGroup>[0],
+  );
+  const closeAge = judgementAge(group);
+  const ageAt = (monthKey: string): number =>
+    completedPlayerAgeAtDevelopmentMonth(
+      input.birthDate as Parameters<typeof completedPlayerAgeAtDevelopmentMonth>[0],
+      monthKey as Parameters<typeof completedPlayerAgeAtDevelopmentMonth>[1],
+    );
+
+  const monthsFromBoundary = input.closedDevelopmentMonthKeys
+    .filter((monthKey) => monthKey >= input.firstEligibleDevelopmentMonthKey)
+    .toSorted();
+  const windowMonths = monthsFromBoundary.filter(
+    (monthKey) => l6_43BControlGrowthAgeMultiplier(group, ageAt(monthKey)) > 0,
+  );
+  const judgementMonthKey = monthsFromBoundary.find(
+    (monthKey) => ageAt(monthKey) >= closeAge,
+  );
+  const availableExposure = roundExposure(windowMonths.reduce(
+    (total, monthKey) => total + l6_43BControlGrowthAgeMultiplier(group, ageAt(monthKey)),
+    0,
+  ));
+
+  const windowMonthKeys = new Set(windowMonths);
+  const rowsByMonthKey = new Map(input.rows.map((row) => [String(row.change.monthKey), row]));
+  const failure = (instrumentFailureReason: string): DevelopmentRealizationPlayerEvaluation => ({
+    playerId: input.playerId,
+    outcome: "instrument_failure",
+    observedExposure: 0,
+    availableExposure,
+    intakeExpectedCeiling: input.intakeExpectedCeiling,
+    maxRoleCurrentAbility: "not_observed",
+    instrumentFailureReason,
+  });
+  if (rowsByMonthKey.size !== input.rows.length) {
+    return failure("duplicate_observed_month");
+  }
+  for (const monthKey of rowsByMonthKey.keys()) {
+    if (monthKey < input.firstEligibleDevelopmentMonthKey) {
+      return failure("row_before_first_eligible_month");
+    }
+  }
+  if (availableExposure <= 0) {
+    return failure("empty_exposure_denominator");
+  }
+
+  // Walk the window in order so the sustained-exposure boundary and the first
+  // lost ceiling are dated rather than inferred from totals.
+  let observedExposure = 0;
+  let sustainedExposureMonthKey: string | undefined;
+  let ceilingLostMonthKey: string | undefined;
+  let maxRoleCurrentAbility: number | undefined;
+  let recoveredMonthKey: string | undefined;
+  let finalBucketMargins: PlayerMonthlyDevelopmentObservation["bucketMargins"] | undefined;
+  for (const monthKey of windowMonths) {
+    const row = rowsByMonthKey.get(monthKey);
+    if (row !== undefined) {
+      finalBucketMargins = row.bucketMargins;
+      const policy = monthlyDevelopmentPolicy({
+        positionGroup: row.change.positionGroup,
+        age: row.change.age,
+        participation: {
+          minutes: row.change.minutes,
+          ratingTotal: row.ratingTotal,
+          ratingSamples: row.ratingSamples,
+        },
+        positiveGrowthEnvironmentBasisPoints:
+          row.change.positiveGrowthEnvironmentBasisPoints,
+      });
+      // Opportunity comes from the canonical policy, recomposed from the facts
+      // the observation retained, so no minute band is restated here. The age
+      // weight deliberately does not: it comes from the frozen control curve,
+      // because a candidate that pays more at an age must not thereby award
+      // itself more exposure against a control denominator. Exposure measures
+      // opportunity received, priced on one instrument for both arms.
+      observedExposure += l6_43BControlGrowthAgeMultiplier(group, ageAt(monthKey))
+        * policy.opportunityMultiplier;
+      const roleCurrent = Number(row.change.roleCurrentAbilityAfter);
+      maxRoleCurrentAbility = Math.max(maxRoleCurrentAbility ?? roleCurrent, roleCurrent);
+      if (
+        recoveredMonthKey === undefined
+        && roleCurrent >= ELITE_CURRENT_ABILITY
+      ) {
+        recoveredMonthKey = monthKey;
+      }
+      if (
+        ceilingLostMonthKey === undefined
+        && Number(row.change.rolePotentialAbility) < ELITE_CURRENT_ABILITY
+      ) {
+        ceilingLostMonthKey = monthKey;
+      }
+    }
+    if (
+      sustainedExposureMonthKey === undefined
+      && observedExposure / availableExposure >= SUSTAINED_EXPOSURE_SHARE
+    ) {
+      sustainedExposureMonthKey = monthKey;
+    }
+  }
+
+  const resolved = {
+    playerId: input.playerId,
+    observedExposure: roundExposure(observedExposure),
+    availableExposure,
+    intakeExpectedCeiling: input.intakeExpectedCeiling,
+    maxRoleCurrentAbility: maxRoleCurrentAbility ?? "not_observed",
+    ...(finalBucketMargins === undefined ? {} : { finalBucketMargins }),
+    ...(sustainedExposureMonthKey === undefined ? {} : { sustainedExposureMonthKey }),
+    ...(ceilingLostMonthKey === undefined ? {} : { ceilingLostMonthKey }),
+    ...(judgementMonthKey === undefined ? {} : { judgementMonthKey }),
+  } as const;
+  const censored = judgementMonthKey === undefined;
+
+  // A ceiling that disappeared and a career that reached elite cannot both be
+  // true. Potential is never written below current, and current does not fall
+  // inside the growth window, so once elite is reached potential stays at or
+  // above it. Both dated facts present means the payload contradicts itself,
+  // and choosing either silently would publish a share built on it.
+  if (ceilingLostMonthKey !== undefined && recoveredMonthKey !== undefined) {
+    return failure("ceiling_lost_and_recovered");
+  }
+
+  // The contract's frozen order, which is not simply evaluability first: an
+  // incredible intake ceiling and a ceiling lost mid-career both outrank
+  // censoring, because both are dated facts about a career that a horizon
+  // ending later could not have changed. Censoring outranks only the states
+  // that need a completed window to mean anything.
+  if (input.intakeExpectedCeiling < ELITE_CURRENT_ABILITY) {
+    return { ...resolved, outcome: "expected_ceiling_below_16_at_intake" };
+  }
+  if (ceilingLostMonthKey !== undefined) {
+    return {
+      ...resolved,
+      outcome: "ceiling_lost_before_realization",
+      lossTiming: sustainedExposureMonthKey !== undefined
+          && sustainedExposureMonthKey <= ceilingLostMonthKey
+        ? "after_sustained_exposure"
+        : "before_sustained_exposure",
+    };
+  }
+  if (censored) {
+    return { ...resolved, outcome: "right_censored_at_horizon" };
+  }
+  // Reaching elite is not a loss at all, and the two remaining states both
+  // presume he never did.
+  if (recoveredMonthKey !== undefined) {
+    return { ...resolved, outcome: "recovered_before_judgement" };
+  }
+  if (observedExposure / availableExposure < SUSTAINED_EXPOSURE_SHARE) {
+    return { ...resolved, outcome: "sustained_opportunity_insufficient" };
+  }
+  return { ...resolved, outcome: "realization_under_viable_projection" };
+}
+
+function roundExposure(value: number): number {
+  return Math.round(value * 10_000) / 10_000;
+}
+
+/**
+ * States that may name an owner.
+ *
+ * `right_censored_at_horizon` is a horizon fact, `instrument_failure` is a fact
+ * about the measurement, and `recovered_before_judgement` is not a failure at
+ * all. None of the three describes a mechanism, so none may be corrected.
+ */
+const DEVELOPMENT_REALIZATION_ATTRIBUTABLE_STATES = [
+  "expected_ceiling_below_16_at_intake",
+  "ceiling_lost_before_realization",
+  "sustained_opportunity_insufficient",
+  "realization_under_viable_projection",
+] as const satisfies readonly DevelopmentRealizationLossState[];
+
+const DEVELOPMENT_REALIZATION_OUTCOMES = [
+  ...DEVELOPMENT_REALIZATION_LOSS_STATES,
+  "recovered_before_judgement",
+] as const satisfies readonly DevelopmentRealizationOutcome[];
+
+const CEILING_LOSS_TIMINGS = [
+  "before_sustained_exposure",
+  "after_sustained_exposure",
+] as const satisfies readonly CeilingLossTiming[];
+
+/**
+ * Resolves the frozen decision population against the observed monthly rows.
+ *
+ * The decision population is not recomputed here: it is exactly the players the
+ * frozen baseline classified `development_realization` at its own season-ten
+ * boundary. This evaluator only says *why* each of them failed, and it may not
+ * quietly re-select who failed.
+ */
+export function evaluateDevelopmentRealizationCheckpoint(input: {
+  readonly baseline: SuccessorPathwayCheckpointDecision;
+  readonly assignments: readonly SuccessorPathwayWorldFacts[];
+  readonly observation: readonly DevelopmentRealizationWorldObservation[];
+}): DevelopmentRealizationCheckpointDecision {
+  const assignmentsBySeed = new Map(
+    input.assignments.map((world) => [world.worldSeed, world]),
+  );
+  const observationBySeed = new Map(
+    input.observation.map((world) => [world.worldSeed, world]),
+  );
+  let reconciliationFailureCount = Number(
+    assignmentsBySeed.size !== input.baseline.worlds.length,
+  ) + Number(observationBySeed.size !== input.baseline.worlds.length);
+
+  const worlds: DevelopmentRealizationWorldEvaluation[] = [];
+  for (const baselineWorld of input.baseline.worlds) {
+    const assignments = assignmentsBySeed.get(baselineWorld.worldSeed);
+    const observation = observationBySeed.get(baselineWorld.worldSeed);
+    if (assignments === undefined || observation === undefined) {
+      reconciliationFailureCount += 1;
+      continue;
+    }
+    const world = evaluateDevelopmentRealizationWorld({
+      baselineWorld,
+      assignments,
+      observation,
+    });
+    worlds.push(world);
+    reconciliationFailureCount += world.reconciliationFailureCount;
+  }
+
+  const pooledOutcomeCounts = emptyCounts(DEVELOPMENT_REALIZATION_OUTCOMES);
+  const pooledLossTimingCounts = emptyCounts(CEILING_LOSS_TIMINGS);
+  let pooledEvaluableCount = 0;
+  let pooledCensoredCount = 0;
+  let pooledRecoveredCount = 0;
+  for (const world of worlds) {
+    pooledEvaluableCount += world.evaluableCount;
+    pooledCensoredCount += world.censoredCount;
+    pooledRecoveredCount += world.recoveredCount;
+    for (const outcome of DEVELOPMENT_REALIZATION_OUTCOMES) {
+      pooledOutcomeCounts[outcome] += world.outcomeCounts[outcome];
+    }
+    for (const timing of CEILING_LOSS_TIMINGS) {
+      pooledLossTimingCounts[timing] += world.lossTimingCounts[timing];
+    }
+  }
+
+  const rankedOwners = [...DEVELOPMENT_REALIZATION_ATTRIBUTABLE_STATES].toSorted(
+    (left, right) =>
+      pooledOutcomeCounts[right] - pooledOutcomeCounts[left]
+        || left.localeCompare(right),
+  );
+  const owner = rankedOwners[0]!;
+  const second = rankedOwners[1]!;
+  const ownerCoherenceWorldCount = worlds.filter(
+    (world) => dominantAttributableState(world) === owner,
+  ).length;
+  const pooledOwnerShare = observedRatio(
+    pooledOutcomeCounts[owner],
+    pooledEvaluableCount,
+  );
+  const pooledOwnerMargin = pooledEvaluableCount === 0
+    ? "not_observed"
+    : (pooledOutcomeCounts[owner] - pooledOutcomeCounts[second]) / pooledEvaluableCount;
+
+  reconciliationFailureCount += Number(worlds.length !== input.baseline.worlds.length)
+    + pooledOutcomeCounts.instrument_failure;
+  // Power is decided before attribution: too few evaluable players cannot name
+  // an owner however cleanly they rank, and the contract's answer is a longer
+  // horizon rather than a correction.
+  const underpowered = worlds.some((world) => world.evaluableCount < 10)
+    || pooledEvaluableCount < 100;
+  const ownerHeld = pooledOwnerShare !== "not_observed"
+    && pooledOwnerMargin !== "not_observed"
+    && ownerCoherenceWorldCount >= 5
+    && pooledOwnerShare >= 0.20
+    && pooledOwnerMargin >= 0.05;
+
+  return {
+    decision: reconciliationFailureCount > 0
+      ? "STOP_INSTRUMENT"
+      : underpowered
+        ? "UNDERPOWERED"
+        : ownerHeld
+          ? "OWNER_IDENTIFIED"
+          : "MIXED",
+    owner: reconciliationFailureCount > 0
+      ? "instrument"
+      : underpowered
+        ? "underpowered"
+        : ownerHeld
+          ? owner
+          : "mixed",
+    ownerCoherenceWorldCount,
+    pooledEvaluableCount,
+    pooledCensoredCount,
+    pooledRecoveredCount,
+    pooledOutcomeCounts,
+    pooledLossTimingCounts,
+    pooledOwnerShare,
+    pooledOwnerMargin,
+    frozenFailureCohortRecoveryShare: observedRatio(
+      pooledRecoveredCount,
+      pooledEvaluableCount + pooledRecoveredCount,
+    ),
+    // Pooled over the whole frozen population, not over the seven per-world
+    // summaries: a median of medians is not a median.
+    pooledCrossCutting: developmentRealizationCrossCuttingFacts(
+      worlds.flatMap(({ players }) => players),
+    ),
+    // Pooled here rather than per world because quantiles need the raw values
+    // together: a quantile of per-world quantiles is not a quantile.
+    pooledIntakeProfile: developmentRealizationIntakeProfile(
+      input.assignments,
+      new Map(worlds.map(({ worldSeed, players }) =>
+        [worldSeed, new Set(players.map(({ playerId }) => playerId))])),
+    ),
+    worlds: worlds.toSorted((left, right) =>
+      left.worldSeed.localeCompare(right.worldSeed)),
+    reconciliationFailureCount,
+  };
+}
+
+function evaluateDevelopmentRealizationWorld(input: {
+  readonly baselineWorld: SuccessorPathwayWorldEvaluation;
+  readonly assignments: SuccessorPathwayWorldFacts;
+  readonly observation: DevelopmentRealizationWorldObservation;
+}): DevelopmentRealizationWorldEvaluation {
+  const headerByPlayerId = new Map(
+    input.observation.cohort.map((entry) => [entry.playerId, entry]),
+  );
+  const projectionByPlayerId = new Map(
+    input.assignments.assignments.map((assignment) =>
+      [assignment.playerId, assignment.projection]),
+  );
+  const rowsByPlayerId = groupBy(
+    input.observation.rows,
+    ({ change }) => String(change.playerId),
+  );
+  const decisionPopulation = input.baselineWorld.players.filter(
+    ({ terminal }) => terminal === "development_realization",
+  );
+
+  let reconciliationFailureCount = 0;
+  const players = decisionPopulation.map((player) => {
+    const header = headerByPlayerId.get(player.playerId);
+    const projection = projectionByPlayerId.get(player.playerId);
+    if (header === undefined || projection === undefined) {
+      // A frozen-cohort player with no header has no exposure denominator at
+      // all, so every share computed for him would be invented.
+      reconciliationFailureCount += 1;
+      return {
+        playerId: player.playerId,
+        outcome: "instrument_failure" as const,
+        observedExposure: 0,
+        availableExposure: 0,
+        intakeExpectedCeiling: "not_observed" as const,
+        maxRoleCurrentAbility: "not_observed" as const,
+        instrumentFailureReason: header === undefined
+          ? "missing_cohort_header"
+          : "missing_intake_projection",
+      };
+    }
+    return evaluateDevelopmentRealizationPlayer({
+      playerId: player.playerId,
+      birthDate: header.birthDate,
+      naturalPosition: header.naturalPosition,
+      firstEligibleDevelopmentMonthKey: header.firstEligibleDevelopmentMonthKey,
+      rows: rowsByPlayerId.get(player.playerId) ?? [],
+      closedDevelopmentMonthKeys: input.observation.closedDevelopmentMonthKeys,
+      intakeExpectedCeiling: projection.p50Ability,
+    });
+  });
+
+  const outcomeCounts = emptyCounts(DEVELOPMENT_REALIZATION_OUTCOMES);
+  const lossTimingCounts = emptyCounts(CEILING_LOSS_TIMINGS);
+  for (const player of players) {
+    outcomeCounts[player.outcome] += 1;
+    if (player.lossTiming !== undefined) lossTimingCounts[player.lossTiming] += 1;
+  }
+  // Each player resolves exactly once, and the three groups partition the
+  // cohort. A mismatch means an outcome was double-counted or dropped.
+  const censoredCount = outcomeCounts.right_censored_at_horizon;
+  const recoveredCount = outcomeCounts.recovered_before_judgement;
+  const evaluableCount = players.length - censoredCount - recoveredCount;
+  reconciliationFailureCount += Number(
+    DEVELOPMENT_REALIZATION_OUTCOMES.reduce(
+      (total, outcome) => total + outcomeCounts[outcome],
+      0,
+    ) !== players.length,
+  ) + Number(
+    lossTimingCounts.before_sustained_exposure + lossTimingCounts.after_sustained_exposure
+      !== outcomeCounts.ceiling_lost_before_realization,
+  );
+
+  return {
+    worldSeed: input.baselineWorld.worldSeed,
+    decisionPopulationCount: players.length,
+    evaluableCount,
+    censoredCount,
+    recoveredCount,
+    outcomeCounts,
+    lossTimingCounts,
+    crossCutting: developmentRealizationCrossCuttingFacts(players),
+    players: players.toSorted((left, right) =>
+      left.playerId.localeCompare(right.playerId)),
+    reconciliationFailureCount,
+  };
+}
+
+/** Instrument facts for one observed world, before any attribution. */
+export interface DevelopmentRealizationObservedWorld {
+  readonly worldSeed: string;
+  /** The population under attribution, rows or no rows. */
+  readonly cohort: DevelopmentRealizationWorldObservation["cohort"];
+  /** Months a development checkpoint actually ran in; the denominator basis. */
+  readonly closedDevelopmentMonthKeys: readonly string[];
+  /** Distinct players that produced at least one row. The non-vacuity gate. */
+  readonly observedPlayerCount: number;
+  readonly observedMonthCount: number;
+  /**
+   * Rows the recorded boundary cannot place. Zero is the only passing value.
+   *
+   * A row dated before its own player's first eligible month, or belonging to a
+   * player with no header at all, means the rows and the boundary are reading
+   * different calendars - and every other number here stays believable while
+   * that is true.
+   */
+  readonly rowsOutsideRecordedBoundaryCount: number;
+}
+
+/**
+ * The whole L6.43B checkpoint: the frozen baseline plus one declared sub-field.
+ *
+ * The baseline is reused verbatim through the ten-season adapter and is never
+ * recomputed here, because the replay's entire purpose is to show that turning
+ * the observer on changes nothing an earlier run established.
+ */
+export function evaluateDevelopmentRealizationL6_43BCheckpoint(input: {
+  readonly control: readonly SuccessorCeilingArmWorldInput[];
+  readonly candidate: readonly (SuccessorCeilingArmWorldInput & {
+    readonly pathway: SuccessorPathwayWorldFacts;
+  })[];
+  readonly seasonCount: number;
+  readonly observation: readonly DevelopmentRealizationWorldObservation[];
+}): SuccessorPathwayCheckpointDecision & {
+  readonly developmentRealization: DevelopmentRealizationCheckpointDecision & {
+    readonly observedWorlds: readonly DevelopmentRealizationObservedWorld[];
+  };
+} {
+  const baselineArms = successorPathwayBaselineArms(input);
+  const baseline = evaluateSuccessorPathwayCheckpoint(baselineArms);
+  return {
+    ...baseline,
+    developmentRealization: {
+      ...evaluateDevelopmentRealizationCheckpoint({
+        baseline,
+        assignments: baselineArms.candidate.map(({ pathway }) => pathway),
+        observation: input.observation,
+      }),
+      observedWorlds: input.observation.map((world) => ({
+        worldSeed: world.worldSeed,
+        cohort: world.cohort,
+        closedDevelopmentMonthKeys: world.closedDevelopmentMonthKeys,
+        observedPlayerCount: new Set(
+          world.rows.map(({ change }) => String(change.playerId)),
+        ).size,
+        observedMonthCount: world.rows.length,
+        rowsOutsideRecordedBoundaryCount: rowsOutsideRecordedBoundary(world).length,
+      })),
+    },
+  };
+}
+
+function rowsOutsideRecordedBoundary(
+  world: DevelopmentRealizationWorldObservation,
+): readonly PlayerMonthlyDevelopmentObservation[] {
+  const firstEligibleByPlayerId = new Map(
+    world.cohort.map(({ playerId, firstEligibleDevelopmentMonthKey }) =>
+      [playerId, firstEligibleDevelopmentMonthKey] as const),
+  );
+  return world.rows.filter(({ change }) => {
+    const firstEligible = firstEligibleByPlayerId.get(String(change.playerId));
+    return firstEligible === undefined || String(change.monthKey) < firstEligible;
+  });
+}
+
+/**
+ * Facts true of a resolved population regardless of which state each reached.
+ *
+ * Computed from the rows rather than during resolution, so no diagnostic can
+ * influence the state a player received. `horizonEndsBeforeJudgementCount` in
+ * particular is not `censoredCount`: a player resolved at intake may also have
+ * an unfinished horizon, and reporting that is not the same as re-opening him.
+ */
+function developmentRealizationCrossCuttingFacts(
+  players: readonly DevelopmentRealizationPlayerEvaluation[],
+): DevelopmentRealizationCrossCuttingFacts {
+  const intakeCeilings = players
+    .map(({ intakeExpectedCeiling }) => intakeExpectedCeiling)
+    .filter((ceiling): ceiling is number => ceiling !== "not_observed");
+  const exposureShares = players
+    .filter(({ availableExposure }) => availableExposure > 0)
+    .map(({ observedExposure, availableExposure }) => observedExposure / availableExposure);
+  return {
+    intakeExpectedCeiling: distributionFact(intakeCeilings),
+    intakeExpectedCeilingBelowEliteCount: intakeCeilings.filter(
+      (ceiling) => ceiling < ELITE_CURRENT_ABILITY,
+    ).length,
+    horizonEndsBeforeJudgementCount: players.filter(
+      ({ judgementMonthKey }) => judgementMonthKey === undefined,
+    ).length,
+    ceilingLostBeforeJudgementCount: players.filter(
+      ({ ceilingLostMonthKey }) => ceilingLostMonthKey !== undefined,
+    ).length,
+    exposureShare: distributionFact(exposureShares),
+  };
+}
+
+/**
+ * Reads the canonical intake projections for one resolved population.
+ *
+ * Takes them from the pathway assignments rather than from anything the
+ * evaluator persisted, so the report carries the derived diagnostic only and
+ * the projection stays single-sourced.
+ */
+function developmentRealizationIntakeProfile(
+  assignments: readonly SuccessorPathwayWorldFacts[],
+  // Keyed by world: player ids are derived from club and season, not from the
+  // seed, so the same id exists in all seven worlds. Pooling ids into one set
+  // matches assignments from worlds the player never played in, and silently
+  // inflates the population the distribution claims to describe.
+  playerIdsByWorldSeed: ReadonlyMap<string, ReadonlySet<string>>,
+): DevelopmentRealizationIntakeProfile {
+  const projections = assignments
+    .flatMap(({ worldSeed, assignments: rows }) =>
+      rows.filter(({ playerId }) =>
+        playerIdsByWorldSeed.get(worldSeed)?.has(playerId) === true))
+    .map(({ projection }) => projection);
+  const reaching = (values: readonly number[]): number =>
+    values.filter((value) => value >= ELITE_CURRENT_ABILITY).length;
+  const currents = projections.map(({ currentAbility }) => currentAbility);
+  const p50s = projections.map(({ p50Ability }) => p50Ability);
+  const uppers = projections.map(({ upperAbility }) => upperAbility);
+  const ceilings = projections.map(({ storedCeilingAbility }) => storedCeilingAbility);
+  return {
+    playerCount: projections.length,
+    currentAbility: distributionFact(currents),
+    p50Ability: distributionFact(p50s),
+    upperAbility: distributionFact(uppers),
+    storedCeilingAbility: distributionFact(ceilings),
+    reachingEliteCount: {
+      p50Ability: reaching(p50s),
+      upperAbility: reaching(uppers),
+      storedCeilingAbility: reaching(ceilings),
+    },
+  };
+}
+
+function distributionFact(
+  values: readonly number[],
+): DevelopmentRealizationDistribution {
+  const sorted = [...values].toSorted((left, right) => left - right);
+  return {
+    minimum: sorted[0] ?? "not_observed",
+    p10: percentile(sorted, 0.1),
+    p50: percentile(sorted, 0.5),
+    p90: percentile(sorted, 0.9),
+    maximum: sorted.at(-1) ?? "not_observed",
+  };
+}
+
+function dominantAttributableState(
+  world: DevelopmentRealizationWorldEvaluation,
+): DevelopmentRealizationLossState | "not_observed" {
+  const ranked = [...DEVELOPMENT_REALIZATION_ATTRIBUTABLE_STATES].toSorted(
+    (left, right) =>
+      world.outcomeCounts[right] - world.outcomeCounts[left]
+        || left.localeCompare(right),
+  );
+  const leader = ranked[0]!;
+  return world.outcomeCounts[leader] === 0 ? "not_observed" : leader;
 }
 
 /** One-season execution/reconciliation gate; it makes no renewal claim. */

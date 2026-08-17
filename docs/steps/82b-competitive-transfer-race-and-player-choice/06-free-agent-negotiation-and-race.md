@@ -11,11 +11,11 @@ clubs compete for a free agent through the same race, and keep
 `applyCareerFreeAgentSigning` as the single atomic apply called only by the
 winner.
 
-## Interaction With Phase 81B
+## Interaction With Phases 81B And 81C
 
 This step is the only one in the phase that changes the throughput of a channel
-an earlier phase already calibrated. Phase 81B tuned the AI free-agent signing
-policy against a frozen pool cycle: a peak of `5-7%` of a competition's senior
+earlier phases already established. Phase 81B owns the AI free-agent signing
+policy; Phase 81C calibrates it against a frozen pool cycle: a peak of `5-7%` of a competition's senior
 population at the season boundary, a trough near `2%` once the window closes,
 and a drain between them achieved mostly by signings rather than by players
 leaving football.
@@ -76,13 +76,13 @@ green.
 - Persist the new negotiation variant losslessly in JSON and SQLite/OPFS.
   Delete incompatible beta saves through the canonical runtime/storage path;
   add no migration, dual reader, or fallback default.
-- Re-measure the Phase 81B free-agent cycle after the three-day stage exists,
+- Re-measure the Phase 81C free-agent cycle after the three-day stage exists,
   using that phase's audit with its unchanged seeds and denominators: peak,
   trough, and drain attributed between signings and exits. Record the result
   whether or not it holds.
 - If the drain no longer reaches the frozen trough, fix it inside this step's
   own scope - AI approach frequency and how many free agents a club may pursue
-  concurrently are the levers - and do not widen the Phase 81B band, because the
+  concurrently are the levers - and do not widen the Phase 81C band, because the
   band did not become wrong when this step slowed the channel.
 
 ## What NOT To Implement
@@ -124,8 +124,8 @@ git diff --check
   winner, with a zero fee.
 - Free-agent negotiations and race references survive a lossless save/reload
   round trip.
-- The Phase 81B free-agent cycle is re-measured with the three-day stage in
+- The Phase 81C free-agent cycle is re-measured with the three-day stage in
   place and still reaches its frozen trough, with the drain still attributed
   mostly to signings. The measured peak, trough, and drain are recorded beside
-  the Phase 81B values, and any shortfall is repaired here rather than absorbed
+  the Phase 81C values, and any shortfall is repaired here rather than absorbed
   by widening that band.

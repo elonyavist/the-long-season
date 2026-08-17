@@ -2,9 +2,9 @@
 
 ## Status
 
-**Draft.** The product contract is accepted, but Phase 81A, Phase 81B and Phase
-82A now land in front of it. This phase was previously numbered 80C. Do not
-start until Phase 82A is complete.
+**Draft.** The product contract is accepted, but Phase 81A, Phase 81B, Phase
+81C and Phase 82A now land in front of it. This phase was previously numbered
+80C. Do not start until Phase 82A is complete.
 
 The cross-phase requirements added on 2026-08-02 - the shared season boundary,
 the free-agent cycle the three-day player stage must not close - are intent to
@@ -24,8 +24,8 @@ The governing contract is:
 
 ## Entry Gate
 
-- Phase 80, Phase 80A, Phase 81, Phase 81A, Phase 81B, and Phase 82A are Done.
-- One season-boundary owner exists, introduced by Phase 81B. Race deadlines
+- Phase 80, Phase 80A, Phase 81, Phase 81A, Phase 81B, Phase 81C, and Phase 82A are Done.
+- One season-boundary owner exists, introduced by Phase 81C. Race deadlines
   capped by a registration-window close read the same boundary as contract
   expiry and loan return.
 - The contract's six accepted product decisions remain unchanged.
@@ -36,8 +36,8 @@ The governing contract is:
   negotiation kinds; different acquiring clubs may target the same player.
 - Phase 82A's temporary same-player scheduling restriction is in force.
 - Owned/selectable accessors are in use by structural squad floors.
-- Public value is club-independent; UI, valuation, willingness, and AI share
-  one current/`P50`/upper assessment.
+- Public value is club-independent; UI, valuation, willingness and AI share the
+  Phase 81B absolute probability assessment and never latent trajectory.
 - Phase 79 Step 14 remains Reopened, paused, and unclaimed.
 
 ## Fixed Architecture
@@ -67,8 +67,9 @@ The governing contract is:
 - Permanent transfers and free agents race in this release. Loans keep the
   serial Phase 82A lifecycle behind the same discriminated extension seam.
 - A free agent always waits through the full shared player-stage window, even
-  with one suitor. That wait slows every signing on the channel Phase 81B
-  calibrated, so Step 06 re-measures that phase's free-agent cycle and repairs
+  with one suitor. That wait slows every signing on the channel Phase 81B owns
+  and the cadence Phase 81C calibrated, so Step 06 re-measures that free-agent
+  cycle and repairs
   any shortfall through approach frequency and concurrent-pursuit limits, never
   by widening the frozen band.
 - For a manager-owned player, accepting an offer records seller acceptability
@@ -80,8 +81,8 @@ The governing contract is:
 - Step 09 closes Phase 82B and owns the second checkpointed `50 x 20`, run with
   exactly seven workers over the completed competitive market. Phase 81 Step 15
   ran the historical engine cohort, Phase 81A Step 16 closes the contextual
-  engine, and Phase 81B Step 07 runs `750 x 10` over complete
-  selected-division fixtures plus its free-agent foundation. None observes both
+  engine, and Phase 81C Step 07 runs `750 x 10` over complete domestic fixtures
+  plus its free-agent foundation. None observes both
   loans and races, so none can prove the completed market. The market run
   remains an accepted cost of the phase order.
 
@@ -159,7 +160,7 @@ workers, over the completed competitive market.
 - No agents, playing-time contracts, swaps, resale clauses, or loan fees.
 - No competitive loan race in this release.
 - No longitudinal cohort before Step 09.
-- No reuse of Phase 81 Step 15, Phase 81A Step 16 or Phase 81B Step 07 as
+- No reuse of Phase 81 Step 15, Phase 81A Step 16 or Phase 81C Step 07 as
   completed-market evidence: none observed both loans and races.
 - No Phase 79 Step 14 or Step 15 implementation.
 

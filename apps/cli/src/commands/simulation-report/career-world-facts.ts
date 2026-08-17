@@ -24,6 +24,7 @@ import {
 import {
   FORMATION_CATALOG,
   advanceCareerOneSeason,
+  monthKeyForCareerDate,
   completedPlayerAge,
   createFreshCareerState,
   developPlayersFromParticipationRows,
@@ -46,6 +47,7 @@ import {
   type CareerActivePlayerStockEntry,
   type FormationKey,
   type LineupSlot,
+  type PlayerMonthlyDevelopmentObservation,
   type PlayerPotentialProjection,
   type RoleWeightProfile,
   type SimulateSeasonInput,
@@ -278,6 +280,17 @@ export interface CareerWorldInspection {
   readonly aiMarketNeedSubmissionOrder?: "legacy" | "bounded_succession";
   /** Observation-only L6.40 succession context; ordinary reports do no work. */
   readonly collectRoleSuccessionSnapshots?: boolean;
+  /**
+   * Observation-only L6.43B monthly development seam.
+   *
+   * The observed cohort is accumulated during the run rather than read from a
+   * frozen id list: each season's exact-five assignments are added to the set
+   * used by later seasons. The canonical season order places
+   * `monthly_lifecycle` before `youth_intake`, so a prospect assigned at season
+   * `N` has no season-`N` development to lose. Ordinary reports leave this off
+   * and no work is done.
+   */
+  readonly collectMonthlyDevelopmentObservations?: boolean;
   /** Receives each completed selected-competition season. */
   readonly observeSeasonResult?: (context: {
     readonly seasonNumber: number;
@@ -444,6 +457,33 @@ export interface CareerWorldFacts {
   /** Closing club values normalized to the source comparator's 22 seniors. */
   readonly closingPlayerMarketClubSquadObservations:
     readonly PlayerMarketClubSquadObservation[];
+  /**
+   * Observation-only L6.43B monthly rows for the accumulated cohort.
+   *
+   * Present only when the inspection requested them. Rows name their month and
+   * never a `seasonNumber`, so they cannot enter the season-prefix hash that
+   * gates continuity against the earlier run.
+   */
+  readonly monthlyDevelopmentObservations?:
+    readonly PlayerMonthlyDevelopmentObservation[];
+  /**
+   * One entry per observed player, present whenever observation was requested.
+   *
+   * A player who never plays produces no monthly row, and dropping him here
+   * would delete the very case the step exists to measure: zero opportunity is
+   * an outcome, not an absence. The entry carries only identity and the time
+   * boundary the rows cannot supply.
+   */
+  readonly monthlyDevelopmentCohort?: readonly MonthlyDevelopmentCohortEntry[];
+  /**
+   * Every development month this world's lifecycle closed, in order.
+   *
+   * The engine's own record, not a calendar rebuilt here. It is the exposure
+   * denominator's month basis: a month in which no development checkpoint ran
+   * was available to nobody, so charging it to a player as lost opportunity
+   * would measure the fixture calendar rather than his career.
+   */
+  readonly closedDevelopmentMonthKeys?: readonly string[];
   /** Exact season-ten stock; absent when the requested run ends earlier. */
   readonly yearTenExceptionalRatingStock?: ExceptionalRatingStockSnapshot;
   /** Initial/final club ability hierarchy snapshot. */
@@ -1461,6 +1501,16 @@ export function createCareerWorldFacts(
   const usefulLowerDivisionAbilityThreshold =
     lowerDivisionUsefulAbilityThreshold(initialCareerState);
   let activeSeasonContext: { readonly seasonNumber: number; readonly careerState: CliCareerState } | undefined;
+  const monthlyDevelopmentObserver: MonthlyDevelopmentObserver | undefined =
+    inspection?.collectMonthlyDevelopmentObservations === true
+      ? {
+          observedPlayerIds: [],
+          rows: [],
+          cohort: [],
+          closedDevelopmentMonthKeys: [],
+          lastObservableAssignmentSeason: seasonCount - 1,
+        }
+      : undefined;
   let report: ReturnType<typeof runCareerLongRunSimulation<LongRunRetainedSeasonResult>>;
   try {
     report = runCareerLongRunSimulation({
@@ -1482,6 +1532,7 @@ export function createCareerWorldFacts(
           canonicalFreeAgentSigningObservations,
           observeParticipationRows,
           inspection,
+          monthlyDevelopmentObserver,
         ),
       observeAdvancedSeason: ({ seasonNumber, careerState }) => {
         if (seasonNumber === 10) {
@@ -1604,6 +1655,14 @@ export function createCareerWorldFacts(
       closingPlayerMarketEvidence.observations,
     closingPlayerMarketClubSquadObservations:
       closingPlayerMarketEvidence.clubSquadObservations,
+    ...(monthlyDevelopmentObserver === undefined
+      ? {}
+      : {
+          monthlyDevelopmentObservations: monthlyDevelopmentObserver.rows,
+          monthlyDevelopmentCohort: monthlyDevelopmentObserver.cohort,
+          closedDevelopmentMonthKeys:
+            monthlyDevelopmentObserver.closedDevelopmentMonthKeys,
+        }),
     ...(yearTenCareerState === undefined
       ? {}
       : {
@@ -4583,6 +4642,86 @@ function selectedCompetition(
   return competition;
 }
 
+/** Exact observed-cohort type owned by the engine seam, never restated here. */
+type ObservedPlayerIds = NonNullable<
+  Parameters<typeof advanceCareerOneSeason>[0]["observeMonthlyDevelopmentForPlayerIds"]
+>;
+
+/**
+ * Carries the accumulated observation cohort across one world's seasons.
+ *
+ * The set only ever grows, and a player joins it in the season after his own
+ * assignment, so no monthly row earlier than a player's assignment can ever be
+ * retained. Rows are collected here and never merged into a historical section:
+ * touching one would break the baseline continuity comparison that authorizes
+ * the run.
+ */
+interface MonthlyDevelopmentObserver {
+  /** Player ids observed from this season on, in stable assignment order. */
+  observedPlayerIds: ObservedPlayerIds;
+  /** Retained canonical rows, one entry per observed player-month. */
+  readonly rows: PlayerMonthlyDevelopmentObservation[];
+  /** One entry per joined player, emitted whether or not he ever plays. */
+  readonly cohort: MonthlyDevelopmentCohortEntry[];
+  /**
+   * Every development month the lifecycle closed in this world, in order.
+   *
+   * Accumulated from the first season, before anyone joins the cohort, because
+   * a player's recorded boundary is only meaningful against the months that
+   * were already closed when he arrived.
+   */
+  readonly closedDevelopmentMonthKeys: string[];
+  /**
+   * Last assignment season this horizon can still observe.
+   *
+   * Intake runs after the monthly lifecycle, so a player assigned at the end of
+   * the final season has no season left to develop in. He would enter the
+   * cohort with a denominator and no possible numerator, and classify as denied
+   * opportunity when nothing was ever denied him - the horizon simply stopped.
+   * Such an assignment is outside the population under attribution, not a zero
+   * inside it.
+   */
+  readonly lastObservableAssignmentSeason: number;
+}
+
+/**
+ * Identity and time boundary for one observed player, and nothing else.
+ *
+ * A month with no participation produces no row, so the assignment-anchored
+ * exposure denominator cannot be rebuilt from the rows: it needs a birth date
+ * to age the player across months he never played, and the first month in which
+ * development was possible at all. Every other fact the evaluator needs already
+ * exists in the historical checkpoint's own assignment row, and is read from
+ * there rather than copied here.
+ *
+ * The development group is deliberately absent: it is derived from
+ * `naturalPosition` through the canonical mapping, so this entry cannot carry a
+ * grouping that disagrees with the age curve.
+ */
+export interface MonthlyDevelopmentCohortEntry {
+  /** Selected five-star assignment this entry belongs to. */
+  readonly playerId: ObservedPlayerIds[number];
+  /**
+   * Birth date as the canonical epoch day, the only input needed to age him.
+   *
+   * Kept numeric rather than stringified: it survives the checkpoint cache's
+   * JSON round trip unchanged, and the engine's own age reader takes it as is,
+   * so no consumer has to parse a date back out of a report.
+   */
+  readonly birthDate: number;
+  /** Source football identity; the development group is derived from it. */
+  readonly naturalPosition: string;
+  /**
+   * First month in which this player could develop at all.
+   *
+   * Not the assignment month. Intake runs after the season's monthly lifecycle,
+   * so the assignment month names a checkpoint already past, and anchoring the
+   * denominator there would charge him for months in which no development was
+   * possible.
+   */
+  readonly firstEligibleDevelopmentMonthKey: string;
+}
+
 /**
  * Applies deterministic post-season career refresh in memory for the report.
  */
@@ -4600,6 +4739,7 @@ function advanceCareerForReport(
     careerState: CliCareerState,
   ) => void,
   inspection?: CareerWorldInspection,
+  monthlyDevelopmentObserver?: MonthlyDevelopmentObserver,
 ): AdvanceCareerLongRunSeasonResult {
   const nextSeasonId =
     `${context.careerState.gameState.calendar.currentSeasonId}:long-run-${context.seasonNumber}` as AdvanceCareerReportRefreshMode["nextSeasonId"];
@@ -4771,6 +4911,12 @@ function advanceCareerForReport(
     ...(inspection?.collectRoleSuccessionSnapshots === undefined
       ? {}
       : { collectRoleSuccessionSnapshots: inspection.collectRoleSuccessionSnapshots }),
+    ...(monthlyDevelopmentObserver === undefined
+      ? {}
+      : {
+          observeMonthlyDevelopmentForPlayerIds:
+            monthlyDevelopmentObserver.observedPlayerIds,
+        }),
     playerDevelopmentEnvironmentConfig: selectPlayerDevelopmentEnvironmentConfig(
       careerStateWithParticipation.gameState.meta.calibrationVersions,
     ),
@@ -4924,6 +5070,70 @@ function advanceCareerForReport(
     sixAssignmentPlayerIds: allocatedStoredCeilingSixPlayerIds,
     selectedPlayers: selectedCeilingPlayers,
   });
+  if (monthlyDevelopmentObserver !== undefined) {
+    monthlyDevelopmentObserver.rows.push(
+      ...(advanced.monthlyDevelopmentObservations ?? []),
+    );
+    // A month is closed exactly once, so a repeat means the same month was
+    // developed twice and every exposure denominator built on it is wrong.
+    // Fail here rather than let a silently duplicated month inflate what a
+    // player is charged for.
+    const alreadyClosed = new Set(monthlyDevelopmentObserver.closedDevelopmentMonthKeys);
+    for (const closedMonthKey of advanced.closedDevelopmentMonthKeys ?? []) {
+      if (alreadyClosed.has(closedMonthKey)) {
+        throw new Error(`Development month closed twice in one world: ${closedMonthKey}`);
+      }
+      alreadyClosed.add(closedMonthKey);
+      monthlyDevelopmentObserver.closedDevelopmentMonthKeys.push(closedMonthKey);
+    }
+    // This season's assignments join the cohort for later seasons only. The
+    // player did not exist during this season's monthly lifecycle, which runs
+    // before youth intake, so nothing observable is skipped.
+    //
+    // Only the five-star lane joins. The L6.43A pathway cohort this step must
+    // explain is exactly the `minimumRating === 5` placements, and its own
+    // evaluator counts a six-star ceiling as a reconciliation failure; the
+    // six-star lane is compared between arms but never attributed. Observing
+    // both lanes silently widened the cohort by two to three players per world
+    // and would have measured a population the frozen 716 does not contain.
+    const alreadyObserved = new Set(monthlyDevelopmentObserver.observedPlayerIds);
+    const joining = context.seasonNumber
+        > monthlyDevelopmentObserver.lastObservableAssignmentSeason
+      ? []
+      : selectedCeilingPlayers
+        .filter(({ minimumRating }) => minimumRating === 5)
+        .map(({ playerId: selectedId }) => selectedId as ObservedPlayerIds[number])
+        .filter((selectedId) => !alreadyObserved.has(selectedId));
+    if (joining.length > 0) {
+      monthlyDevelopmentObserver.observedPlayerIds = [
+        ...monthlyDevelopmentObserver.observedPlayerIds,
+        ...joining,
+      ];
+      // The calendar has already rolled into the next season here, so its
+      // current date names the first month whose lifecycle this player can
+      // reach. Read through the engine's own date-to-month mapping, the same
+      // one the lifecycle uses to bound a batch, rather than restated as
+      // arithmetic on the season start.
+      const firstEligibleDevelopmentMonthKey = monthKeyForCareerDate(
+        advanced.careerState.gameState.calendar.currentDate,
+      );
+      for (const joinedPlayerId of joining) {
+        const joinedPlayer = advanced.careerState.gameState.players[joinedPlayerId];
+        const naturalPosition = joinedPlayer?.naturalPositions[0];
+        if (joinedPlayer === undefined || naturalPosition === undefined) {
+          throw new Error(
+            `Observed assignment lost its player before intake closed: ${joinedPlayerId}`,
+          );
+        }
+        monthlyDevelopmentObserver.cohort.push({
+          playerId: joinedPlayerId,
+          birthDate: Number(joinedPlayer.birthDate),
+          naturalPosition,
+          firstEligibleDevelopmentMonthKey,
+        });
+      }
+    }
+  }
   const seasonIndex = context.seasonNumber;
   const postRolloverObservations = phase80AActiveCareerObservations({
     seed: worldSeed,

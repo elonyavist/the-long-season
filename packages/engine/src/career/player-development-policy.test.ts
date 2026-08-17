@@ -37,20 +37,9 @@ test("monthlyDevelopmentPolicy combines age, minutes, and bounded performance", 
   const policy = monthlyDevelopmentPolicy({
     positionGroup: "midfielder",
     age: 19,
-    participation: {
-      rowKey: "season:0001|2026-08|player:monthly",
-      playerId: playerId("player:monthly"),
-      seasonId: seasonId("season:0001"),
-      monthKey: "2026-08",
-      starts: 4,
-      substituteAppearances: 0,
-      minutes: 360,
-      ratingTotal: 16,
-      ratingSamples: 2,
-      playedRoleMinutes: { central_midfielder: 360 },
-      clubMinutes: { [clubId("club:selected")]: 360 },
-      appliedFixtureIds: [fixtureId("fixture:000001")],
-    },
+    // Exactly the three facts the policy reads. A full ledger row still
+    // satisfies this input structurally, as the production call site proves.
+    participation: { minutes: 360, ratingTotal: 16, ratingSamples: 2 },
     positiveGrowthEnvironmentBasisPoints: 11_000,
   });
 

@@ -298,7 +298,7 @@ they be taken together stands.
 ## Background-World Seams Handed To Phase 81B
 
 Phase 81B is already scoped under
-`docs/steps/81b-season-anchored-contracts-free-agent-economy-and-background-fixtures/`.
+`docs/steps/81c-season-clock-contracts-and-complete-domestic-world/`.
 Its entry gate is confirmed: the carried monitor is inside band at cohort scale,
 no loan, posture or race behaviour was introduced, and the four seams it consumes
 exist.
@@ -324,7 +324,7 @@ Also handed over: match facts and statistics attribute to the club a player was
 **fielded by**, not the club holding his contract (A8), so Phase 82A can introduce
 loans without rewriting recorded history.
 
-Two Phase 81B items named for the handoff: the contract-duration representation
+Two Phase 81C items named for the handoff: the contract-duration representation
 change, and the simulate-match command as the background-fixture resolution
 point.
 

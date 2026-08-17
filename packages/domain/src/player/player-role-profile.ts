@@ -1,12 +1,21 @@
 import { PLAYER_ROLES, type PlayerRole, type PlayerRoleFamiliarityLevel } from "../entities/player.entity.ts";
 import type { AbilityWeightProfile, PlayerAbilityKey } from "./player-abilities.ts";
 
+/**
+ * Canonical relevance buckets in descending role importance.
+ *
+ * The declared order is the single owner of both the vocabulary and its
+ * traversal order, so no caller enumerates object keys to recover either.
+ */
+export const ROLE_ATTRIBUTE_BUCKETS = [
+  "coreForRole",
+  "secondaryForRole",
+  "allowedButLow",
+  "cappedOutOfRole",
+] as const;
+
 /** Attribute bucket shared by generation, role evaluation, and development. */
-export type RoleAttributeBucket =
-  | "coreForRole"
-  | "secondaryForRole"
-  | "allowedButLow"
-  | "cappedOutOfRole";
+export type RoleAttributeBucket = typeof ROLE_ATTRIBUTE_BUCKETS[number];
 
 /** Canonical role meaning, weighted attributes, and global hard caps. */
 export interface PlayerRoleProfile extends AbilityWeightProfile {
@@ -447,7 +456,7 @@ function playerRoleProfile(
 ): PlayerRoleProfile {
   const weights: Partial<Record<PlayerAbilityKey, number>> = {};
 
-  for (const bucket of Object.keys(ROLE_ATTRIBUTE_WEIGHTS) as RoleAttributeBucket[]) {
+  for (const bucket of ROLE_ATTRIBUTE_BUCKETS) {
     for (const abilityKey of input[bucket]) {
       weights[abilityKey] = ROLE_ATTRIBUTE_WEIGHTS[bucket];
     }

@@ -19,8 +19,11 @@ import {
   prepareSeniorSquadDepartures,
   type PrepareSeniorSquadDepartureInput,
 } from "./senior-squad-transfer.ts";
+import {
+  broadPositionGroup,
+  type BroadPositionGroup,
+} from "./player-development-policy.ts";
 
-type BroadPositionGroup = "goalkeeper" | "defender" | "midfielder" | "attacker";
 const MINIMUM_POST_EXIT_SQUAD_SIZE = 18;
 
 /**
@@ -438,30 +441,6 @@ function owningClubId(careerState: CareerState, playerId: PlayerId): Club["id"] 
   }
 
   return undefined;
-}
-
-function broadPositionGroup(position: PlayerPosition | undefined): BroadPositionGroup {
-  switch (position) {
-    case "gk":
-      return "goalkeeper";
-    case "rb":
-    case "cb":
-    case "lb":
-    case "rwb":
-    case "lwb":
-      return "defender";
-    case "dm":
-    case "cm":
-    case "am":
-    case "rm":
-    case "lm":
-      return "midfielder";
-    case "rw":
-    case "lw":
-    case "st":
-    default:
-      return "attacker";
-  }
 }
 
 function roleForPosition(position: PlayerPosition | undefined): PlayerRole | undefined {
