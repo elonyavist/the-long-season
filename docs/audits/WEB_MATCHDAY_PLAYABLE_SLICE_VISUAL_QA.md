@@ -26,7 +26,7 @@ source ~/.nvm/nvm.sh && nvm use 24 && node --experimental-strip-types apps/web/s
 
 Result: PASS.
 
-Note: the shell selected Node `v24.16.0`; pnpm still reported its known nested
+Note: the shell selected Node `v24.19.0`; pnpm still reported its known nested
 engine warning for `v24.14.0`, but the visual QA, web typecheck, and diff check
 completed successfully.
 

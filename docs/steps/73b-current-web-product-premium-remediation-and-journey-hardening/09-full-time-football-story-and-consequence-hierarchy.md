@@ -145,7 +145,7 @@ current composition and idempotent journey are covered.
 
 ## Verification
 
-- Node `24.16.0` active.
+- Node `24.19.0` active.
 - i18n tests PASS.
 - Web tests PASS: 54 files / 229 tests.
 - Web typecheck and build PASS; the existing non-blocking large-chunk warning

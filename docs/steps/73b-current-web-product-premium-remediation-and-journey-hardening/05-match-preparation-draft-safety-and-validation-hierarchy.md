@@ -154,7 +154,7 @@ new tested owner. Keep no temporary draft persistence bridge.
 
 ## Verification Result
 
-- Node `24.16.0`.
+- Node `24.19.0`.
 - i18n tests PASS.
 - web tests PASS: 49 files / 208 tests.
 - web typecheck and production build PASS.

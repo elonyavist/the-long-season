@@ -100,6 +100,6 @@ No long run belongs to this step.
   historical `365.2425`-day convention. Step 05 replaces the live canonical
   definition with exact completed civil years and starts a non-comparable age
   epoch rather than rewriting this baseline.
-- Verification on Node `24.16.0`: focused Vitest `26/26`, simulation-tools and
+- Verification on Node `24.19.0`: focused Vitest `26/26`, simulation-tools and
   CLI typechecks, `git diff --check`, and `graphify update .` all pass. No
   longitudinal cohort ran.

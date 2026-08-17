@@ -17,12 +17,12 @@ youth count, player development, and long-run world stability.
 ## Commands Reviewed
 
 ```bash
-PATH=/Users/elianarducci/.nvm/versions/node/v24.16.0/bin:$PATH pnpm cli career --save=phase47-engine-check --seed=world-a --new-world-preview
-PATH=/Users/elianarducci/.nvm/versions/node/v24.16.0/bin:$PATH pnpm cli career --save=phase47-engine-check --summary
-PATH=/Users/elianarducci/.nvm/versions/node/v24.16.0/bin:$PATH pnpm cli career --save=phase47-engine-check --squad
-PATH=/Users/elianarducci/.nvm/versions/node/v24.16.0/bin:$PATH pnpm cli career --save=phase47-engine-check --youth-academy
-PATH=/Users/elianarducci/.nvm/versions/node/v24.16.0/bin:$PATH pnpm cli career --save=phase47-engine-check --development-report
-PATH=/Users/elianarducci/.nvm/versions/node/v24.16.0/bin:$PATH pnpm cli ten-season-report --seed-prefix=phase47-career --worlds=10 --seasons=10
+PATH=/Users/elianarducci/.nvm/versions/node/v24.19.0/bin:$PATH pnpm cli career --save=phase47-engine-check --seed=world-a --new-world-preview
+PATH=/Users/elianarducci/.nvm/versions/node/v24.19.0/bin:$PATH pnpm cli career --save=phase47-engine-check --summary
+PATH=/Users/elianarducci/.nvm/versions/node/v24.19.0/bin:$PATH pnpm cli career --save=phase47-engine-check --squad
+PATH=/Users/elianarducci/.nvm/versions/node/v24.19.0/bin:$PATH pnpm cli career --save=phase47-engine-check --youth-academy
+PATH=/Users/elianarducci/.nvm/versions/node/v24.19.0/bin:$PATH pnpm cli career --save=phase47-engine-check --development-report
+PATH=/Users/elianarducci/.nvm/versions/node/v24.19.0/bin:$PATH pnpm cli ten-season-report --seed-prefix=phase47-career --worlds=10 --seasons=10
 ```
 
 ## Career Creation And Summary

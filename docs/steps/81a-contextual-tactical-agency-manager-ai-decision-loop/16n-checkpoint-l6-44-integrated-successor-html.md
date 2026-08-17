@@ -100,7 +100,7 @@ the absolute late-career finding and unblocks Phase 81B.
 ## Required Commands
 
 ```bash
-nvm use 24.16.0
+nvm use 24.19.0
 pnpm cli simulation-report \
   --profile=phase81a-successor-renewal-l6-44-7x15 \
   --workers=7 \

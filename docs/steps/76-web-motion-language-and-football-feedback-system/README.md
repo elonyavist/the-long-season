@@ -102,7 +102,7 @@ The existence of Motion never justifies movement by itself.
 
 ## Phase-Level Checks
 
-Run with Node `24.16.0`:
+Run with Node `24.19.0`:
 
 ```bash
 nvm use 24

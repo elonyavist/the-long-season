@@ -67,7 +67,7 @@ analysis seam in the same step; no dead alternate policy survives.
 ## Canonical Command
 
 ```bash
-nvm use 24.16.0
+nvm use 24.19.0
 pnpm check
 pnpm cli simulation-report \
   --profile=phase81a-succession-priority-l6-5-7x10 \

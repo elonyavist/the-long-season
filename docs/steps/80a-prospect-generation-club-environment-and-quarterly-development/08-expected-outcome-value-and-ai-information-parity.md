@@ -351,7 +351,7 @@ graphify update .
   `EUR 3,022,353.50`, `EUR 503,559`, and `EUR 117,568`. The two reported
   `table_points_spread_avg` world failures are outside this step's economic
   owner and do not mask an owned gate.
-- Required verification on Node `24.16.0`: mandatory Vitest `291/291` across
+- Required verification on Node `24.19.0`: mandatory Vitest `291/291` across
   `24` files; all seven package typechecks; dependency cruise `782` modules /
   `3,100` dependencies with no violations; production absence scans; and
   `git diff --check`. No `50 x 20` ran.
@@ -374,7 +374,7 @@ but do not satisfy the reopened tranche-model Definition of Done.
 - The canonical three-division identity snapshot moved reproducibly from
   `a7f1f42d` to `f2cfaf40` after the intentional generation repair. The new
   value was reproduced twice before the expectation changed.
-- Reopen verification on Node `24.16.0`: mandatory Vitest `232/232` across
+- Reopen verification on Node `24.19.0`: mandatory Vitest `232/232` across
   `20` files; added AI owner coverage `46/46` across `3` files; all seven
   package typechecks; focused ESLint; dependency cruise `782` modules / `3,085`
   dependencies with no violations; production absence scans; `git diff
@@ -396,7 +396,7 @@ but do not satisfy the reopened tranche-model Definition of Done.
   risk appetite over the same public range shown to the manager. Equal public
   assessments produce equal decisions regardless of stored ceiling; wider
   uncertainty ranks lower, with stricter lower-division tolerance.
-- Verification on Node `24.16.0`: the expensive report file passed all
+- Verification on Node `24.19.0`: the expensive report file passed all
   unaffected tests (`20/20`) and its one intentionally changed deterministic
   market outcome passed after a focused fixture update; the remaining required
   suite passed `201/201` across `19` files; additional touched-owner coverage

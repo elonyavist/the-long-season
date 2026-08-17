@@ -81,7 +81,7 @@ CSS class selector. No compatibility bridge was retained.
 
 ## Verification
 
-- Node `24.16.0`;
+- Node `24.19.0`;
 - i18n tests: pass;
 - web typecheck: pass;
 - web unit/component tests: `51` files, `211` tests, pass;

@@ -239,7 +239,7 @@ graphify update .
 
 ## Completion Evidence
 
-- Node `24.16.0`.
+- Node `24.19.0`.
 - One ceiling-first joint owner now serves opening seniors, initial academies,
   seasonal academy intake, and annual career intake. Composition roots pass
   only semantic `policy`, `at_least_rating`, or `below_rating` constraints.
@@ -274,7 +274,7 @@ graphify update .
 This evidence documents the earlier absolute-quality repair. It does not close
 the reopened joint-gap owner.
 
-- Node `24.16.0`.
+- Node `24.19.0`.
 - Required Vitest suite: `13` files / `163` tests passed.
 - `@game/content` and `@game/cli` typechecks passed.
 - The canonical seed matrix contains ordinary First Division category stars at

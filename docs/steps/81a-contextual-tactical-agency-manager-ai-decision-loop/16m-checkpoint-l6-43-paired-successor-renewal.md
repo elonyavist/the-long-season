@@ -140,7 +140,7 @@ growth, add protected minutes or reinterpret this result as `REFINE`.
 After focused tests and a `7 x 1` canary, run each gate alone:
 
 ```bash
-nvm use 24.16.0
+nvm use 24.19.0
 pnpm cli simulation-report \
   --profile=phase81a-successor-ceiling-l6-43-paired-7x10 \
   --workers=7 \

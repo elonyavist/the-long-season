@@ -138,7 +138,7 @@ component or retain a compatibility wrapper with no caller.
 
 ## Verification Result
 
-- Node `24.16.0`.
+- Node `24.19.0`.
 - i18n and web tests PASS; web suite: 52 files / 221 tests.
 - Web typecheck and production build PASS; the existing large-chunk warning is
   unchanged.

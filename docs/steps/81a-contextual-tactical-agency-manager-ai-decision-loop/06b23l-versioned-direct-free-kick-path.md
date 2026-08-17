@@ -75,7 +75,7 @@ Real deterministic match seeds must reach:
 ## Required Verification
 
 ```bash
-nvm use 24.16.0
+nvm use 24.19.0
 pnpm check
 git diff --check
 graphify update .

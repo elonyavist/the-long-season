@@ -385,7 +385,7 @@ reconciled again with `graphify affected` and `git status` after cleanup.
 - repository search finds no L6.41 profile, policy mode, ability-family aging
   summary, resilience helper or candidate selector outside this decision
   history;
-- final `pnpm check` ran alone on Node `24.16.0` and exited `0`: `318` test
+- final `pnpm check` ran alone on Node `24.19.0` and exited `0`: `318` test
   files, `2547` tests, `904` modules with zero dependency violations, all four
   custom checks and every package typecheck passed;
 - `docs/PROJECT_STATUS.md` remains below its `300`-line budget;

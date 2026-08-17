@@ -161,7 +161,7 @@ real consumer. There is no invisible cleanup-only refactor between steps.
 
 ## Phase-Level Checks
 
-Run with Node `24.16.0`:
+Run with Node `24.19.0`:
 
 ```bash
 nvm use 24

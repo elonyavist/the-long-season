@@ -165,7 +165,7 @@ kind, or hidden tactical fallback remains in the current Matchday path.
 
 ## Verification
 
-- Node `24.16.0`;
+- Node `24.19.0`;
 - i18n tests: pass;
 - web tests: `56` files and `235` tests, pass;
 - web typecheck: pass;

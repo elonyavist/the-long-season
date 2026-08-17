@@ -26,7 +26,7 @@ boundaries.
 ## Evidence
 
 Evidence was collected against the current production web path with Node
-24.16.0, Chromium, the real SQLite/OPFS persistence adapter, and deterministic
+24.19.0, Chromium, the real SQLite/OPFS persistence adapter, and deterministic
 career data.
 
 - Desktop visual states: 1440 x 960.

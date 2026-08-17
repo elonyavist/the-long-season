@@ -265,7 +265,7 @@ remaining file owns a coherent rule and no caller recreates player algebra.
 
 ## Reproduction
 
-Run with Node `24.16.0`:
+Run with Node `24.19.0`:
 
 ```bash
 pnpm cli simulate-season --seed=world-a --player-generation-report

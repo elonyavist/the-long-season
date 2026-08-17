@@ -26,7 +26,7 @@ without rewriting any failed checkpoint.
 ## Required Checks
 
 ```bash
-nvm use 24.16.0
+nvm use 24.19.0
 git diff --check
 ```
 

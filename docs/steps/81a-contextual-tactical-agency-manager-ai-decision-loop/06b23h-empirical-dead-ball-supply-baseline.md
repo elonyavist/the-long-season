@@ -64,7 +64,7 @@ coefficient selected to close the current report.
 ## Required Verification
 
 ```bash
-nvm use 24.16.0
+nvm use 24.19.0
 # temporary extractor, exact frozen corpus, 7 workers, 2 complete runs
 git diff --check
 ```

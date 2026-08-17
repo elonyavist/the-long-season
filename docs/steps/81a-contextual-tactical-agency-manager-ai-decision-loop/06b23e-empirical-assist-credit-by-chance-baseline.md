@@ -101,7 +101,7 @@ interpretable population, without a chance-type table.
 ## Required Verification
 
 ```bash
-nvm use 24.16.0
+nvm use 24.19.0
 # temporary extractor, same corpus, exactly seven workers, two complete runs
 git diff --check
 ```

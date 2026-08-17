@@ -99,7 +99,7 @@ git diff --check
 
 ## Verification Result
 
-- Node 24.16.0 focused monthly lifecycle, direct fixture, season rollover,
+- Node 24.19.0 focused monthly lifecycle, direct fixture, season rollover,
   Continue, player rollover, and CLI career tests pass.
 - Engine and CLI typechecks pass.
 - Dependency-cruiser passes.

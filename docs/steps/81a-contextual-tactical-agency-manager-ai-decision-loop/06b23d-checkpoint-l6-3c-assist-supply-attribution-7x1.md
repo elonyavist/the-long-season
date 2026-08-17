@@ -136,7 +136,7 @@ chance-type probabilities before implementation.
 ## Required Verification And Command
 
 ```bash
-nvm use 24.16.0
+nvm use 24.19.0
 pnpm vitest run \
   apps/cli/src/commands/simulation-report/assist-supply-attribution.test.ts \
   apps/cli/src/commands/simulation-report/career-sections.test.ts \

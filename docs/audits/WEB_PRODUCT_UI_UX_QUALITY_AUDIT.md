@@ -255,7 +255,7 @@ Phase 73B.
 
 ## Phase Gate Verification
 
-Final verification ran with Node `v24.16.0`:
+Final verification ran with Node `v24.19.0`:
 
 - required consolidated audit and remediation-map files: PASS;
 - web typecheck: PASS;

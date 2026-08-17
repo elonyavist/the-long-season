@@ -132,10 +132,10 @@ Risks carried into Phase 48:
 
 ## Final Gate Commands
 
-All final gate commands were run with Node `v24.16.0` by setting:
+All final gate commands were run with Node `v24.19.0` by setting:
 
 ```bash
-PATH=/Users/elianarducci/.nvm/versions/node/v24.16.0/bin:$PATH
+PATH=/Users/elianarducci/.nvm/versions/node/v24.19.0/bin:$PATH
 ```
 
 ### `pnpm check`

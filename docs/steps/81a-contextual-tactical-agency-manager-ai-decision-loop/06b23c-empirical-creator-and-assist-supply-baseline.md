@@ -143,7 +143,7 @@ after the accepted hashes are recorded.
 ## Required Verification
 
 ```bash
-nvm use 24.16.0
+nvm use 24.19.0
 # temporary extractor, two complete runs, exactly seven workers
 git diff --check
 ```

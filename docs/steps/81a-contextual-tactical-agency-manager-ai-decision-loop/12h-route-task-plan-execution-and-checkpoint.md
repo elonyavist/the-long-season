@@ -74,7 +74,7 @@ populations without changing the frozen product target.
 ## Required Checks
 
 ```bash
-nvm use 24.16.0
+nvm use 24.19.0
 pnpm exec vitest run \
   packages/domain/src/balance/match-tactics-calibration.test.ts \
   packages/content/src/balance/match-tactics-calibration.test.ts \

@@ -74,11 +74,11 @@ Strict balance report:
 The repeated warning:
 
 ```text
-Unsupported engine: wanted node 24.16.0, current node v24.14.0
+Unsupported engine: wanted node 24.19.0, current node v24.14.0
 ```
 
 appears only inside repo scripts that invoke the globally resolved `pnpm` from
-the Codex runtime. Direct verification commands used `nvm use 24.16.0` plus
+the Codex runtime. Direct verification commands used `nvm use 24.19.0` plus
 `corepack pnpm`, and all focused gates passed. This is an environment-wrapper
 warning, not a gameplay regression.
 

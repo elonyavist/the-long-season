@@ -594,7 +594,7 @@ Any additional file must be added here with its ownership reason before edit.
    `pnpm check` alone.
 
 ```bash
-nvm use 24.16.0
+nvm use 24.19.0
 pnpm cli simulation-report \
   --profile=phase81a-development-realization-l6-43b-7x15 \
   --workers=7 \

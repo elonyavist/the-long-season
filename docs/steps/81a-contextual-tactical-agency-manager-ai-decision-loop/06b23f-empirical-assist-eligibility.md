@@ -116,7 +116,7 @@ is dead-ball supply; it is not repaired inside this step.
 ## Required Verification
 
 ```bash
-nvm use 24.16.0
+nvm use 24.19.0
 pnpm exec vitest run packages/domain/src/balance/match-tactics-calibration.test.ts
 pnpm exec vitest run packages/content/src/schemas/match-tactics-calibration.schema.test.ts packages/content/src/balance/match-tactics-calibration.test.ts
 pnpm exec vitest run packages/engine/src/match-engine/chance-actors.test.ts packages/engine/src/match-engine/occasion-context.test.ts packages/engine/src/match-engine/step-match.test.ts

@@ -201,7 +201,7 @@ action.
 
 - required focused suites: green, including direct four-origin derivation,
   fail-closed read-only cache and locked-profile tests;
-- `pnpm check` on Node `24.16.0`: exit `0` captured in a filesystem sentinel; `305` test files,
+- `pnpm check` on Node `24.19.0`: exit `0` captured in a filesystem sentinel; `305` test files,
   `2,350` tests, `878` modules with zero dependency violations, all custom
   checks and every workspace typecheck green;
 - `git diff --check`: clean;

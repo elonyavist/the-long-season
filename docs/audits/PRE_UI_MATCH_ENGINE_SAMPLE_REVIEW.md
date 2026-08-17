@@ -16,14 +16,14 @@ point of view. It does not tune the match engine.
 ## Commands Reviewed
 
 ```bash
-PATH=/Users/elianarducci/.nvm/versions/node/v24.16.0/bin:$PATH pnpm cli simulate-season --seed=world-a --fixture=fixture:000001 --fixture-explanation
-PATH=/Users/elianarducci/.nvm/versions/node/v24.16.0/bin:$PATH pnpm cli simulate-season --seed=world-b --fixture=fixture:000001 --fixture-explanation
-PATH=/Users/elianarducci/.nvm/versions/node/v24.16.0/bin:$PATH pnpm cli simulate-season --seed=world-a --fixture=fixture:000006 --fixture-explanation
-PATH=/Users/elianarducci/.nvm/versions/node/v24.16.0/bin:$PATH pnpm cli simulate-season --seed=world-c --fixture=fixture:000001 --fixture-explanation
+PATH=/Users/elianarducci/.nvm/versions/node/v24.19.0/bin:$PATH pnpm cli simulate-season --seed=world-a --fixture=fixture:000001 --fixture-explanation
+PATH=/Users/elianarducci/.nvm/versions/node/v24.19.0/bin:$PATH pnpm cli simulate-season --seed=world-b --fixture=fixture:000001 --fixture-explanation
+PATH=/Users/elianarducci/.nvm/versions/node/v24.19.0/bin:$PATH pnpm cli simulate-season --seed=world-a --fixture=fixture:000006 --fixture-explanation
+PATH=/Users/elianarducci/.nvm/versions/node/v24.19.0/bin:$PATH pnpm cli simulate-season --seed=world-c --fixture=fixture:000001 --fixture-explanation
 ```
 
 `PATH` was set explicitly because this shell exposed Node 20 by default while
-the project runtime is Node `v24.16.0`.
+the project runtime is Node `v24.19.0`.
 
 ## Sample Table
 

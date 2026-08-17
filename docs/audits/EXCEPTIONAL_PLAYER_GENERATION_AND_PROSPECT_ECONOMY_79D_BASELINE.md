@@ -9,7 +9,7 @@ Status: Reproduced pre-change baseline for Step 01
   `f2c7013d4b91fb0c9fcf185adca8384b6cdcb584`.
 - Working-tree context: the uncommitted Phase 79A-79C implementation is the
   baseline under review; the base commit alone does not contain that work.
-- Runtime: Node `v24.16.0`.
+- Runtime: Node `v24.19.0`.
 - Canonical composition owner:
   `createFakeDomesticWorld` in
   `packages/content/src/generators/domestic-world.ts`.

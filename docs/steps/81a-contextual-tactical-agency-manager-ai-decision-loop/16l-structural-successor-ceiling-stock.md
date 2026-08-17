@@ -147,7 +147,7 @@ required file is added here with its ownership reason before editing.
 
 ## Required Checks
 
-1. `nvm use 24.16.0`.
+1. `nvm use 24.19.0`.
 2. Graphify explain/affected for the annual allocator and both generation roots.
 3. Focused schema, rarity, youth and annual-provider tests.
 4. Exact control replay and RNG/ID/order proof.

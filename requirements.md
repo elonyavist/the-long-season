@@ -266,7 +266,7 @@ Ultimo aggiornamento: 31 luglio 2026 — **fondazione tecnica sviscerata** in se
 - **Disclaimer** in-game/store/credits: gioco non ufficiale, contenuti del gioco base fittizi, nessuna affiliazione con federazioni/leghe/club/associazioni giocatori. Chiarisce l'intento di non-confusione; non è uno scudo assoluto, accompagna le scelte sopra, non le sostituisce.
 
 ### 22. Architettura tecnica e analisi dello stack ✅
-**Premessa:** il progetto è di fatto **due software** che condividono i tipi TypeScript — il motore (Fase 1, Node v24.16.0 puro, headless, per il bilanciamento) e l'app (Fase 2, browser). Le tecnologie si giudicano per i vincoli reali (un solo dev, gioco di tabelle, offline, vendibile), non in astratto.
+**Premessa:** il progetto è di fatto **due software** che condividono i tipi TypeScript — il motore (Fase 1, Node v24.19.0 puro, headless, per il bilanciamento) e l'app (Fase 2, browser). Le tecnologie si giudicano per i vincoli reali (un solo dev, gioco di tabelle, offline, vendibile), non in astratto.
 
 **Linguaggio e UI**
 - TypeScript come linguaggio unico: tipi condivisi motore↔UI, indispensabili con 22 sistemi interconnessi. Un motore in-memoria in TS fa migliaia di partite/secondo: il collo di bottiglia è il tempo dello sviluppatore, non la CPU.
@@ -274,7 +274,7 @@ Ultimo aggiornamento: 31 luglio 2026 — **fondazione tecnica sviscerata** in se
 
 **Persistenza**
 - SQLite WASM su OPFS per i salvataggi (Fase 2): SQL completo (JOIN, indici, aggregazioni) per mercato/statistiche/archivio, e soprattutto migrazioni di schema = base tecnica della promessa "i save non si rompono dentro la major" (Area 19). Scartati: localStorage (troppo piccolo, sincrono), IndexedDB (niente query, API verbosa).
-- Disaccoppiamento chiave: il motore di Fase 1 NON usa SQLite — carica un DB di prova da JSON, simula in memoria, scrive CSV per l'analisi. SQLite entra solo in Fase 2. La fase di bilanciamento resta Node v24.16.0 puro, leggera, testabile da CLI.
+- Disaccoppiamento chiave: il motore di Fase 1 NON usa SQLite — carica un DB di prova da JSON, simula in memoria, scrive CSV per l'analisi. SQLite entra solo in Fase 2. La fase di bilanciamento resta Node v24.19.0 puro, leggera, testabile da CLI.
 - Da sapere: SQLite WASM in versione web richiede header COOP/COEP (configurazione una tantum dell'hosting); su Tauri/desktop il punto non si pone (filesystem vero).
 
 **Worker e performance**
@@ -288,7 +288,7 @@ Ultimo aggiornamento: 31 luglio 2026 — **fondazione tecnica sviscerata** in se
 - Tauri (non Electron) per l'app desktop: usa il motore web del sistema → installer di pochi MB, poca RAM, filesystem vero per i save. Electron trascinerebbe un Chrome intero (100+ MB) senza vantaggi per un gioco di tabelle. Costo onesto: Tauri ha una parte nativa in Rust che di norma non si tocca; per integrazioni Steam profonde è terreno documentato (Fase 3).
 
 **Il vantaggio pagato una volta sola**
-Lo stesso codebase alimenta tre bersagli — demo browser (PWA), app desktop (Tauri), motore headless (Node v24.16.0) — possibile solo perché il motore è isolato dalla UI e la UI non dipende da API esclusive del browser. È la disciplina che attraversa tutto il design.
+Lo stesso codebase alimenta tre bersagli — demo browser (PWA), app desktop (Tauri), motore headless (Node v24.19.0) — possibile solo perché il motore è isolato dalla UI e la UI non dipende da API esclusive del browser. È la disciplina che attraversa tutto il design.
 
 **Altri pilastri architetturali**
 - Il motore emette eventi strutturati, mai testo; narratore separato (ticker al lancio, telecronista futuro) — Area 20.

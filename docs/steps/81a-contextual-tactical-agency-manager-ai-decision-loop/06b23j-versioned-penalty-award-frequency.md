@@ -81,7 +81,7 @@ reopens only this step; direct free kicks stay outside this checkpoint.
 ## Required Verification
 
 ```bash
-nvm use 24.16.0
+nvm use 24.19.0
 pnpm exec vitest run packages/engine/src/match-engine/match-discipline.test.ts packages/content/src/generators/gameplay-config.test.ts
 pnpm check
 git diff --check

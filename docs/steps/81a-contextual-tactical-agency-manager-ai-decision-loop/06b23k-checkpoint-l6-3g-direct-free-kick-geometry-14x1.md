@@ -72,7 +72,7 @@ cohort decimal.
 ## Required Verification And Command
 
 ```bash
-nvm use 24.16.0
+nvm use 24.19.0
 pnpm check
 pnpm cli simulation-report \
   --profile=phase81a-direct-free-kick-geometry-l6-3g-14x1 \

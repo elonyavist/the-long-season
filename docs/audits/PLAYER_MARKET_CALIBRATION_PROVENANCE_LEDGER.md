@@ -94,7 +94,7 @@ exactly 22 active seniors; it is derived context, not a source fact.
 - Repository commit: `f2c7013d4b91fb0c9fcf185adca8384b6cdcb584`.
 - Relevant source diff SHA-256: `e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855`
   (the empty digest: generation and valuation owners were clean).
-- Runtime: Node `v24.16.0`.
+- Runtime: Node `v24.19.0`.
 - Command form:
   `source /Users/elianarducci/.nvm/nvm.sh && nvm use 24 && node --input-type=module < phase79c-current-baseline.mjs`.
 - Seed prefix: `phase79c-current-baseline`.

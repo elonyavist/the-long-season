@@ -56,7 +56,7 @@ nothing by itself; it selects the next causal question from fresh facts.
 ## Required Verification And Command
 
 ```bash
-nvm use 24.16.0
+nvm use 24.19.0
 pnpm check
 pnpm cli simulation-report \
   --profile=phase81a-renewal-baseline-l6-4-7x10 \

@@ -93,7 +93,7 @@ development or `OpponentRead` implementation is in scope.
 Run the checkpoint alone, then the focused and repository gates alone:
 
 ```bash
-nvm use 24.16.0
+nvm use 24.19.0
 pnpm cli simulation-report --profile=phase81a-e-option-b-continuity-7x2 --workers=7 --format=json --report-output=simulation-out/phase81a-e-option-b-continuity-7x2.json
 pnpm exec vitest run packages/engine/src/career/progress-fixture.test.ts packages/engine/src/match-engine/create-match-report.test.ts packages/engine/src/match-engine/match-explanation-trace.test.ts packages/storage/src/sqlite/world-state-mapper.test.ts packages/storage/src/json-career-storage.test.ts apps/web/src/runtime/web-career-runtime.test.ts --maxWorkers=7
 pnpm check

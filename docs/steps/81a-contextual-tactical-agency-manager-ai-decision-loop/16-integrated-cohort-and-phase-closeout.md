@@ -108,7 +108,7 @@ failed current reader reopens its existing owner instead of being patched here.
 Run every gate alone:
 
 ```bash
-nvm use 24.16.0
+nvm use 24.19.0
 pnpm cli simulation-report --profile=phase81-tactical-shape --format=json --report-output=simulation-out/phase81a-f-tactical-shape.json
 pnpm cli simulation-report --profile=phase81a-e-option-b-continuity-7x2 --workers=7 --format=json --report-output=simulation-out/phase81a-f-option-b-closeout.json
 cmp simulation-out/phase81a-e-option-b-continuity-7x2.json simulation-out/phase81a-f-option-b-closeout.json

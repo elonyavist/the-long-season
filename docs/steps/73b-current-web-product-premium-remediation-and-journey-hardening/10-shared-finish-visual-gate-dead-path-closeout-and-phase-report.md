@@ -175,7 +175,7 @@ caller or assertion, retain it and document why; do not force the count.
 
 ## Verification Result
 
-- Node `24.16.0`;
+- Node `24.19.0`;
 - i18n tests pass;
 - web typecheck and production build pass;
 - web tests pass: `51` files, `211` tests;

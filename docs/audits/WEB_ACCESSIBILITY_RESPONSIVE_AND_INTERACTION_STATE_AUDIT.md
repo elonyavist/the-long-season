@@ -33,7 +33,7 @@ source was changed during this step.
 
 ## Evidence And Method
 
-Evidence was collected with Node 24.16.0, Chromium, the production
+Evidence was collected with Node 24.19.0, Chromium, the production
 SQLite/OPFS adapter, deterministic current career data, source inspection,
 keyboard walkthroughs, computed-style probes, and existing focused tests.
 

@@ -2,7 +2,7 @@
 
 Date: 2026-07-17  
 Phase: `74-player-generation-and-model-consolidation-cleanup`  
-Runtime: Node `24.16.0`
+Runtime: Node `24.19.0`
 
 ## Decision Summary
 

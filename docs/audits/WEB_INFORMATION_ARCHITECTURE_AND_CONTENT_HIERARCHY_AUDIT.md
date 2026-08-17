@@ -23,7 +23,7 @@ and five P2 findings. The tactical board remains the approved football anchor.
 
 ## Evidence
 
-Evidence was collected with Node 24.16.0 against the production SQLite/OPFS
+Evidence was collected with Node 24.19.0 against the production SQLite/OPFS
 adapter on a deterministic local origin.
 
 - Desktop viewport: 1440 x 960.

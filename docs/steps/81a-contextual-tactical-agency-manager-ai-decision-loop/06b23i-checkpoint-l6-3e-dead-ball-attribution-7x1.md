@@ -82,7 +82,7 @@ implementation may correct more than one only if each appears here.
 ## Required Verification And Command
 
 ```bash
-nvm use 24.16.0
+nvm use 24.19.0
 pnpm exec vitest run apps/cli/src/commands/simulation-report/assist-supply-attribution.test.ts apps/cli/src/commands/simulation-report/report-planner.test.ts
 pnpm check
 pnpm cli simulation-report \

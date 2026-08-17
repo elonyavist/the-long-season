@@ -28,7 +28,7 @@ There are no current P0 journey findings.
 
 ## Evidence Run
 
-Current evidence was gathered with Node 24.16.0 and production SQLite/OPFS
+Current evidence was gathered with Node 24.19.0 and production SQLite/OPFS
 storage on isolated browser origins.
 
 | Evidence | Result |

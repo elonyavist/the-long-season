@@ -213,7 +213,7 @@ graphify update .
   and intermediate v3 shards without the current stock-arrival keys. Cohort
   aggregation also rejects duplicate or unequal gate-key sets across worlds,
   so stale shards cannot silently contribute partial denominators.
-- Second-reopen verification on Node `24.16.0`: mandatory Vitest `279/279`
+- Second-reopen verification on Node `24.19.0`: mandatory Vitest `279/279`
   across `23` files; all seven package typechecks; focused ESLint;
   `git diff --check`; `graphify update .`; and an independent read-only review
   with no residual blocker. No canonical cohort and no `50 x 20` ran.
@@ -228,7 +228,7 @@ graphify update .
   vacancy, zero allocation, and zero generated replacement. The bounded `2 x
   2` diagnostic now reports all five stock gates at zero violations, including
   positive vacancy evidence `1 / minimum 1`.
-- Reopen verification on Node `24.16.0`: the full invocation passed `272`
+- Reopen verification on Node `24.19.0`: the full invocation passed `272`
   unaffected cases and exposed only the invalid small-sample exit-code
   expectation; the corrected case then passed in isolation, so all `273`
   cases have green evidence. All seven package typechecks, `git diff --check`,
@@ -249,6 +249,6 @@ graphify update .
 - The obsolete fixed year-ten total-six cap and its rating-inflation gate were
   removed. Year-ten totals remain descriptive while active young-stock
   transitions own replacement and no-inflation truth.
-- Verification on Node `24.16.0`: mandatory Vitest `264/264` across `23` files;
+- Verification on Node `24.19.0`: mandatory Vitest `264/264` across `23` files;
   domain, shared, content, engine, simulation-tools, i18n, and CLI typechecks;
   `git diff --check`; and `graphify update .` all pass. No `50 x 20` ran.

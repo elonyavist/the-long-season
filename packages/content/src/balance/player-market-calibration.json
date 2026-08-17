@@ -468,7 +468,7 @@
     "classification": "derived_aggregate",
     "repositoryCommit": "f2c7013d4b91fb0c9fcf185adca8384b6cdcb584",
     "relevantDiffSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-    "nodeVersion": "v24.16.0",
+    "nodeVersion": "v24.19.0",
     "worldCount": 100,
     "seedPrefix": "phase79c-current-baseline",
     "projectionMethod": "Generate 18x22 players independently for each category using the same club IDs, 4..9 reputations, world seed, initial contracts, neutral form 50, and the pre-79C default valuation config.",

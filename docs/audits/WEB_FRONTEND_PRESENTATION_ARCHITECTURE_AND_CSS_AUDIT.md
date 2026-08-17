@@ -43,7 +43,7 @@ architecture defect.
 
 ## Evidence And Method
 
-The audit used Node 24.16.0, Graphify queries, source/import tracing,
+The audit used Node 24.19.0, Graphify queries, source/import tracing,
 Dependency Cruiser, exact production-caller scans, stylesheet metrics,
 existing unit tests, historical browser runners, and the Phase 73A Steps 01-05
 product evidence.

@@ -98,7 +98,7 @@ git diff --check
 
 ## Verification Result
 
-- Node 24.16.0 focused Step 13 tests PASS: `7` files / `116` tests.
+- Node 24.19.0 focused Step 13 tests PASS: `7` files / `116` tests.
 - `@game/simulation-tools`, `@game/cli`, and `@game/i18n` typechecks PASS.
 - `pnpm cli simulate-season --seed=phase75-report-a --player-generation-report`
   PASS with zero age-26+ high-room warnings.

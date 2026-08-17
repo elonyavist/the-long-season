@@ -65,7 +65,7 @@ this checkpoint.
 ## Commands
 
 ```sh
-nvm use 24.16.0
+nvm use 24.19.0
 pnpm cli simulation-report --profile=phase81a-routine-youth-runway-l6-31-control-7x10 --workers=7 --format=json --report-output=simulation-out/phase81a-l6-31-integrated-control-7x10.json
 pnpm cli simulation-report --profile=phase81a-routine-youth-runway-l6-31-candidate-7x10 --workers=7 --format=json --report-output=simulation-out/phase81a-l6-31-integrated-candidate-7x10.json
 pnpm cli simulation-report --profile=phase81a-routine-youth-runway-l6-31-oos-control-7x10 --workers=7 --format=json --report-output=simulation-out/phase81a-l6-31-integrated-oos-control-7x10.json

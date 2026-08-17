@@ -82,7 +82,7 @@ attention policy, state-derived resolution, and a real destination.
 
 ## Verification
 
-- All required package typechecks passed on Node 24.16.0.
+- All required package typechecks passed on Node 24.19.0.
 - Web: 47 files and 193 tests passed; production build passed.
 - Monorepo: 160 files and 946 tests passed through `pnpm check`.
 - Playwright: 2 production SQLite/OPFS journeys passed on desktop and narrow

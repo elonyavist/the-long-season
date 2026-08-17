@@ -104,7 +104,7 @@ git diff --check
 
 ## Verification Result
 
-- Node `24.16.0` `pnpm check` PASS.
+- Node `24.19.0` `pnpm check` PASS.
 - `pnpm cli ten-season-report --seed-prefix=phase75-diagnostic --worlds=50 --seasons=10 --report-output=docs/audits/PLAYER_LIFECYCLE_REWORK_50X10_REPORT.md` PASS with `0` failed worlds.
 - `pnpm cli ten-season-report --seed-prefix=phase75-pre-gate --worlds=250 --seasons=30 --report-output=docs/audits/PLAYER_LIFECYCLE_REWORK_250X30_REPORT.md` PASS with `0` failed worlds.
 - `pnpm cli balance-report --seed-prefix=phase75-balance --seasons=20 --target-profile=calibration-v1 --strict` PASS.

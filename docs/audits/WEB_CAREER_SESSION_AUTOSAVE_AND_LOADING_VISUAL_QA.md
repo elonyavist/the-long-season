@@ -3,7 +3,7 @@
 Date: 2026-07-13  
 Phase: `72-career-session-autosave-and-command-feedback`  
 Browser: Chromium through Playwright  
-Node: `24.16.0`
+Node: `24.19.0`
 
 ## Scope
 

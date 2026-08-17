@@ -211,7 +211,7 @@ its reason before it is edited.
 4. Run the fresh paired `7 x 10` alone, exactly seven workers:
 
 ```bash
-nvm use 24.16.0
+nvm use 24.19.0
 pnpm cli simulation-report \
   --profile=phase81a-successor-pathway-l6-43a-paired-7x10 \
   --workers=7 \

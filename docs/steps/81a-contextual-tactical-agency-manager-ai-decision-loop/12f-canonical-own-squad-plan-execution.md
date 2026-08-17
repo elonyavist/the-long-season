@@ -80,7 +80,7 @@ and wrong choices translate in opposite xG and point directions.
 ## Required Checks
 
 ```bash
-nvm use 24.16.0
+nvm use 24.19.0
 pnpm exec vitest run \
   packages/engine/src/match-engine/own-squad-plan-fit.test.ts \
   packages/engine/src/match-engine/opportunity-route.test.ts \
@@ -126,7 +126,7 @@ each, preserved non-commit replay exactly and retained all structural
 guardrails. It was then removed in full: no schema v10, content v12, plan key,
 volume multiplier, report profile, label, fixture or orphaned test remains.
 
-Final-tree verification on Node `24.16.0`: `pnpm check` exited `0` with
+Final-tree verification on Node `24.19.0`: `pnpm check` exited `0` with
 `317` test files and `2,540` tests green, `902` modules free of dependency
 violations, all four custom checks green and all workspace typechecks green.
 `git diff --check` is clean, `PROJECT_STATUS.md` is exactly `300` lines and

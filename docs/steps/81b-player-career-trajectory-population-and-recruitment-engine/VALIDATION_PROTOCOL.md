@@ -2,7 +2,7 @@
 
 ## General Rules
 
-- Run `nvm use 24`; pinned runtime is Node `24.16.0`.
+- Run `nvm use 24`; pinned runtime is Node `24.19.0`.
 - Use only `pnpm cli simulation-report`.
 - Use exactly `7` workers with at least seven independent worlds.
 - Run each gate alone, never beside tests/build/browser/another report.

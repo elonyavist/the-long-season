@@ -16,10 +16,10 @@ role, age, potential, and identity. It does not tune the generator.
 ## Commands Reviewed
 
 ```bash
-PATH=/Users/elianarducci/.nvm/versions/node/v24.16.0/bin:$PATH pnpm cli simulate-season --seed=world-a --player-generation-report
-PATH=/Users/elianarducci/.nvm/versions/node/v24.16.0/bin:$PATH pnpm cli simulate-season --seed=world-b --player-generation-report
-PATH=/Users/elianarducci/.nvm/versions/node/v24.16.0/bin:$PATH pnpm cli simulate-season --seed=world-a --identity-review
-PATH=/Users/elianarducci/.nvm/versions/node/v24.16.0/bin:$PATH pnpm cli simulate-season --seed=world-b --identity-review
+PATH=/Users/elianarducci/.nvm/versions/node/v24.19.0/bin:$PATH pnpm cli simulate-season --seed=world-a --player-generation-report
+PATH=/Users/elianarducci/.nvm/versions/node/v24.19.0/bin:$PATH pnpm cli simulate-season --seed=world-b --player-generation-report
+PATH=/Users/elianarducci/.nvm/versions/node/v24.19.0/bin:$PATH pnpm cli simulate-season --seed=world-a --identity-review
+PATH=/Users/elianarducci/.nvm/versions/node/v24.19.0/bin:$PATH pnpm cli simulate-season --seed=world-b --identity-review
 ```
 
 ## Player Generation Summary

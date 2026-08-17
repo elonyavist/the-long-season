@@ -79,7 +79,7 @@ Provide an open, incremental, and iterative execution guide for the project: one
   exact locale money presentation with an integer-safe editable parser; and an
   explicit dialog dismissal policy that keeps a transfer-offer draft alive.
 - Step 08 closed every repository, build, dependency, and browser gate on the
-  pinned Node `24.16.0` toolchain, including Playwright `34/34`, and recorded
+  pinned Node `24.19.0` toolchain, including Playwright `34/34`, and recorded
   `docs/audits/PHASE_80_GRAPHICAL_AND_STRUCTURAL_REWORK_REPORT.md`.
 - Step 09 closed the phase without running any longitudinal cohort.
 - Step 01 established one repository-wide simulation execution policy:
@@ -176,7 +176,7 @@ Provide an open, incremental, and iterative execution guide for the project: one
 - Checkpoints progress through `7 x 1`, `7 x 2`, `7 x 5`, decisive/repeated
   `7 x 15`, then a `50 x 20` player-model HTML split into four five-season
   windows. Every batch uses
-  `simulation-report`, Node 24.16.0 and exactly seven workers when seven worlds
+  `simulation-report`, Node 24.19.0 and exactly seven workers when seven worlds
   exist. The HTML does not claim a complete domestic world.
 
 - `docs/steps/81c-season-clock-contracts-and-complete-domestic-world/`

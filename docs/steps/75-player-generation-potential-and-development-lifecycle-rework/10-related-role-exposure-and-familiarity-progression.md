@@ -28,7 +28,7 @@ pnpm depcruise
 git diff --check
 ```
 
-All required checks passed with Node `24.16.0`.
+All required checks passed with Node `24.19.0`.
 
 ## Goal
 

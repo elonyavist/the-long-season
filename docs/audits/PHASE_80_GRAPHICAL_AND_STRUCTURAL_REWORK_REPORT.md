@@ -89,7 +89,7 @@ persistence, or simulation, and it ran no longitudinal cohort.
 - One QA assertion assumed a searched full name matches exactly one generated
   player. Fictional full names can repeat, so the delayed query is now proven by
   a smaller matching-only result set.
-- On the pinned Node `24.16.0` ICU, Italian requires two grouping digits, so a
+- On the pinned Node `24.19.0` ICU, Italian requires two grouping digits, so a
   four-digit amount stays ungrouped (`1250,75`). One money expectation and one
   browser regex assumed unconditional grouping and were corrected to the real
   locale rule.
@@ -118,7 +118,7 @@ persistence, or simulation, and it ran no longitudinal cohort.
 
 ## Gate Results
 
-All gates ran on the pinned Node `24.16.0` toolchain.
+All gates ran on the pinned Node `24.19.0` toolchain.
 
 - `pnpm check` PASS (exit `0`): ESLint, dependency-cruiser, the localized-text
   script, Vitest `1,606` tests across `256` files, and all ten workspace
@@ -129,10 +129,10 @@ All gates ran on the pinned Node `24.16.0` toolchain.
   and SQLite/OPFS specs, `6.7` minutes, exit `0`.
 - `git diff --check` and `graphify update .` PASS.
 
-The Node version matters: the repository pins `24.16.0`, and the default shell
+The Node version matters: the repository pins `24.19.0`, and the default shell
 here is Node `20.17.0`, where `pnpm check` cannot even start because
 `scripts/check-localized-presentation-text.ts` needs native TypeScript
-execution. Node `24.16.0` also carries the ICU rules these gates assert.
+execution. Node `24.19.0` also carries the ICU rules these gates assert.
 
 ## Manual Inspection Targets
 

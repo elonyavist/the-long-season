@@ -3,7 +3,7 @@
 Date: 2026-07-18
 Phase: `75-player-generation-potential-and-development-lifecycle-rework`
 Step: `01-accepted-lifecycle-contract-and-reproducible-baseline`
-Runtime: Node `24.16.0`
+Runtime: Node `24.19.0`
 
 ## Purpose
 

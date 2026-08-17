@@ -38,7 +38,7 @@ approved anchor. The board needs better surrounding hierarchy, not replacement.
 
 ## Evidence And Method
 
-Evidence was gathered with Node `v24.16.0`, Chromium, production SQLite/OPFS
+Evidence was gathered with Node `v24.19.0`, Chromium, production SQLite/OPFS
 storage, deterministic generated careers, and the current Zustand screen state.
 No source, CSS, test, translation, runtime, storage, or dependency was changed.
 

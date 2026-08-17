@@ -212,7 +212,7 @@ Supporting documents:
   five-season windows. It replaces `100 x 10` and does not substitute for the
   paired fifteen-season attribution evidence.
 
-Every batch uses `pnpm cli simulation-report`, Node `24.16.0`, exactly `7`
+Every batch uses `pnpm cli simulation-report`, Node `24.19.0`, exactly `7`
 workers when seven work items exist, and runs alone.
 
 The implementation paths, locked profile IDs, formulas, populations,
@@ -248,6 +248,6 @@ not maintain second copies of metric definitions.
 - Checkpoints A-F close in order; later green evidence cannot launder an
   earlier red gate.
 - `pnpm check`, dependency rules, determinism, storage, Graphify and browser QA
-  are green on Node `24.16.0`.
+  are green on Node `24.19.0`.
 - Phase 81C consumes the new recruitment/development/forecast Interfaces and
   owns the contract clock plus complete domestic world before Phase 82A.

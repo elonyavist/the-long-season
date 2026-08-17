@@ -24,7 +24,7 @@ an owner.
 
 ## Runtime And Execution Contract
 
-- Runtime: Node `24.16.0` after `nvm use 24`.
+- Runtime: Node `24.19.0` after `nvm use 24`.
 - Report entrypoint: `pnpm cli simulation-report` only.
 - Batch concurrency: exactly `7` workers when at least seven independent worlds
   exist; never more than seven.

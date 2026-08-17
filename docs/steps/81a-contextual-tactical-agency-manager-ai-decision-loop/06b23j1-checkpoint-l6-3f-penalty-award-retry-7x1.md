@@ -48,7 +48,7 @@ fail or pass.
 ## Required Verification And Command
 
 ```bash
-nvm use 24.16.0
+nvm use 24.19.0
 pnpm check
 pnpm cli simulation-report \
   --profile=phase81a-penalty-award-l6-3f-7x1 \

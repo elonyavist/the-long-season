@@ -62,7 +62,7 @@ one next owner only; they do not change L6.5's failed product decision.
 ## Command
 
 ```bash
-nvm use 24.16.0
+nvm use 24.19.0
 pnpm cli simulation-report \
   --profile=phase81a-succession-priority-l6-5-7x10 \
   --format=json \

@@ -29,7 +29,7 @@ generation, allocation-diagnostic, and global-curve defects without changing
 any threshold or seed.
 Its entry gate is satisfied: all nine Phase 80 steps are Done, the repository
 and browser closeout is green (`pnpm check`, web build, dependency cruising,
-and `34/34` Playwright on the pinned Node `24.16.0` toolchain), the shared
+and `34/34` Playwright on the pinned Node `24.19.0` toolchain), the shared
 three-band potential renderer is complete, the deferred `50 x 20` is unrun, and
 Phase 79 Step 14 remains Reopened, paused, and unclaimed.
 

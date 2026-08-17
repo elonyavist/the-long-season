@@ -44,7 +44,7 @@ Result:
 
 - Passed.
 - Dependency Cruiser reported no dependency violations across 222 modules and 808 dependencies.
-- Environment note: the sandbox shell did not initially find `pnpm`; using the Node v24.16.0 path is recommended for future checks in this environment.
+- Environment note: the sandbox shell did not initially find `pnpm`; using the Node v24.19.0 path is recommended for future checks in this environment.
 
 ## File Inventory Legend
 
@@ -230,5 +230,5 @@ Questions for Step 02:
 - `find apps packages -path "*/src/*" -type f | sort`: passed.
 - `wc -l apps/cli/src/commands/*.ts apps/cli/src/commands/**/*.ts packages/engine/src/**/*.ts packages/content/src/**/*.ts packages/simulation-tools/src/**/*.ts`: passed.
 - `rg -n "^import |^export " apps packages`: passed.
-- `pnpm depcruise`: passed with no dependency violations. Environment note: initial shell did not find `pnpm`; using the Node v24.16.0 path is recommended in this sandbox.
+- `pnpm depcruise`: passed with no dependency violations. Environment note: initial shell did not find `pnpm`; using the Node v24.19.0 path is recommended in this sandbox.
 - `git diff --check`: pending final status update.

@@ -64,7 +64,7 @@ as the only reachability evidence.
 ## Verification
 
 ```bash
-nvm use 24.16.0
+nvm use 24.19.0
 pnpm vitest run packages/engine/src/career/ai-market-lifecycle.test.ts \
   packages/engine/src/career/advance-career-month.test.ts \
   packages/engine/src/career/advance-career-season.test.ts \

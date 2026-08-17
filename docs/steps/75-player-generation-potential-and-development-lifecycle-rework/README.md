@@ -164,7 +164,7 @@ second package merely to make tuning convenient.
 
 ## Phase-Level Checks
 
-Run with Node `24.16.0`:
+Run with Node `24.19.0`:
 
 ```bash
 nvm use 24

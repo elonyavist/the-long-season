@@ -110,7 +110,7 @@ of work.
 
 ## Local Runtime And Visual QA Rules
 
-- Node `24.16.0` is the local runtime.
+- Node `24.19.0` is the local runtime.
 - Before installing, upgrading, or removing dependencies, or before changing
   any `package.json`/`pnpm-lock.yaml` content, run `nvm use 24` from the
   repository root and perform the dependency change with pnpm.
